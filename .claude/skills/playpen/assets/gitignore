@@ -1,0 +1,6 @@
+# playpen — generated/runtime files
+www/node_modules/
+www/dist/
+run/
+# Uncomment if the persisted playpen data is ephemeral user state:
+# server/data/

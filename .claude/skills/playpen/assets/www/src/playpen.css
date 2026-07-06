@@ -1,0 +1,86 @@
+/* Playpen layout — project-owned CSS. Layout only; colours, type, spacing and
+   motion all come from the Forge tokens (var(--token)), never raw values. */
+
+.pp-shell {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  grid-template-rows: 1fr auto;
+  grid-template-areas:
+    "controls preview"
+    "controls prompt";
+  gap: var(--sp-4);
+  padding: var(--sp-4);
+  height: 100vh;
+  box-sizing: border-box;
+  background: var(--bg-0);
+}
+
+.pp-controls {
+  grid-area: controls;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.pp-preview {
+  grid-area: preview;
+  min-height: 0;
+  overflow: auto;
+}
+
+.pp-preview > .fcard {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.pp-prompt {
+  grid-area: prompt;
+}
+
+.pp-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 240px;
+  flex: 1;
+}
+
+.pp-prompt-text {
+  margin: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-relaxed);
+  color: var(--fg-1);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.pp-preset-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+.pp-field-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+/* Full-bleed canvas variant (concept-map, code-map, node-grid): the preview
+   card body becomes a pannable surface. */
+.pp-canvas {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--bg-0);
+  border-radius: var(--r-sm);
+  touch-action: none;
+}

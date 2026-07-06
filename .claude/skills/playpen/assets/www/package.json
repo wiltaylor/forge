@@ -1,0 +1,19 @@
+{
+  "name": "playpen-app",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "lucide-solid": "^0.525.0",
+    "solid-js": "^1.9.14"
+  },
+  "devDependencies": {
+    "vite": "^6.4.3",
+    "vite-plugin-solid": "^2.11.12"
+  }
+}
