@@ -109,11 +109,21 @@
   --dur-2: 160ms;
   --dur-3: 240ms;
 
+  /* Responsive breakpoints — CSS variables cannot be used inside @media
+     conditions, so these are documented constants. Use the literal values:
+       compact: @media (max-width: 1024px)  — sidebar becomes a drawer
+       mobile:  @media (max-width: 768px)   — single-column stacking
+     Touch: @media (pointer: coarse) bumps the --h-* control heights below. */
+
   /* Component sizes (touch-friendly minimums) */
   --h-sm: 28px;
   --h-md: 32px;
   --h-lg: 36px;
   --h-xl: 40px;
+
+  /* Shell dimensions — the app-shell grid and the mobile drawer share these */
+  --sidebar-w: 240px;
+  --topbar-h: 48px;
 }
 
 /* -------- LIGHT ----------------------------------------------------------- */
@@ -400,5 +410,17 @@ th {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* Touch devices — grow control heights to tap-target sizes. Components that
+   size themselves with var(--h-*) pick this up automatically; viewport width
+   never changes density, only a coarse pointer does. */
+@media (pointer: coarse) {
+  :root {
+    --h-sm: 32px;
+    --h-md: 40px;
+    --h-lg: 44px;
+    --h-xl: 48px;
   }
 }

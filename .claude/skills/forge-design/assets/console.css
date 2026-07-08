@@ -3,8 +3,8 @@
 
 .app-shell {
   display: grid;
-  grid-template-columns: 240px 1fr;
-  grid-template-rows: 48px 1fr;
+  grid-template-columns: var(--sidebar-w) 1fr;
+  grid-template-rows: var(--topbar-h) 1fr;
   grid-template-areas:
     "topbar topbar"
     "sidebar main";
@@ -63,7 +63,7 @@
   margin-left: auto;
   display: flex; align-items: center; gap: 8px;
   background: var(--bg-1); border: 1px solid var(--border);
-  padding: 0 10px; height: 28px; border-radius: 4px;
+  padding: 0 10px; height: var(--h-sm); border-radius: 4px;
   width: 280px; color: var(--fg-2); font-size: 12px;
   cursor: text;
 }
@@ -72,10 +72,15 @@
   color: var(--fg-0); font: inherit; font-size: 13px;
 }
 .ftopbar-icon-btn {
-  width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center;
+  width: var(--h-sm); height: var(--h-sm); display: inline-flex; align-items: center; justify-content: center;
   background: transparent; border: 0; border-radius: 4px; color: var(--fg-1); cursor: pointer;
 }
 .ftopbar-icon-btn:hover { background: var(--bg-2); color: var(--fg-0); }
+
+/* Hamburger that opens the sidebar drawer — hidden on desktop, shown ≤1024px.
+   Backdrop behind the open drawer — shown only while .is-sidebar-open. */
+.fsidebar-toggle { display: none; }
+.fscrim { display: none; }
 
 /* ---------------- Main content -------------------------------------------- */
 .app-main { overflow: auto; padding: 24px 28px; }
@@ -87,14 +92,14 @@
 /* ---------------- Buttons -------------------------------------------------- */
 .fbtn {
   display: inline-flex; align-items: center; gap: 6px;
-  height: 32px; padding: 0 12px;
+  height: var(--h-md); padding: 0 12px;
   border-radius: 4px; border: 1px solid transparent;
   font-family: inherit; font-size: 13px; font-weight: 500;
   cursor: pointer;
   transition: background var(--dur-1) var(--ease-out), border-color var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out);
 }
-.fbtn-sm { height: 28px; padding: 0 10px; font-size: 12px; }
-.fbtn-lg { height: 40px; padding: 0 16px; font-size: 14px; }
+.fbtn-sm { height: var(--h-sm); padding: 0 10px; font-size: 12px; }
+.fbtn-lg { height: var(--h-xl); padding: 0 16px; font-size: 14px; }
 .fbtn-primary { background: var(--accent); color: var(--accent-contrast); }
 .fbtn-primary:hover { background: var(--accent-hover); }
 .fbtn-primary:active { background: var(--accent-press); }
@@ -111,7 +116,7 @@
 .ffield-label { font-size: 12px; color: var(--fg-1); font-weight: 500; }
 .ffield-input {
   display: flex; align-items: center; gap: 8px;
-  height: 32px; padding: 0 10px;
+  height: var(--h-md); padding: 0 10px;
   background: var(--bg-1); border: 1px solid var(--border); border-radius: 4px;
   color: var(--fg-2); transition: border-color var(--dur-1) var(--ease-out), box-shadow var(--dur-1) var(--ease-out);
 }
@@ -173,6 +178,9 @@
 .fstat-delta.tone-neutral { color: var(--fg-2); }
 
 /* ---------------- Tables --------------------------------------------------- */
+/* Wrap every .ftable in a .ftable-wrap div — it becomes a horizontal scroll
+   container at ≤768px so wide tables never force page-level scroll. */
+.ftable-wrap { min-width: 0; }
 .ftable { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
 .ftable th {
   text-align: left; padding: 8px 14px;
@@ -245,6 +253,15 @@
 .settings-section .sub { color: var(--fg-2); font-size: 13px; margin-bottom: 16px; }
 .settings-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 12px; }
 
+/* ---------------- Grid helper ---------------------------------------------- */
+/* Intrinsically responsive tile grid (stat rows, card grids) — columns pack
+   at ≥180px and collapse to one column on narrow screens, no media query. */
+.fgrid {
+  display: grid;
+  gap: var(--sp-4);
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
 /* ---------------- Misc ----------------------------------------------------- */
 .eyebrow {
   font-size: 10px; font-weight: 600; letter-spacing: 0.08em;
@@ -259,3 +276,63 @@
   color: var(--fg-2);
 }
 .empty h3 { color: var(--fg-1); font-size: 14px; margin-bottom: 4px; }
+
+/* ---------------- Responsive ----------------------------------------------- */
+/* Desktop-first overrides only — nothing above this line changes on desktop.
+   Breakpoints are documented in colors_and_type.css (compact 1024 / mobile 768). */
+
+/* Compact (≤1024px): the sidebar leaves the grid and becomes an off-canvas
+   drawer, toggled by adding .is-sidebar-open to .app-shell (see the drawer
+   wiring pattern in reference/solidjs.md). */
+@media (max-width: 1024px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "topbar"
+      "main";
+  }
+  .fsidebar {
+    position: fixed;
+    top: var(--topbar-h); left: 0; bottom: 0;
+    width: var(--sidebar-w);
+    background: var(--bg-1);
+    border-right: 1px solid var(--border);
+    transform: translateX(-100%);
+    transition: transform var(--dur-2) var(--ease-out);
+    z-index: 30;
+    overflow-y: auto;
+  }
+  .app-shell.is-sidebar-open .fsidebar { transform: translateX(0); }
+  .fscrim {
+    position: fixed;
+    inset: var(--topbar-h) 0 0 0;
+    background: rgb(0 0 0 / 0.5);
+    z-index: 20;
+  }
+  .app-shell.is-sidebar-open .fscrim { display: block; }
+  .fsidebar-toggle { display: inline-flex; }
+
+  .app-main { padding: 20px; }
+  .ftopbar-search { width: 200px; }
+  .settings-layout { grid-template-columns: 1fr; }
+  .settings-nav { position: static; flex-direction: row; flex-wrap: wrap; }
+}
+
+/* Mobile (≤768px): single-column stacking, tables scroll inside their wrap. */
+@media (max-width: 768px) {
+  .app-main { padding: 16px; }
+  .ftopbar-crumbs { display: none; }  /* the .page-head h1 carries location */
+  .ftopbar-search { width: auto; flex: 1; min-width: 0; }
+  .page-head { flex-wrap: wrap; align-items: start; }
+  .ftable-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .ftable-wrap .ftable { min-width: 560px; }
+  .flogs { height: calc(100dvh - 180px); }  /* dvh: stable under mobile URL bar */
+  .flog-line { grid-template-columns: 64px 48px 1fr; gap: 8px; padding: 2px 12px; }
+  .settings-row { grid-template-columns: 1fr; }
+}
+
+/* Touch: tap-target minimums beyond the --h-* bump in colors_and_type.css. */
+@media (pointer: coarse) {
+  .fsidebar a { min-height: var(--h-md); }
+  .ftable td { padding: 12px 14px; }
+}

@@ -92,7 +92,27 @@ tinted border (like toasts do), use `color-mix(in oklab, var(--<tone>) 30%, tran
 - Radii: `--r-sm` 4px (buttons, inputs, badges) · `--r-md` 6px (cards) · `--r-lg` 8px (modals, large panels) ·
   `--r-pill` only for status dots and avatars — **never on buttons**.
 - Heights: `--h-sm` 28 · `--h-md` 32 (default control + table row) · `--h-lg` 36 · `--h-xl` 40.
+- Shell: `--topbar-h` 48px · `--sidebar-w` 240px — the app-shell grid and the mobile drawer share these.
 - Density is the point: 32px table rows, 14px body, 48px topbar, 240px sidebar.
+
+## Breakpoints & responsive rules
+
+CSS variables can't be used inside `@media` conditions, so the breakpoints are **documented
+constants** — use the literal values (they're also listed in the token CSS header comment):
+
+- **compact** — `@media (max-width: 1024px)`: the sidebar leaves the shell grid and becomes an
+  off-canvas drawer (`.is-sidebar-open` on `.app-shell`, hamburger `.fsidebar-toggle`, backdrop
+  `.fscrim`); search shrinks; settings stack.
+- **mobile** — `@media (max-width: 768px)`: single-column stacking — `.page-head` wraps,
+  breadcrumbs hide (the page `<h1>` carries location), tables scroll horizontally inside
+  `.ftable-wrap`, `.settings-row` goes one column.
+- **touch** — `@media (pointer: coarse)`: the `--h-*` control heights bump to 32/40/44/48 and
+  tap targets get minimums. This is the only thing that relaxes density.
+
+**Density is the desktop truth** — only a coarse pointer relaxes control heights; viewport
+width never does. Size interactive components with `var(--h-*)` so touch sizing applies
+automatically. Grids of tiles use `.fgrid` (auto-fit, `minmax(180px, 1fr)`) — intrinsically
+responsive, no media query needed.
 
 ## Motion
 
@@ -127,3 +147,5 @@ Every new component must pass all of these before it ships:
 - [ ] Radius 4px for controls, 6px for cards, 8px for modals
 - [ ] Numbers get units and `tabular-nums`; transitions use `--dur-*` + `--ease-out`
 - [ ] Renders correctly in **both** themes — check by toggling `data-theme` on `<html>`
+- [ ] Usable at 375px wide — no page-level horizontal scroll (wide tables scroll inside `.ftable-wrap`)
+- [ ] Interactive targets sized with `var(--h-*)` so `pointer: coarse` touch sizing applies

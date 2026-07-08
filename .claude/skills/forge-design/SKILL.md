@@ -1,6 +1,6 @@
 ---
 name: forge-design
-description: Builds SolidJS UIs with the Forge design system — a dark-default, dense, technical-tools aesthetic for dashboards, consoles, observability and admin panels. Ships the full colour scheme/design tokens (CSS variables), component CSS, and SolidJS primitives (Button, Card, Badge, Input, Stat, Toast, tables, logs, app shell). Use when building or styling SolidJS components or pages, choosing colours for a new component, wiring design tokens into a project, or when the user says "use the design system", "Forge style", "match the console look", "make this look like the tech tools design".
+description: Builds SolidJS UIs with the Forge design system — a dark-default, dense, technical-tools aesthetic for dashboards, consoles, observability and admin panels. Ships the full colour scheme/design tokens (CSS variables), component CSS, and SolidJS primitives (Button, Card, Badge, Input, Stat, Toast, tables, logs, app shell). Responsive out of the box — the shell collapses to an off-canvas drawer on narrow screens and touch targets grow under coarse pointers. Use when building or styling SolidJS components or pages, choosing colours for a new component, wiring design tokens into a project, or when the user says "use the design system", "Forge style", "match the console look", "make this look like the tech tools design", "make it work on mobile".
 user-invocable: true
 argument-hint: [what to build or style]
 ---
@@ -49,9 +49,10 @@ goes" section of `reference/solidjs.md` says — never append to the copied Forg
 </step>
 
 <step order="5">
-Validate: render the app in both themes (toggle `data-theme` on `<html>`) and run any new
-component through the checklist at the end of `reference/tokens.md`. Fix violations before
-presenting the result.
+Validate: render the app in both themes (toggle `data-theme` on `<html>`) and at 375px and
+768px viewport widths — the drawer opens/closes from the hamburger and nothing forces
+page-level horizontal scroll. Run any new component through the checklist at the end of
+`reference/tokens.md`. Fix violations before presenting the result.
 </step>
 </workflow>
 
@@ -62,6 +63,7 @@ presenting the result.
 - Use SolidJS idioms: `class`/`classList`, `splitProps`/`mergeProps`, `Show`/`For` — never destructure props
 - Use Lucide icons (`lucide-solid`) at 1.5px stroke, `currentColor`
 - Keep density: 32px controls/rows, 14px body, sentence case, tabular numerals with units
+- Keep desktop density — touch sizing applies only under `pointer: coarse`, never by viewport width
 </always>
 
 <ask>
@@ -74,6 +76,7 @@ presenting the result.
 - Hardcode colours that exist as tokens, or invent new colours outside the palette rules in `reference/tokens.md`
 - Use drop shadows, gradients, frosted-glass cards, emoji, or unicode-as-icon (`→`, `✓`)
 - Put the accent colour on large background fills or pill-shaped buttons
+- Hide content on narrow screens beyond the documented reflows (breadcrumbs ≤768px) — reflow, don't remove
 - Edit the files in `${CLAUDE_SKILL_DIR}/assets/` — they mirror the design project (id
   `019dc74c-a1ff-74d0-8504-0ad85b5589fe`); re-sync from there via the DesignSync tool instead
 </never>
