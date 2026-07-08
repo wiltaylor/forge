@@ -10,9 +10,11 @@ How to wire the Forge design system into a SolidJS project and build screens wit
    cp ${CLAUDE_SKILL_DIR}/assets/console.css        <project>/src/forge/
    cp ${CLAUDE_SKILL_DIR}/assets/ui.jsx             <project>/src/forge/
    ```
-   A fourth asset, `assets/graph.jsx` (the `NodeGraph` editor), is **optional** — copy it
-   only when the project builds node editors / pipeline views. It needs no extra deps and
-   imports nothing from `ui.jsx`, but it does need this version's `console.css`.
+   Three further assets are **optional** — copy only what the project needs; each imports
+   nothing from `ui.jsx` but requires this version's `console.css`:
+   - `assets/graph.jsx` — `NodeGraph` editor + `Flowchart` (auto-layout DAG). No deps.
+   - `assets/charts.jsx` — Pie/Line/Bar/Gantt/Sparkline SVG charts. No deps.
+   - `assets/code.jsx` — CodeMirror 6 editor/diff. Needs npm packages (see "Code editor").
 2. The three files version together — `ui.jsx` components emit classes defined in `console.css`
    (e.g. `Modal` needs the `.fmodal` block), so always copy/update them as a set, never one file.
 3. Import the CSS once, in the app entry, tokens first. Find the entry by reading the
@@ -99,6 +101,63 @@ Form controls (all controlled; Checkbox/Toggle/Radio keep a hidden native input 
 | `ListBox` | `options` + single `value`/`onChange`, or `multiple` + `values[]`/`onChange(values)`, `label?` | `.flistbox` scrollable option list; multi rows get check indicators; keyboard nav. |
 | `Progress` | `value` 0–100, `tone` (`accent`\|`success`\|`warning`\|`danger`), `label?`, `showValue?`, `indeterminate?` | 4px `.fprogress` bar — the default Forge loading treatment. |
 | `Spinner` | `size` (16), `label` | Inline arc spinner, `currentColor` — for inline/button waits only. |
+| `Combobox` | `options`, `value`, `onChange`, `placeholder`, `label`, `help`, `error`, `emptyText?` | Searchable select — typing filters (`.fcombo` + the Select popover classes). |
+| `Slider` | `value`, `onChange(n)`, `min` 0, `max` 100, `step` 1, `label?`, `showValue?` | Restyled native range (`.fslider`) — keyboard/a11y free. |
+| `Textarea` | `label`, `help`, `error`, native textarea props | `.ffield-area` — mirrors Input. |
+| `ToggleGroup` | `options [{value,label,icon?,disabled?}]`, `value`, `onChange` | `.fseg` segmented control. |
+| `Calendar` | `value` (`YYYY-MM-DD`\|null), `onChange(iso)`, `min?`, `max?` | Monday-start month grid; today outlined, ISO strings throughout. Ranges = future work. |
+| `DatePicker` | Calendar props + `label`, `placeholder`, `help`, `disabled` | Trigger button + Calendar in a `.fpop`. |
+
+Overlays & menus:
+
+| Component | Props | Notes |
+|---|---|---|
+| `Tooltip` | `label`, `side` (`top`\|`bottom`\|`left`\|`right`), children | CSS-only (`.ftip`), shows on hover **and** keyboard focus. Text-only — rich content wants `Popover`. |
+| `Popover` | `label`, `icon?`, `variant`, `size`, `align` (`start`\|`end`), `width?`, children = panel | Renders its own trigger `Button` + `.fpop` panel. |
+| `DropdownMenu` | trigger props + `items` | Items: `{label, icon?, kbd?, danger?, disabled?, onSelect?}` or `{separator: true}`. Full keyboard nav. |
+| `ContextMenu` | `items` (same shape), children = surface | Right-click opens at cursor inside the wrapped surface. |
+| `Command` | `open`, `onClose`, `items [{group?, label, icon?, kbd?, onSelect}]`, `placeholder?` | ⌘K palette (`.fcmd`, modal layer). Substring filter, arrows wrap, Enter selects. Bind the hotkey consumer-side. |
+| `Sheet` | `open`, `onClose`, `title`, `side` (`right`\|`left`), `footer?`, children | Slide-in panel at z 40 — above the drawer, below modals. Full-width ≤768px. |
+| `Toaster` / `toast(msg, {tone, icon, duration})` / `dismissToast(id)` | mount `<Toaster/>` once at the app root | Stacked corner toasts at z 70; `duration: 0` = sticky; default 4 s. |
+
+Navigation & structure:
+
+| Component | Props | Notes |
+|---|---|---|
+| `Tabs` | `tabs [{id, label, count?, disabled?}]`, `active`, `onChange` | Renders the bar only — content is your `Show`/`Switch`. |
+| `Accordion` | `items [{id, title, content}]`, `defaultOpen?` (id) | Single-open. `Collapsible` (`title`, `defaultOpen?`) is the standalone disclosure. |
+| `Pagination` | `page`, `pages`, `onChange` | Windowed `1 … p−1 [p] p+1 … N`. |
+| `Separator` | `vertical?` | `.fsep` hairline. |
+| `Skeleton` | `width?`, `height?` | Loading placeholder; shimmer only under `prefers-reduced-motion: no-preference`. |
+| `Avatar` | `name`, `src?`, `size` (`sm`\|`md`\|`lg`), `status?` (tone) | Initials fallback, optional status dot. |
+| `Alert` | `tone`, `title?`, `icon?`, children | Block callout via the tone triple. |
+| `SplitPane` | `first`, `second` (JSX), `initial` 280, `min` 160, `vertical?`, `onResize?` | Draggable divider (pointer + arrow keys). Uncontrolled. |
+
+Popover-family caveat: all anchored popovers (Select, Combobox, DatePicker, DropdownMenu,
+Popover, ContextMenu) position in-place with `position: absolute` — inside a scrolling or
+`overflow: hidden` container they clip. Keep them out of scrolling modal bodies, or size
+the container. Don't open `Command` and `Modal` at once (both live at z 50).
+
+```jsx
+// DropdownMenu
+<DropdownMenu label="Actions" align="end" items={[
+  { label: 'Rename', icon: Pencil, kbd: 'R', onSelect: rename },
+  { separator: true },
+  { label: 'Delete', icon: Trash2, danger: true, onSelect: del },
+]} />
+
+// Command — bind ⌘K yourself (one-liner):
+createEffect(() => {
+  const onKey = (e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); setCmdOpen(true); } };
+  document.addEventListener('keydown', onKey);
+  onCleanup(() => document.removeEventListener('keydown', onKey));
+});
+
+// Toaster — mount once, call from anywhere:
+<Toaster />
+toast('Deploy started');
+toast('Disk almost full', { tone: 'warning', duration: 0 });  // sticky
+```
 
 ## Node graphs (`assets/graph.jsx`, optional)
 
@@ -134,6 +193,63 @@ import { NodeGraph } from './forge/graph';
   are computed without DOM measurement. Optional per-node body: pass a render-prop child
   `{(node) => JSX}`.
 - Future work (not yet built): pan/zoom viewport, auto-width nodes.
+
+### Flowchart (display DAG, auto-layout)
+
+`<Flowchart nodes={[{id, label, tone?}]} edges={[{from, to, label?, state?}]} onNodeClick? />`
+— no x/y needed: longest-path layering + one barycenter pass lays the graph out left→right.
+Edge `state` reuses the NodeGraph classes (`active` ants, `broken` flash). Cycles are
+tolerated (back-edges skipped for layering, still drawn via the backward detour). Renders
+inside a `.fchart-scroll`, so it scrolls horizontally on narrow screens.
+
+## Charts (`assets/charts.jsx`, optional, zero-dep)
+
+Static SVG (hover/tooltip layer is future work). Categorical series colours come from the
+**validated ramp** `CHART_SERIES` (see "Chart colours" in tokens.md) — fixed order, never
+cycled; >5 series fold into "Other" (`--fg-2`). Semantic data passes `tone:` instead —
+status hues never impersonate a series. Charts measure their container (ResizeObserver)
+and re-render at true pixel width.
+
+| Component | Props |
+|---|---|
+| `PieChart` | `data [{label, value, tone?}]`, `size` 180, `donut?`, `legend` true, `showValues` true |
+| `LineChart` | `series [{label, points [{x,y}], tone?}]`, `height` 220, `area?`, `xLabels?`, `yTicks?` |
+| `BarChart` | `data` or `series [{label, data, tone?}]`, `stacked?`, `height` 220 — vertical only (horizontal = future) |
+| `GanttChart` | `tasks [{id, label, start, end, tone?, progress?}]` (ISO dates), `today?` (`false` hides) — dashed accent today line; dependency arrows = future |
+| `Sparkline` | `points [n]`, `width` 96, `height` 28, `tone?` — for Stat cards |
+
+Also exported: `CHART_SERIES`, `CHART_SERIES_BG`, `seriesColor(i, tone?)`, `niceTicks`.
+
+## Code editor (`assets/code.jsx`, optional, CodeMirror 6)
+
+Install when you copy the file (the one sanctioned dependency set beyond lucide-solid):
+
+```
+npm i @codemirror/state @codemirror/view @codemirror/language @codemirror/commands \
+      @codemirror/lint @codemirror/search @codemirror/merge @codemirror/lang-javascript \
+      @codemirror/lang-python @codemirror/lang-json @codemirror/lang-css \
+      @codemirror/lang-html @codemirror/legacy-modes @lezer/highlight
+```
+
+| Component | Props |
+|---|---|
+| `CodeEditor` | `value`, `onChange` (absent → read-only), `readOnly`, `language` (`js`\|`jsx`\|`ts`\|`tsx`\|`python`\|`json`\|`css`\|`html`\|`shell`), `annotations`, `contextMenuItems`, `lineNumbers` true, `wrap?`, `height` '240px', `placeholder?` |
+| `DiffEditor` | `original`, `modified`, `onChange?` (editable right side), `language`, `unified?`, `annotations?` (modified side), `lineNumbers`, `height` '280px' |
+
+Also exported: `LANGUAGES`, `forgeTheme` (theme + highlight extensions for raw CM use).
+
+- **Annotations** are LSP/tree-sitter-style diagnostics: `{from: {line, col}, to?, severity:
+  'error'|'warning'|'info'|'hint', message, source?}` — **1-based line, 0-based col**.
+  Rendered as squiggles + gutter dots + hover message.
+- **Context menu** items use the DropdownMenu shape; `onSelect(view)` receives the
+  EditorView. Native menu is suppressed.
+- Controlled-value pattern is loop-safe by compare-before-dispatch — echoing `onChange`
+  back into `value` is fine. The editor is themed entirely with `var(--token)`, so it
+  follows `data-theme` live.
+
+Note: if the copying project's bundler can't resolve bare imports from the forge dir
+(out-of-root), alias `@codemirror` and `@lezer` to its `node_modules` (see
+`preview/vite.config.js` for the pattern).
 
 <examples>
 <example name="dashboard-card">

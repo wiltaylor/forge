@@ -5,22 +5,32 @@ import {
 } from '@forge/ui.jsx';
 import Primitives from './sections/Primitives';
 import FormsDemo from './sections/FormsDemo';
+import Forms2Demo from './sections/Forms2Demo';
 import Layout from './sections/Layout';
+import StructureDemo from './sections/StructureDemo';
+import OverlaysDemo from './sections/OverlaysDemo';
 import TableDemo from './sections/TableDemo';
 import LogsDemo from './sections/LogsDemo';
 import SettingsDemo from './sections/SettingsDemo';
 import ModalDemo from './sections/ModalDemo';
 import GraphDemo from './sections/GraphDemo';
+import CodeDemo from './sections/CodeDemo';
+import ChartsDemo from './sections/ChartsDemo';
 
 const SECTIONS = [
   ['primitives', 'Primitives', Primitives],
   ['forms', 'Forms', FormsDemo],
+  ['forms2', 'Forms 2', Forms2Demo],
   ['layout', 'Page & layout', Layout],
+  ['structure', 'Navigation & structure', StructureDemo],
   ['tables', 'Tables', TableDemo],
   ['logs', 'Logs', LogsDemo],
   ['settings', 'Settings', SettingsDemo],
   ['modal', 'Modal', ModalDemo],
+  ['overlays', 'Overlays & menus', OverlaysDemo],
   ['graph', 'Node graph', GraphDemo],
+  ['code', 'Code', CodeDemo],
+  ['charts', 'Charts', ChartsDemo],
 ];
 
 function useViewport() {

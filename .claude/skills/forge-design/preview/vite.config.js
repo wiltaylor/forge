@@ -10,9 +10,11 @@ export default defineConfig({
     alias: {
       // The gallery previews the live skill assets — no copies.
       '@forge': r('../assets'),
-      // ../assets/ui.jsx has no node_modules on its walk-up path; pin bare
-      // solid-js imports (and solid-js/web via prefix) to the preview's copy.
+      // ../assets/*.jsx have no node_modules on their walk-up path; pin their
+      // bare imports (prefix-matched) to the preview's copies.
       'solid-js': r('node_modules/solid-js'),
+      '@codemirror': r('node_modules/@codemirror'),
+      '@lezer': r('node_modules/@lezer'),
     },
     dedupe: ['solid-js'],
   },

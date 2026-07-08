@@ -1,6 +1,6 @@
 ---
 name: forge-design
-description: Builds SolidJS UIs with the Forge design system — a dark-default, dense, technical-tools aesthetic for dashboards, consoles, observability and admin panels. Ships the full colour scheme/design tokens (CSS variables), component CSS, and SolidJS components for everything (Button, Card, Badge, Input, Stat, Toast, AppShell with built-in mobile drawer, nav, Crumbs, PageHead, Table, Logs, Settings, Grid, Empty, Modal, plus form controls — Checkbox, Toggle, Radio, Select, ListBox, Progress, Spinner — and an optional NodeGraph editor with draggable nodes, typed ports, elbow connections, animated and broken edge states). Responsive out of the box — the shell collapses to an off-canvas drawer on narrow screens and touch targets grow under coarse pointers. Includes a runnable preview gallery of every control. Use when building or styling SolidJS components or pages, choosing colours for a new component, wiring design tokens into a project, or when the user says "use the design system", "Forge style", "match the console look", "make this look like the tech tools design", "make it work on mobile", "preview the design system", "show me the controls", "build a node editor".
+description: Builds SolidJS UIs with the Forge design system — a dark-default, dense, technical-tools aesthetic for dashboards, consoles, observability and admin panels. Ships the full colour scheme/design tokens (CSS variables), component CSS, and SolidJS components for everything — shell (AppShell with built-in mobile drawer, nav, Crumbs, PageHead, Tabs, Pagination, SplitPane, Sheet), forms (Input, Textarea, Checkbox, Toggle, Radio, Select, Combobox, ListBox, Slider, ToggleGroup, Calendar, DatePicker), feedback (Badge, Toast + Toaster, Alert, Progress, Spinner, Skeleton, Tooltip, Modal, Command palette, menus — Dropdown and ContextMenu), data (Table, Logs, Stat, Avatar, Accordion), plus optional assets: a NodeGraph editor + auto-layout Flowchart (typed ports, elbow connections, animated/broken edges), zero-dep SVG charts (pie, line, bar, gantt, sparkline) on a CVD-validated ramp, and a CodeMirror-6 code editor/diff viewer with LSP-style annotations and Forge context menus. Responsive out of the box; includes a runnable preview gallery of every control. Use when building or styling SolidJS components or pages, choosing colours for a new component, wiring design tokens into a project, or when the user says "use the design system", "Forge style", "match the console look", "make it work on mobile", "preview the design system", "show me the controls", "build a node editor", "show a diff", "add a chart", "build a dashboard with charts".
 user-invocable: true
 argument-hint: [what to build or style]
 ---
@@ -44,8 +44,10 @@ and follow its new-component checklist.
 <step order="4">
 Wire the assets into the target project as described in `reference/solidjs.md`: copy
 `assets/colors_and_type.css`, `assets/console.css`, and `assets/ui.jsx` in, import the two
-CSS files at the app entry (tokens first). Add `assets/graph.jsx` only when the project
-builds node editors. Copy — never symlink into this skill directory.
+CSS files at the app entry (tokens first). Optional extras: `assets/graph.jsx` (node
+editors/flowcharts), `assets/charts.jsx` (charts), `assets/code.jsx` (code editor — needs
+the CodeMirror packages listed in `reference/solidjs.md`). Copy — never symlink into this
+skill directory.
 For each asset that already exists in the project, run `diff -u <project copy> <skill copy>`:
 identical → leave it and continue; different → show the diff and ask the user whether to
 update the project copy. Never overwrite an existing project copy without approval.

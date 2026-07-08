@@ -12,7 +12,8 @@ viewport transform.
 > edges, typed ports, animated/broken edge states, drag + connect built in) over
 > hand-rolling this from scratch; this template remains useful for its palette/
 > properties/persistence structure and for viewport panning, which NodeGraph doesn't
-> do yet.
+> do yet. (Forge also ships `charts.jsx` and `code.jsx` — the latter needs the
+> CodeMirror packages installed in `www/` if a playpen imports it.)
 
 ## Layout
 

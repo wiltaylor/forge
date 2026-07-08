@@ -499,11 +499,386 @@
   stroke-dasharray: 4 4; pointer-events: none;
 }
 
+/* ---------------- Tabs & segmented ----------------------------------------- */
+.ftabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border-subtle); }
+.ftab {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: var(--h-lg); padding: 0 12px;
+  background: transparent; border: 0; font: inherit; font-size: 13px;
+  color: var(--fg-1); cursor: pointer;
+  transition: color var(--dur-1) var(--ease-out);
+}
+.ftab:hover { color: var(--fg-0); }
+.ftab.is-active { color: var(--fg-0); box-shadow: inset 0 -2px 0 var(--accent); }
+.ftab:disabled { opacity: 0.4; cursor: not-allowed; }
+.ftab .count { font-family: var(--font-mono); font-size: 11px; color: var(--fg-2); }
+
+.fseg { display: inline-flex; background: var(--bg-1); border: 1px solid var(--border); border-radius: var(--r-sm); overflow: hidden; }
+.fseg-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: var(--h-sm); padding: 0 10px;
+  background: transparent; border: 0; font: inherit; font-size: 12px;
+  color: var(--fg-1); cursor: pointer;
+}
+.fseg-btn + .fseg-btn { border-left: 1px solid var(--border-subtle); }
+.fseg-btn:hover { color: var(--fg-0); }
+.fseg-btn.is-active { background: var(--bg-3); color: var(--fg-0); }
+.fseg-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ---------------- Tooltip --------------------------------------------------- */
+/* Text-only, CSS-driven: shows on hover and keyboard focus. z 80 tops all. */
+.ftip { position: relative; display: inline-flex; }
+.ftip::after {
+  content: attr(data-tip);
+  position: absolute; z-index: 80;
+  background: var(--bg-4); color: var(--fg-0);
+  border: 1px solid var(--border-strong); border-radius: var(--r-sm);
+  padding: 3px 8px; font-size: 11px; white-space: nowrap;
+  opacity: 0; visibility: hidden; pointer-events: none;
+  transition: opacity var(--dur-1) var(--ease-out), visibility var(--dur-1);
+}
+.ftip:hover::after, .ftip:focus-within::after {
+  opacity: 1; visibility: visible; transition-delay: var(--dur-3);
+}
+.ftip[data-side='top']::after    { bottom: calc(100% + 6px); left: 50%; translate: -50% 0; }
+.ftip[data-side='bottom']::after { top: calc(100% + 6px); left: 50%; translate: -50% 0; }
+.ftip[data-side='left']::after   { right: calc(100% + 6px); top: 50%; translate: 0 -50%; }
+.ftip[data-side='right']::after  { left: calc(100% + 6px); top: 50%; translate: 0 -50%; }
+
+/* ---------------- Popovers & menus ------------------------------------------ */
+/* .fpop is the shared anchored-popover surface (menus, popover, date picker).
+   In-place absolute like .fselect-pop — clips inside scroll containers. */
+.fpop {
+  position: absolute; top: calc(100% + 4px); left: 0;
+  z-index: 60;  /* beats .fmodal (50) so popovers work inside modals */
+  background: var(--bg-4); border: 1px solid var(--border-strong); border-radius: var(--r-md);
+  padding: 4px;
+  animation: fmodal-in var(--dur-2) var(--ease-out);
+}
+.fpop.is-end { left: auto; right: 0; }
+.fmenu, .fpopover, .fctx, .fcombo, .fdate { position: relative; }
+.fmenu { display: inline-flex; }
+.fpopover { display: inline-flex; }
+.fpopover-pop { padding: 12px; width: max-content; max-width: 320px; font-size: 13px; }
+.fmenu-pop { min-width: 180px; }
+.fmenu-item {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 6px 8px; border-radius: var(--r-sm);
+  background: transparent; border: 0; font: inherit; font-size: 13px;
+  color: var(--fg-0); cursor: pointer; text-align: left;
+}
+.fmenu-item.is-active { background: var(--bg-2); }
+.fmenu-item.is-danger { color: var(--danger-fg); }
+.fmenu-item.is-disabled, .fmenu-item:disabled { opacity: 0.4; cursor: not-allowed; }
+.fmenu-label { flex: 1; }
+.fmenu-kbd { font-family: var(--font-mono); font-size: 11px; color: var(--fg-2); }
+.fmenu-sep { border-top: 1px solid var(--border-subtle); margin: 4px 0; }
+
+/* ---------------- Command palette ------------------------------------------- */
+.fcmd {
+  position: fixed; inset: 0; z-index: 50;  /* modal layer — don't open both */
+  display: flex; justify-content: center; align-items: flex-start;
+  padding: 96px 16px 16px;
+  background: rgb(0 0 0 / 0.5);
+  backdrop-filter: blur(4px);
+}
+.fcmd-panel {
+  width: min(560px, 100%); max-height: 60vh;
+  display: flex; flex-direction: column;
+  background: var(--bg-1); border: 1px solid var(--border-strong); border-radius: var(--r-lg);
+  animation: fmodal-in var(--dur-2) var(--ease-out);
+  overflow: hidden;
+}
+.fcmd-input {
+  display: flex; align-items: center; gap: 10px;
+  height: var(--h-xl); padding: 0 14px; flex: none;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--fg-2);
+}
+.fcmd-input input {
+  flex: 1; background: transparent; border: 0; outline: none;
+  color: var(--fg-0); font: inherit; font-size: 14px;
+}
+.fcmd-list { overflow-y: auto; padding: 4px; }
+.fcmd-group {
+  font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--fg-2); padding: 8px 8px 4px;
+}
+.fcmd-item {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 7px 8px; border-radius: var(--r-sm);
+  background: transparent; border: 0; font: inherit; font-size: 13px;
+  color: var(--fg-0); cursor: pointer; text-align: left;
+}
+.fcmd-item.is-active { background: var(--bg-2); }
+.fcmd-item .fmenu-kbd { margin-left: auto; }
+.fcmd-empty { color: var(--fg-2); text-align: center; padding: 24px; font-size: 13px; }
+
+/* ---------------- Sheet ----------------------------------------------------- */
+.fsheet { position: fixed; inset: 0; z-index: 40; }  /* above drawer, below modal */
+.fsheet-scrim { position: absolute; inset: 0; background: rgb(0 0 0 / 0.5); }
+.fsheet-panel {
+  position: absolute; top: 0; bottom: 0; right: 0;
+  width: min(380px, 100%);
+  display: flex; flex-direction: column;
+  background: var(--bg-1); border-left: 1px solid var(--border-strong);
+  animation: fsheet-in var(--dur-3) var(--ease-out);
+}
+.fsheet.is-left .fsheet-panel {
+  right: auto; left: 0;
+  border-left: 0; border-right: 1px solid var(--border-strong);
+  animation-name: fsheet-in-left;
+}
+.fsheet-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px; border-bottom: 1px solid var(--border-subtle); flex: none;
+}
+.fsheet-head h3 { font-size: 14px; font-weight: 600; }
+.fsheet-body { padding: 16px; overflow-y: auto; flex: 1; font-size: 13px; color: var(--fg-1); }
+.fsheet-foot {
+  display: flex; justify-content: flex-end; gap: 8px;
+  padding: 12px 16px; border-top: 1px solid var(--border-subtle); flex: none;
+}
+
+/* ---------------- Toaster --------------------------------------------------- */
+.ftoaster {
+  position: fixed; right: 16px; bottom: 16px; z-index: 70;  /* above modal */
+  display: flex; flex-direction: column; gap: 8px; align-items: flex-end;
+  pointer-events: none;
+}
+.ftoaster .ftoast {
+  pointer-events: auto; max-width: 360px;
+  animation: ftoast-in var(--dur-2) var(--ease-out);
+}
+.ftoast-close {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; margin-left: 4px; flex: none;
+  background: transparent; border: 0; border-radius: var(--r-sm);
+  color: currentColor; opacity: 0.7; cursor: pointer;
+}
+.ftoast-close:hover { opacity: 1; }
+
+/* ---------------- Alert ----------------------------------------------------- */
+.falert {
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 12px 14px; border-radius: var(--r-md);
+  border: 1px solid transparent; font-size: 13px;
+}
+.falert-title { font-weight: 600; margin-bottom: 2px; }
+.falert-body { line-height: var(--lh-snug); }
+.falert-info    { background: var(--info-bg);    color: var(--info-fg);    border-color: color-mix(in oklab, var(--info) 30%, transparent); }
+.falert-success { background: var(--success-bg); color: var(--success-fg); border-color: color-mix(in oklab, var(--success) 30%, transparent); }
+.falert-warning { background: var(--warning-bg); color: var(--warning-fg); border-color: color-mix(in oklab, var(--warning) 30%, transparent); }
+.falert-danger  { background: var(--danger-bg);  color: var(--danger-fg);  border-color: color-mix(in oklab, var(--danger) 30%, transparent); }
+
+/* ---------------- Avatar ---------------------------------------------------- */
+.favatar {
+  position: relative; display: inline-flex; align-items: center; justify-content: center;
+  background: var(--bg-3); border: 1px solid var(--border); border-radius: var(--r-pill);
+  color: var(--fg-1); font-weight: 600; flex: none; overflow: visible;
+}
+.favatar img { width: 100%; height: 100%; object-fit: cover; border-radius: var(--r-pill); }
+.favatar-sm { width: 24px; height: 24px; font-size: 10px; }
+.favatar-md { width: 32px; height: 32px; font-size: 11px; }
+.favatar-lg { width: 40px; height: 40px; font-size: 13px; }
+.favatar-status {
+  position: absolute; right: -1px; bottom: -1px;
+  width: 8px; height: 8px; border-radius: var(--r-pill);
+  border: 2px solid var(--bg-1);
+}
+
+/* ---------------- Separator ------------------------------------------------- */
+.fsep { border: 0; border-top: 1px solid var(--border-subtle); margin: var(--sp-4) 0; }
+.fsep.is-vertical {
+  border-top: 0; border-left: 1px solid var(--border-subtle);
+  margin: 0 var(--sp-3); align-self: stretch; height: auto;
+}
+
+/* ---------------- Skeleton -------------------------------------------------- */
+/* Static --bg-2 base is also the reduced-motion fallback; shimmer is gated. */
+.fskel { display: block; height: 14px; background: var(--bg-2); border-radius: var(--r-sm); }
+
+/* ---------------- Slider ---------------------------------------------------- */
+/* Native range input; fill driven by inline --fslider-fill (functional
+   hard-stop fill, not a decorative gradient — see tokens.md). */
+.fslider {
+  appearance: none; -webkit-appearance: none;
+  width: 100%; height: var(--h-md); background: transparent; margin: 0;
+  cursor: pointer;
+}
+.fslider::-webkit-slider-runnable-track {
+  height: 4px; border-radius: var(--r-sm);
+  background: linear-gradient(to right, var(--accent) var(--fslider-fill, 0%), var(--bg-3) 0);
+}
+.fslider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px; height: 14px; border-radius: var(--r-pill);
+  background: var(--accent); border: 2px solid var(--bg-0);
+  margin-top: -5px;
+}
+.fslider::-moz-range-track { height: 4px; border-radius: var(--r-sm); background: var(--bg-3); }
+.fslider::-moz-range-progress { height: 4px; border-radius: var(--r-sm); background: var(--accent); }
+.fslider::-moz-range-thumb {
+  width: 10px; height: 10px; border-radius: var(--r-pill);
+  background: var(--accent); border: 2px solid var(--bg-0);
+}
+.fslider:disabled { opacity: 0.4; cursor: not-allowed; }
+.fslider-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-size: 12px; color: var(--fg-1);
+}
+.fslider-head .fslider-value { font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: var(--fg-2); }
+
+/* ---------------- Textarea -------------------------------------------------- */
+.ffield-area {
+  display: flex; padding: 8px 10px;
+  background: var(--bg-1); border: 1px solid var(--border); border-radius: 4px;
+  transition: border-color var(--dur-1) var(--ease-out), box-shadow var(--dur-1) var(--ease-out);
+}
+.ffield-area:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg); }
+.ffield-area.is-error { border-color: var(--danger); }
+.ffield-area textarea {
+  flex: 1; min-height: 72px; resize: vertical;
+  background: transparent; border: 0; outline: none;
+  color: var(--fg-0); font: inherit; font-size: 13px; line-height: var(--lh-snug);
+}
+.ffield-area textarea::placeholder { color: var(--fg-3); }
+
+/* ---------------- Pagination ------------------------------------------------ */
+.fpage { display: flex; gap: 4px; align-items: center; font-variant-numeric: tabular-nums; }
+.fpage-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: var(--h-sm); height: var(--h-sm);
+  background: transparent; border: 1px solid transparent; border-radius: var(--r-sm);
+  font-family: var(--font-mono); font-size: 12px; color: var(--fg-1); cursor: pointer;
+}
+.fpage-btn:hover { background: var(--bg-2); color: var(--fg-0); }
+.fpage-btn.is-active { background: var(--accent-bg); color: var(--accent-fg); }
+.fpage-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.fpage-gap { color: var(--fg-3); font-size: 12px; padding: 0 2px; }
+
+/* ---------------- Accordion ------------------------------------------------- */
+.facc { background: var(--bg-1); border: 1px solid var(--border); border-radius: var(--r-md); }
+.facc-item + .facc-item { border-top: 1px solid var(--border-subtle); }
+.facc-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  width: 100%; padding: 10px 14px;
+  background: transparent; border: 0; font: inherit; font-size: 13px; font-weight: 500;
+  color: var(--fg-0); cursor: pointer; text-align: left;
+}
+.facc-head svg { color: var(--fg-2); transition: rotate var(--dur-2) var(--ease-out); flex: none; }
+.facc-item.is-open .facc-head svg { rotate: 180deg; }
+.facc-body { padding: 0 14px 12px; font-size: 13px; color: var(--fg-1); line-height: var(--lh-snug); }
+
+/* ---------------- Calendar & date picker ------------------------------------ */
+.fcal { width: 252px; user-select: none; }
+.fcal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.fcal-title { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.fcal-nav {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; background: transparent; border: 0; border-radius: var(--r-sm);
+  color: var(--fg-1); cursor: pointer;
+}
+.fcal-nav:hover { background: var(--bg-2); color: var(--fg-0); }
+.fcal-dow, .fcal-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
+.fcal-dow span {
+  text-align: center; font-size: 10px; font-weight: 600; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--fg-2); padding: 4px 0;
+}
+.fcal-day {
+  display: inline-flex; align-items: center; justify-content: center;
+  height: 32px; background: transparent; border: 0; border-radius: var(--r-sm);
+  font: inherit; font-size: 13px; font-variant-numeric: tabular-nums;
+  color: var(--fg-0); cursor: pointer;
+}
+.fcal-day:hover { background: var(--bg-2); }
+.fcal-day.is-out { color: var(--fg-3); }
+.fcal-day.is-today { box-shadow: inset 0 0 0 1px var(--accent); }
+.fcal-day.is-selected { background: var(--accent); color: var(--accent-contrast); }
+.fcal-day:disabled { opacity: 0.4; cursor: not-allowed; }
+.fdate-pop { width: max-content; padding: 12px; }
+
+/* ---------------- Code editor (chrome for assets/code.jsx) ------------------ */
+/* CodeMirror internals are themed in code.jsx via var(--token); this is the
+   wrapper chrome only. */
+.fcode {
+  background: var(--bg-0);
+  border: 1px solid var(--border); border-radius: var(--r-md);
+  overflow: hidden;
+}
+.fcode:focus-within { border-color: var(--accent); }
+.fcode .cm-editor, .fcode .cm-mergeView { height: 100%; }
+.fcode .cm-scroller { font-family: var(--font-mono); }
+.fcode-menu { position: fixed; z-index: 70; }
+
+/* ---------------- Charts (assets/charts.jsx) --------------------------------- */
+.fchart { position: relative; }
+.fchart svg { display: block; }
+.fchart-legend {
+  display: flex; flex-wrap: wrap; gap: var(--sp-3);
+  font-size: 12px; color: var(--fg-1); padding-top: var(--sp-2);
+  align-items: center;
+}
+.fchart-legend .fchart-pct { font-family: var(--font-mono); font-size: 11px; color: var(--fg-2); }
+.fchart-swatch { width: 10px; height: 10px; border-radius: var(--r-sm); flex: none; display: inline-block; }
+.fchart-axis { fill: var(--fg-2); font-size: 11px; font-family: var(--font-sans); font-variant-numeric: tabular-nums; }
+.fchart-value { fill: var(--fg-1); font-size: 11px; font-variant-numeric: tabular-nums; }
+.fchart-grid { stroke: var(--border-subtle); }
+.fchart-baseline { stroke: var(--border); }
+.fchart-today { stroke: var(--accent); stroke-dasharray: 2 3; }
+.fchart-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.fgantt-label {
+  font-size: 12px; color: var(--fg-1);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* ---------------- Flowchart (assets/graph.jsx Flowchart) --------------------- */
+.fflow {
+  position: relative;
+  background: var(--bg-0);
+  background-image: radial-gradient(var(--border) 1px, transparent 1px);
+  background-size: 20px 20px;
+  border: 1px solid var(--border); border-radius: var(--r-md);
+}
+.fflow-node {
+  position: absolute; height: 36px;
+  display: inline-flex; align-items: center; padding: 0 12px;
+  background: var(--bg-1); border: 1px solid var(--border); border-radius: var(--r-md);
+  font-size: 12px; font-weight: 600; color: var(--fg-0);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.fflow-node.is-clickable { cursor: pointer; }
+.fflow-node.is-clickable:hover { border-color: var(--border-strong); }
+.fflow-node.tone-success { background: var(--success-bg); color: var(--success-fg); border-color: color-mix(in oklab, var(--success) 30%, transparent); }
+.fflow-node.tone-warning { background: var(--warning-bg); color: var(--warning-fg); border-color: color-mix(in oklab, var(--warning) 30%, transparent); }
+.fflow-node.tone-danger  { background: var(--danger-bg);  color: var(--danger-fg);  border-color: color-mix(in oklab, var(--danger) 30%, transparent); }
+.fflow-node.tone-info    { background: var(--info-bg);    color: var(--info-fg);    border-color: color-mix(in oklab, var(--info) 30%, transparent); }
+.fflow-node.tone-accent  { background: var(--accent-bg);  color: var(--accent-fg);  border-color: color-mix(in oklab, var(--accent) 30%, transparent); }
+.fflow-edge-label { fill: var(--fg-2); font-size: 11px; }
+.fflow-edge-label-bg { fill: var(--bg-0); }
+
+/* ---------------- Split pane ------------------------------------------------ */
+.fsplit { display: flex; width: 100%; min-height: 0; }
+.fsplit.is-vertical { flex-direction: column; }
+.fsplit-pane { min-width: 0; min-height: 0; overflow: auto; }
+.fsplit-divider {
+  flex: none; position: relative; background: var(--border-subtle);
+  width: 4px; cursor: col-resize; border-radius: var(--r-sm);
+  transition: background var(--dur-1) var(--ease-out);
+}
+.fsplit.is-vertical > .fsplit-divider { width: auto; height: 4px; cursor: row-resize; }
+.fsplit-divider:hover, .fsplit-divider.is-dragging { background: var(--accent); }
+.fsplit-divider::after { content: ''; position: absolute; inset: -4px; }
+
 /* Continuous loops use linear — --ease-out is for enter/exit only (tokens.md). */
 @keyframes fgraph-ants   { to { stroke-dashoffset: -10; } }  /* period = 6+4 dash cycle */
 @keyframes fgraph-broken { 50% { opacity: 0.3; } }
 @keyframes fspinner-spin { to { transform: rotate(360deg); } }
 @keyframes fprogress-slide { from { translate: -100% 0; } to { translate: 350% 0; } }
+@keyframes fskel-shimmer { from { background-position: 200% 0; } to { background-position: 0 0; } }
+@keyframes ftoast-in { from { opacity: 0; translate: 0 8px; } }
+@keyframes fsheet-in { from { translate: 100% 0; } }
+@keyframes fsheet-in-left { from { translate: -100% 0; } }
 
 /* Static fallbacks (also what reduced-motion users see): states stay legible
    with no animation to freeze mid-frame. */
@@ -524,6 +899,11 @@
   .fprogress.is-indeterminate .fprogress-fill {
     width: 40%; background: var(--accent);
     animation: fprogress-slide 1.2s linear infinite;
+  }
+  .fskel {
+    background: linear-gradient(90deg, var(--bg-2), var(--bg-3), var(--bg-2));
+    background-size: 200% 100%;
+    animation: fskel-shimmer 1.6s linear infinite;
   }
 }
 /* Spinner needs no gating: the global reduced-motion kill switch freezes it
@@ -582,6 +962,10 @@
   .flogs { height: calc(100dvh - 180px); }  /* dvh: stable under mobile URL bar */
   .flog-line { grid-template-columns: 64px 48px 1fr; gap: 8px; padding: 2px 12px; }
   .settings-row { grid-template-columns: 1fr; }
+  .fsheet-panel { width: 100%; }
+  .ftoaster { left: 16px; right: 16px; align-items: stretch; }
+  .ftoaster .ftoast { max-width: none; }
+  .fcmd { padding-top: 48px; }
 }
 
 /* Touch: tap-target minimums beyond the --h-* bump in colors_and_type.css. */
@@ -591,4 +975,9 @@
   .fcheck-box, .fradio-dot { width: 20px; height: 20px; }
   .fcheck, .ftoggle, .fradio { min-height: var(--h-sm); }
   .fgraph-port::after { inset: -8px; }
+  .fmenu-item, .fcmd-item { min-height: var(--h-sm); }
+  .ftab { min-height: var(--h-md); }
+  .fcal-day { height: 40px; }
+  .fpage-btn { width: var(--h-md); height: var(--h-md); }
+  .fsplit-divider::after { inset: -8px; }
 }

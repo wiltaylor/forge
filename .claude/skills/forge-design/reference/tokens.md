@@ -90,7 +90,10 @@ tinted border (like toasts do), use `color-mix(in oklab, var(--<tone>) 30%, tran
 
 - Spacing: 4px base. `--sp-1..16` = 4, 8, 12, 16, 20, 24, 32, 40, 48, 64.
 - Radii: `--r-sm` 4px (buttons, inputs, badges) · `--r-md` 6px (cards) · `--r-lg` 8px (modals, large panels) ·
-  `--r-pill` only for status dots, avatars, **toggle-switch tracks and graph port dots** — **never on buttons**.
+  `--r-pill` only for status dots, avatars, **toggle-switch tracks, slider thumbs and graph
+  port dots** — **never on buttons**.
+- Gradients stay banned decoratively; the two sanctioned **functional fills** are the
+  skeleton shimmer sweep and the slider's hard-stop track fill.
 - Heights: `--h-sm` 28 · `--h-md` 32 (default control + table row) · `--h-lg` 36 · `--h-xl` 40.
 - Shell: `--topbar-h` 48px · `--sidebar-w` 240px — the app-shell grid and the mobile drawer share these.
 - Density is the point: 32px table rows, 14px body, 48px topbar, 240px sidebar.
@@ -125,6 +128,49 @@ responsive, no media query needed.
   frozen frame would be misleading (a flash stuck at low opacity), put the animated
   treatment inside `@media (prefers-reduced-motion: no-preference)` with a static, legible
   fallback outside it — see the `.fgraph-edge.is-active/.is-broken` pattern in console.css.
+
+## Layers (z-index ladder)
+
+| z | Layer | Classes |
+|---|---|---|
+| 10 | topbar | `.ftopbar` |
+| 20 | drawer scrim | `.fscrim` |
+| 30 | sidebar drawer | `.fsidebar` (≤1024px) |
+| 40 | sheet | `.fsheet` — above the drawer, below modals |
+| 50 | modal, command palette | `.fmodal`, `.fcmd` (don't open both) |
+| 60 | anchored popovers | `.fpop`, `.fselect-pop` — beat modals so they work inside them |
+| 70 | toaster, editor context menu | `.ftoaster`, `.fcode-menu` |
+| 80 | tooltip | `.ftip::after` |
+
+## Chart colours
+
+Categorical series use a **fixed, validated order** (dataviz six-checks validator; min
+adjacent CVD ΔE **17.8 dark / 16.9 light**, target ≥ 12; light mode passes all checks,
+dark mode's warning/success/info sit slightly above the lightness band — a conscious
+brand-tokens-only tradeoff mitigated by always-on legends, direct labels and 2px surface
+gaps). Never reorder, never cycle:
+
+| Slot | Token | Slot | Token |
+|---|---|---|---|
+| 1 | `--accent` | 4 | `--warning` |
+| 2 | `--danger` | 5 | `--info` |
+| 3 | `--success` | Other (fold, not a slot) | `--fg-2` |
+
+When the data is **semantic** (statuses, health), use `tone:` props — the status meaning
+wins and the categorical ramp is not used. Text in charts always wears text tokens
+(`--fg-1`/`--fg-2`), never the series colour.
+
+## Syntax highlighting (code.jsx)
+
+| Lezer tag group | Token | Lezer tag group | Token |
+|---|---|---|---|
+| keywords | `--accent-fg` | types, classes, regex | `--warning-fg` |
+| strings | `--success-fg` | properties, attributes | `--info-fg` |
+| numbers, bools | `--info-fg` | punctuation, operators | `--fg-2` |
+| comments | `--fg-3` | invalid | `--danger-fg` |
+| variables | `--fg-0` | HTML tags, links | `--accent-fg` |
+
+`-fg` variants so contrast holds in both themes; no italics — Forge has no italic voice.
 
 ## Graph port colours
 
