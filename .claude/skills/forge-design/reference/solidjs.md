@@ -10,7 +10,9 @@ How to wire the Forge design system into a SolidJS project and build screens wit
    cp ${CLAUDE_SKILL_DIR}/assets/console.css        <project>/src/forge/
    cp ${CLAUDE_SKILL_DIR}/assets/ui.jsx             <project>/src/forge/
    ```
-2. Import the CSS once, in the app entry, tokens first. Find the entry by reading the
+2. The three files version together — `ui.jsx` components emit classes defined in `console.css`
+   (e.g. `Modal` needs the `.fmodal` block), so always copy/update them as a set, never one file.
+3. Import the CSS once, in the app entry, tokens first. Find the entry by reading the
    project's `index.html` — the `<script type="module" src="...">` points at it (Vite
    defaults: `src/index.tsx` or `src/main.tsx`):
    ```jsx
@@ -18,9 +20,10 @@ How to wire the Forge design system into a SolidJS project and build screens wit
    import './forge/console.css';
    ```
    Fonts (IBM Plex Sans + JetBrains Mono) load via the `@import` inside the token CSS — no extra step.
-3. Install the icon set: `npm i lucide-solid` (or `pnpm add` / `bun add` — match the project's lockfile).
+4. Install the icon set: `npm i lucide-solid` (or `pnpm add` / `bun add` — match the project's lockfile).
    If the project cannot take the dependency, inline SVGs with `stroke="currentColor" stroke-width="1.5"`.
-4. Do **not** add other runtime dependencies for styling. Tailwind is optional; if the project already
+   (`ui.jsx` itself works without lucide — its hamburger and modal-close icons are inline SVGs.)
+5. Do **not** add other runtime dependencies for styling. Tailwind is optional; if the project already
    uses it, expose the tokens in `theme.extend` (e.g. `colors: { 'bg-1': 'var(--bg-1)', accent: 'var(--accent)' }`)
    rather than duplicating values.
 
@@ -56,6 +59,31 @@ How to wire the Forge design system into a SolidJS project and build screens wit
 | `StatusDot` | `tone` | 6px solid dot; pair with text, don't use alone. |
 | `Kbd` | children | Keyboard shortcut chip. |
 | `Icon` | `of` (lucide component), `size` | Forge defaults: 16px, 1.5px stroke, `currentColor`. |
+
+Shell & navigation (classes shown so raw-class markup stays discoverable):
+
+| Component | Props | Notes |
+|---|---|---|
+| `AppShell` | `topbar` (JSX), `sidebar` (JSX), children → main | The whole `.app-shell` grid. **Owns the mobile drawer**: hamburger, scrim and close-on-nav-tap are built in — zero wiring. |
+| `NavSection` | children | `.fsidebar-section` group label. |
+| `NavLink` | `href`, `icon`, `active`, `count`, native `<a>` props | Sidebar link; `.is-active` rail + right-aligned `.count`. |
+| `Crumbs` | `items` (array) | `.ftopbar-crumbs` with `/` separators. |
+| `IconButton` | `icon`, `label` (aria-label + title), native button props | `.ftopbar-icon-btn` for bell/theme/user. |
+
+Page & data:
+
+| Component | Props | Notes |
+|---|---|---|
+| `PageHead` | `title`, `sub`, `actions` (JSX) | `.page-head` header row. |
+| `Grid` | children, native div props | `.fgrid` auto-fit tile grid (stat rows, card grids). |
+| `Table` | children (`<thead>`/`<tbody>`), native table props | `.ftable-wrap > .ftable` — mobile scroll built in. Markup-only; render rows with `<For>`. |
+| `Logs` / `LogLine` | native div props / `time`, `level` (`info\|warn\|error\|debug`), children | `.flogs` container of `.flog-line` rows. |
+| `SettingsLayout` | `nav` (JSX links), children | `.settings-layout` with sticky `.settings-nav`. |
+| `SettingsSection` | `title`, `sub`, children | `.settings-section` card. |
+| `SettingsRow` | children | `.settings-row` two-column field grid. |
+| `Empty` | `title`, `action` (JSX), children (one sentence) | `.empty` dashed empty state. |
+| `Eyebrow` | children | `.eyebrow` micro-label. |
+| `Modal` | `open`, `onClose`, `title`, `footer` (JSX), children | Portal + `.fmodal`; closes on Escape, backdrop click, head X. Controlled by a signal. **Requires the `.fmodal` block in console.css — copy both files together.** |
 
 <examples>
 <example name="dashboard-card">
@@ -94,59 +122,59 @@ function DeploysCard(props) {
 
 ## Layout & screen patterns (classes from `console.css`)
 
-- **App shell**: one grid — `<div class="app-shell">` containing `<header class="ftopbar">`,
-  `<nav class="fsidebar">`, `<main class="app-main">`. Topbar 48px, sidebar 240px, both sticky.
-  At ≤1024px the sidebar becomes an off-canvas drawer — wire it per "Responsive patterns" below.
+- **App shell**: `<AppShell topbar={…} sidebar={…}>` (drawer built in) — or raw
+  `<div class="app-shell">` containing `.ftopbar`/`.fsidebar`/`.app-main`. Topbar 48px,
+  sidebar 240px, both sticky; at ≤1024px the sidebar becomes an off-canvas drawer
+  (see "Responsive patterns").
 - **Sidebar nav**: `.fsidebar-section` uppercase group labels; links get `.is-active` for the current
   route (accent inset rail comes free); `<span class="count">` right-aligns a mono counter.
 - **Page header**: `.page-head` with `<h1>` + `.sub` caption on the left, `.page-actions` buttons right.
 - **Topbar**: `.ftopbar-brand`, `.ftopbar-crumbs` (separator `<span class="sep">/</span>`),
   `.ftopbar-search`, `.ftopbar-icon-btn` for bell/theme/user.
-- **Tables**: `.ftable` — sticky uppercase headers, 32px hoverable rows, `.col-mono` for IDs/times.
-  Standard markup: `<Card padded={false}><div class="ftable-wrap"><table class="ftable">…` — the
-  wrap div scrolls the table horizontally at ≤768px so it never forces page-level scroll.
+- **Tables**: `<Card padded={false}><Table><thead>…` — sticky uppercase headers, 32px hoverable
+  rows, `.col-mono` for IDs/times. `Table` renders `.ftable-wrap > .ftable`, which scrolls the
+  table horizontally at ≤768px so it never forces page-level scroll.
 - **Logs**: `.flogs` container of `.flog-line` grids (`.flog-time` / `.flog-level info|warn|error|debug` /
   `.flog-msg`). Mono, dense, on `--bg-0`.
-- **Settings**: `.settings-layout` (sticky `.settings-nav` + `.settings-section` cards, `.settings-row`
-  two-column field grid).
-- **Empty states**: `.empty` — dashed border, one sentence + one action button. Never a paragraph.
-- **Stat rows**: `<div class="fgrid">` of `<Card><Stat …/></Card>` tiles — auto-fit columns,
-  collapses to one column on narrow screens with no media query.
-- **Modals**: `--bg-1` panel, `--r-lg`, `1px solid var(--border-strong)`; backdrop
-  `rgb(0 0 0 / 0.5)` + `backdrop-filter: blur(4px)`; enter over `--dur-3`.
+- **Settings**: `<SettingsLayout nav={…}><SettingsSection title …><SettingsRow>` — sticky nav +
+  section cards + two-column field grids.
+- **Empty states**: `<Empty title="…" action={…}>one sentence</Empty>`. Never a paragraph.
+- **Stat rows**: `<Grid>` of `<Card><Stat …/></Card>` tiles — auto-fit columns, collapses to one
+  column on narrow screens with no media query.
+- **Modals**: `<Modal open={sig()} onClose={…} title footer={…}>` — Portal-rendered `.fmodal`:
+  `--bg-1` panel, `--r-lg`, `border-strong`, dimmed blurred backdrop, enter over `--dur-3`;
+  closes on Escape / backdrop / X.
 
 ## Responsive patterns
 
-The component CSS is responsive out of the box (breakpoints in `reference/tokens.md`); the one
-thing each app must wire is the sidebar drawer — a signal plus three elements:
+The component CSS is responsive out of the box (breakpoints in `reference/tokens.md`), and
+`AppShell` owns the mobile drawer — hamburger, scrim, and close-on-nav-tap need zero wiring:
 
 ```jsx
-import { createSignal } from 'solid-js';
-import { Menu } from 'lucide-solid';
-import { Icon } from './forge/ui';
+import { AppShell, NavSection, NavLink, Crumbs, IconButton } from './forge/ui';
+import { LayoutGrid, Bell } from 'lucide-solid';
 
-function AppShell(props) {
-  const [navOpen, setNavOpen] = createSignal(false);
-  const close = () => setNavOpen(false);
-  return (
-    <div class="app-shell" classList={{ 'is-sidebar-open': navOpen() }}>
-      <header class="ftopbar">
-        <button class="ftopbar-icon-btn fsidebar-toggle" aria-label="Toggle navigation"
-                aria-expanded={navOpen()} onClick={() => setNavOpen((o) => !o)}>
-          <Icon of={Menu} />
-        </button>
-        {/* brand, crumbs, search … */}
-      </header>
-      <nav class="fsidebar" onClick={close}>{/* sections + links */}</nav>
-      <div class="fscrim" onClick={close} />
-      <main class="app-main">{props.children}</main>
-    </div>
-  );
-}
+<AppShell
+  topbar={<>
+    <div class="ftopbar-brand"><strong>console</strong></div>
+    <Crumbs items={['fleet', 'nodes']} />
+    <div style={{ flex: 1 }} />
+    <IconButton icon={Bell} label="Notifications" />
+  </>}
+  sidebar={<>
+    <NavSection>Fleet</NavSection>
+    <NavLink href="/" icon={LayoutGrid} active count={12}>Overview</NavLink>
+  </>}
+>
+  {/* page content */}
+</AppShell>
 ```
 
-- The toggle and scrim are `display: none` on desktop, so this markup is inert above 1024px.
-- `onClick={close}` on the `<nav>` closes the drawer after a link tap (harmless on desktop).
+- Fallback (raw-class shells that can't use `ui.jsx`): add a `createSignal(false)`, toggle
+  `is-sidebar-open` on `.app-shell` via `classList`, render a
+  `button.ftopbar-icon-btn.fsidebar-toggle` first in the topbar and a `div.fscrim` after the
+  nav, both clicking the signal closed. The toggle and scrim are `display: none` on desktop,
+  so the markup is inert above 1024px.
 - Don't hide content to make a screen fit — reflow it. The only sanctioned removal is the
   breadcrumbs at ≤768px (the page `<h1>` carries location).
 - Test widths: **1280** (desktop truth), **1024** and **768** (breakpoint edges), **375** (phone).

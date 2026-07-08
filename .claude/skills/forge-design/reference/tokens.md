@@ -140,7 +140,7 @@ Every new component must pass all of these before it ships:
 
 - [ ] Colours only via `var(--token)` — no hardcoded hex/oklch anywhere in component code
 - [ ] Surface = `--bg-1` + `1px solid var(--border)`; floating surface = `--bg-4` + `--border-strong`
-- [ ] No `box-shadow` for elevation (backdrop of modals: `rgb(0 0 0 / 0.5)` + `blur(4px)` is the one exception)
+- [ ] No `box-shadow` for elevation (the `.fmodal` backdrop — `rgb(0 0 0 / 0.5)` + `blur(4px)` — is the one exception)
 - [ ] No gradients, no frosted glass on cards/buttons, no emoji, no unicode-as-icon (`→`, `✓`)
 - [ ] Status shown with the tone triple: `-bg` tint + `-fg` text, or a solid `--<tone>` dot
 - [ ] Hover/press/focus/disabled states follow the ladder above (interactive components only)
