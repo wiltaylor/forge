@@ -3,7 +3,7 @@
    Icons come from lucide-solid: pass the imported icon component via the
    `icon` prop, e.g. icon={Terminal}. All icons render at 1.5px stroke. */
 
-import { Show, Index, createSignal, createEffect, onCleanup, mergeProps, splitProps } from 'solid-js';
+import { Show, For, Index, createSignal, createEffect, createUniqueId, onCleanup, mergeProps, splitProps } from 'solid-js';
 import { Dynamic, Portal } from 'solid-js/web';
 
 /* ---------------- Icon ----------------------------------------------------- */
@@ -325,5 +325,271 @@ export function Modal(props) {
         </div>
       </Portal>
     </Show>
+  );
+}
+
+/* ===========================================================================
+   Form controls — Checkbox / Toggle / Radio hide a native input (a11y + form
+   semantics) and draw the control with console.css classes.
+   =========================================================================== */
+
+const CheckMark = () => (
+  <svg class="fcheck-mark" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+       stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M4 12l5 5L20 6" />
+  </svg>
+);
+const CheckDash = () => (
+  <svg class="fcheck-dash" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+       stroke-width="3" stroke-linecap="round" aria-hidden="true" style={{ position: 'absolute' }}>
+    <line x1="5" y1="12" x2="19" y2="12" />
+  </svg>
+);
+const ChevronDown = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+       stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M6 9l6 6 6-6" />
+  </svg>
+);
+
+/* ---------------- Checkbox ------------------------------------------------- */
+export function Checkbox(props) {
+  const [local, rest] = splitProps(props, ['checked', 'onChange', 'indeterminate', 'children']);
+  let input;
+  createEffect(() => { if (input) input.indeterminate = !!local.indeterminate; });
+  return (
+    <label class="fcheck">
+      <input ref={input} type="checkbox" checked={local.checked}
+             onInput={(e) => local.onChange?.(e.currentTarget.checked)} {...rest} />
+      <span class="fcheck-box"><CheckMark /><CheckDash /></span>
+      <Show when={local.children}>
+        <span class="fcheck-label">{local.children}</span>
+      </Show>
+    </label>
+  );
+}
+
+/* ---------------- Toggle (switch) ------------------------------------------ */
+export function Toggle(props) {
+  const [local, rest] = splitProps(props, ['checked', 'onChange', 'children']);
+  return (
+    <label class="ftoggle">
+      <input type="checkbox" role="switch" checked={local.checked}
+             onInput={(e) => local.onChange?.(e.currentTarget.checked)} {...rest} />
+      <span class="ftoggle-track"><span class="ftoggle-knob" /></span>
+      <Show when={local.children}>
+        <span class="ftoggle-label">{local.children}</span>
+      </Show>
+    </label>
+  );
+}
+
+/* ---------------- Radio ---------------------------------------------------- */
+export function Radio(props) {
+  const [local, rest] = splitProps(props, ['value', 'checked', 'onChange', 'children']);
+  return (
+    <label class="fradio">
+      <input type="radio" value={local.value} checked={local.checked}
+             onInput={() => local.onChange?.(local.value)} {...rest} />
+      <span class="fradio-dot" />
+      <Show when={local.children}>
+        <span class="fradio-label">{local.children}</span>
+      </Show>
+    </label>
+  );
+}
+
+export function RadioGroup(props) {
+  const merged = mergeProps({ name: createUniqueId() }, props);
+  return (
+    <div class="ffield">
+      <Show when={merged.label}>
+        <span class="ffield-label">{merged.label}</span>
+      </Show>
+      <div class="fradio-group" classList={{ 'is-row': !!merged.row }} role="radiogroup">
+        <For each={merged.options}>
+          {(opt) => (
+            <Radio name={merged.name} value={opt.value} checked={merged.value === opt.value}
+                   disabled={opt.disabled} onChange={(v) => merged.onChange?.(v)}>
+              {opt.label}
+            </Radio>
+          )}
+        </For>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Select (custom popover dropdown) -------------------------- */
+export function Select(props) {
+  const [local, rest] = splitProps(props,
+    ['options', 'value', 'onChange', 'placeholder', 'label', 'help', 'error', 'children']);
+  const [open, setOpen] = createSignal(false);
+  const [activeIdx, setActiveIdx] = createSignal(-1);
+  let root;
+
+  const selected = () => local.options?.find((o) => o.value === local.value);
+  const enabledIdx = (from, dir) => {
+    const opts = local.options ?? [];
+    for (let i = from; i >= 0 && i < opts.length; i += dir) if (!opts[i].disabled) return i;
+    return -1;
+  };
+  const openAt = () => {
+    const cur = local.options?.findIndex((o) => o.value === local.value) ?? -1;
+    setActiveIdx(cur >= 0 ? cur : enabledIdx(0, 1));
+    setOpen(true);
+  };
+  const commit = (idx) => {
+    const opt = local.options?.[idx];
+    if (opt && !opt.disabled) { local.onChange?.(opt.value); setOpen(false); }
+  };
+  const onKeyDown = (e) => {
+    if (!open()) {
+      if (['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(e.key)) { e.preventDefault(); openAt(); }
+      return;
+    }
+    if (e.key === 'Escape') setOpen(false);
+    else if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIdx((i) => enabledIdx(Math.min(i + 1, local.options.length - 1), 1) ?? i); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIdx((i) => enabledIdx(Math.max(i - 1, 0), -1) ?? i); }
+    else if (e.key === 'Home') { e.preventDefault(); setActiveIdx(enabledIdx(0, 1)); }
+    else if (e.key === 'End') { e.preventDefault(); setActiveIdx(enabledIdx(local.options.length - 1, -1)); }
+    else if (e.key === 'Enter') { e.preventDefault(); commit(activeIdx()); }
+  };
+  createEffect(() => {
+    if (!open()) return;
+    const onDown = (e) => { if (!root.contains(e.target)) setOpen(false); };
+    document.addEventListener('pointerdown', onDown);
+    onCleanup(() => document.removeEventListener('pointerdown', onDown));
+  });
+
+  return (
+    <div class="ffield">
+      <Show when={local.label}>
+        <span class="ffield-label">{local.label}</span>
+      </Show>
+      <div class="fselect" classList={{ 'is-open': open() }} ref={root}>
+        <button type="button" class="fselect-btn" aria-haspopup="listbox" aria-expanded={open()}
+                onClick={() => (open() ? setOpen(false) : openAt())} onKeyDown={onKeyDown} {...rest}>
+          <span class="fselect-value" classList={{ 'is-placeholder': !selected() }}>
+            {selected()?.label ?? local.placeholder ?? 'Select…'}
+          </span>
+          <ChevronDown />
+        </button>
+        <Show when={open()}>
+          <div class="fselect-pop" role="listbox">
+            <For each={local.options}>
+              {(opt, i) => (
+                <div class="fselect-opt" role="option" aria-selected={opt.value === local.value}
+                     classList={{
+                       'is-active': i() === activeIdx(),
+                       'is-selected': opt.value === local.value,
+                       'is-disabled': !!opt.disabled,
+                     }}
+                     onPointerEnter={() => !opt.disabled && setActiveIdx(i())}
+                     onClick={() => commit(i())}>
+                  {opt.label}
+                  <Show when={opt.value === local.value}>
+                    <span class="fselect-check"><CheckMark /></span>
+                  </Show>
+                </div>
+              )}
+            </For>
+          </div>
+        </Show>
+      </div>
+      <Show when={local.help}>
+        <span class="ffield-help" classList={{ 'is-error': !!local.error }}>{local.help}</span>
+      </Show>
+    </div>
+  );
+}
+
+/* ---------------- ListBox --------------------------------------------------- */
+/* Single-select: value/onChange(value). Multi: multiple + values/onChange(values). */
+export function ListBox(props) {
+  const [local, rest] = splitProps(props,
+    ['options', 'value', 'values', 'onChange', 'multiple', 'label']);
+  const [activeIdx, setActiveIdx] = createSignal(-1);
+
+  const isSelected = (opt) =>
+    local.multiple ? (local.values ?? []).includes(opt.value) : opt.value === local.value;
+  const pick = (opt) => {
+    if (opt.disabled) return;
+    if (local.multiple) {
+      const cur = local.values ?? [];
+      local.onChange?.(cur.includes(opt.value) ? cur.filter((v) => v !== opt.value) : [...cur, opt.value]);
+    } else {
+      local.onChange?.(opt.value);
+    }
+  };
+  const onKeyDown = (e) => {
+    const opts = local.options ?? [];
+    if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIdx((i) => Math.min(i + 1, opts.length - 1)); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIdx((i) => Math.max(i - 1, 0)); }
+    else if (e.key === 'Home') { e.preventDefault(); setActiveIdx(0); }
+    else if (e.key === 'End') { e.preventDefault(); setActiveIdx(opts.length - 1); }
+    else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (opts[activeIdx()]) pick(opts[activeIdx()]); }
+  };
+
+  return (
+    <div class="ffield">
+      <Show when={local.label}>
+        <span class="ffield-label">{local.label}</span>
+      </Show>
+      <div class="flistbox" role="listbox" tabindex="0" aria-multiselectable={!!local.multiple}
+           onKeyDown={onKeyDown} {...rest}>
+        <For each={local.options}>
+          {(opt, i) => (
+            <div class="flistbox-opt" role="option" aria-selected={isSelected(opt)}
+                 classList={{ 'is-selected': isSelected(opt), 'is-active': i() === activeIdx(), 'is-disabled': !!opt.disabled }}
+                 onClick={() => { setActiveIdx(i()); pick(opt); }}>
+              <Show when={local.multiple}>
+                <span class="flistbox-check"><CheckMark /></span>
+              </Show>
+              {opt.label}
+            </div>
+          )}
+        </For>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Progress -------------------------------------------------- */
+/* Thin bar — the default Forge loading treatment. */
+export function Progress(props) {
+  const merged = mergeProps({ tone: 'accent', value: 0 }, props);
+  return (
+    <div class="fprogress" classList={{ 'is-indeterminate': !!merged.indeterminate }}>
+      <Show when={merged.label || merged.showValue}>
+        <div class="fprogress-head">
+          <span>{merged.label}</span>
+          <Show when={merged.showValue && !merged.indeterminate}>
+            <span class="fprogress-value">{Math.round(merged.value)} %</span>
+          </Show>
+        </div>
+      </Show>
+      <div class="fprogress-track" role="progressbar"
+           aria-valuemin="0" aria-valuemax="100"
+           aria-valuenow={merged.indeterminate ? undefined : Math.round(merged.value)}
+           aria-label={merged.label}>
+        <div class={`fprogress-fill${merged.tone !== 'accent' ? ` tone-${merged.tone}` : ''}`}
+             style={merged.indeterminate ? undefined : { width: `${Math.min(100, Math.max(0, merged.value))}%` }} />
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Spinner --------------------------------------------------- */
+/* For inline/button-adjacent waits — thin Progress stays the default (tokens.md). */
+export function Spinner(props) {
+  const merged = mergeProps({ size: 16, label: 'Loading' }, props);
+  return (
+    <svg class="fspinner" width={merged.size} height={merged.size} viewBox="0 0 24 24"
+         fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+         role="status" aria-label={merged.label}>
+      <circle cx="12" cy="12" r="9" opacity="0.25" />
+      <path d="M12 3 a 9 9 0 0 1 9 9" />
+    </svg>
   );
 }

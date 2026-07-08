@@ -90,7 +90,7 @@ tinted border (like toasts do), use `color-mix(in oklab, var(--<tone>) 30%, tran
 
 - Spacing: 4px base. `--sp-1..16` = 4, 8, 12, 16, 20, 24, 32, 40, 48, 64.
 - Radii: `--r-sm` 4px (buttons, inputs, badges) · `--r-md` 6px (cards) · `--r-lg` 8px (modals, large panels) ·
-  `--r-pill` only for status dots and avatars — **never on buttons**.
+  `--r-pill` only for status dots, avatars, **toggle-switch tracks and graph port dots** — **never on buttons**.
 - Heights: `--h-sm` 28 · `--h-md` 32 (default control + table row) · `--h-lg` 36 · `--h-xl` 40.
 - Shell: `--topbar-h` 48px · `--sidebar-w` 240px — the app-shell grid and the mobile drawer share these.
 - Density is the point: 32px table rows, 14px body, 48px topbar, 240px sidebar.
@@ -116,9 +116,27 @@ responsive, no media query needed.
 
 ## Motion
 
-- `--ease-out: cubic-bezier(0.2, 0, 0, 1)` — the only easing. No spring, no bounce.
+- `--ease-out: cubic-bezier(0.2, 0, 0, 1)` — the only easing for enter/exit/state changes.
+  No spring, no bounce.
+- **Continuous infinite loops use `linear`** (marching-ants edges, spinner, indeterminate
+  progress) — easing a seamless loop reads as pulsing.
 - `--dur-1` 80ms (hover/press) · `--dur-2` 160ms (panels) · `--dur-3` 240ms (modals, routes).
-- Reduced motion is honored globally by the token CSS.
+- Reduced motion is honored globally by the token CSS. For **infinite** animations whose
+  frozen frame would be misleading (a flash stuck at low opacity), put the animated
+  treatment inside `@media (prefers-reduced-motion: no-preference)` with a static, legible
+  fallback outside it — see the `.fgraph-edge.is-active/.is-broken` pattern in console.css.
+
+## Graph port colours
+
+Node-graph connection ports (and their edges) colour by data type — the one sanctioned
+data-driven colour use (applied as inline `var(--…)`, still token-pure):
+
+| Type | Token | Type | Token |
+|---|---|---|---|
+| `trigger` | `--fg-0` | `object` | `--accent` |
+| `string` | `--success` | `array` | `--warning` |
+| `number` | `--info` | `any` | `--fg-3` |
+| `boolean` | `--danger` | | |
 
 ## Interaction states (apply to every new *interactive* component)
 
@@ -132,7 +150,8 @@ treatment — for them, only both-theme legibility and reduced-motion safety app
   `:focus-visible`). Inputs use `border-color: var(--accent)` + `box-shadow: 0 0 0 3px var(--accent-bg)`.
 - **Active/selected nav**: `--bg-2` fill + `box-shadow: inset 2px 0 0 var(--accent)` left rail.
 - **Disabled**: `opacity: 0.4; pointer-events/cursor off`. No special background.
-- **Loading**: thin 1px top progress bar or inline shimmer — spinners are not the default.
+- **Loading**: the thin `Progress` bar (or a 1px top bar / inline shimmer) is the default;
+  the `Spinner` component is sanctioned only for inline and button-adjacent waits.
 
 ## New-component checklist
 

@@ -10,6 +10,9 @@ How to wire the Forge design system into a SolidJS project and build screens wit
    cp ${CLAUDE_SKILL_DIR}/assets/console.css        <project>/src/forge/
    cp ${CLAUDE_SKILL_DIR}/assets/ui.jsx             <project>/src/forge/
    ```
+   A fourth asset, `assets/graph.jsx` (the `NodeGraph` editor), is **optional** — copy it
+   only when the project builds node editors / pipeline views. It needs no extra deps and
+   imports nothing from `ui.jsx`, but it does need this version's `console.css`.
 2. The three files version together — `ui.jsx` components emit classes defined in `console.css`
    (e.g. `Modal` needs the `.fmodal` block), so always copy/update them as a set, never one file.
 3. Import the CSS once, in the app entry, tokens first. Find the entry by reading the
@@ -84,6 +87,53 @@ Page & data:
 | `Empty` | `title`, `action` (JSX), children (one sentence) | `.empty` dashed empty state. |
 | `Eyebrow` | children | `.eyebrow` micro-label. |
 | `Modal` | `open`, `onClose`, `title`, `footer` (JSX), children | Portal + `.fmodal`; closes on Escape, backdrop click, head X. Controlled by a signal. **Requires the `.fmodal` block in console.css — copy both files together.** |
+
+Form controls (all controlled; Checkbox/Toggle/Radio keep a hidden native input for a11y):
+
+| Component | Props | Notes |
+|---|---|---|
+| `Checkbox` | `checked`, `onChange(bool)`, `indeterminate`, `disabled`, children = label | `.fcheck`; indeterminate renders an accent dash. |
+| `Toggle` | `checked`, `onChange(bool)`, `disabled`, children = label | `.ftoggle` switch — pill track is a sanctioned radius exception. |
+| `Radio` / `RadioGroup` | group: `options [{value,label,disabled?}]`, `value`, `onChange`, `label?`, `row?` | `.fradio`; group name auto-generated. |
+| `Select` | `options`, `value`, `onChange`, `placeholder`, `label`, `help`, `error`, `disabled` | Custom `.fselect-pop` popover (z 60 — works inside modals); Arrow/Enter/Escape/Home/End keys. Caveat: the popover is positioned in-flow, so inside a *scrolling* `.fmodal-body` it can clip — keep modal selects near the top or size the body. |
+| `ListBox` | `options` + single `value`/`onChange`, or `multiple` + `values[]`/`onChange(values)`, `label?` | `.flistbox` scrollable option list; multi rows get check indicators; keyboard nav. |
+| `Progress` | `value` 0–100, `tone` (`accent`\|`success`\|`warning`\|`danger`), `label?`, `showValue?`, `indeterminate?` | 4px `.fprogress` bar — the default Forge loading treatment. |
+| `Spinner` | `size` (16), `label` | Inline arc spinner, `currentColor` — for inline/button waits only. |
+
+## Node graphs (`assets/graph.jsx`, optional)
+
+`NodeGraph` is a **controlled** node editor: nodes/edges/selection live in the consumer's
+store; the component reports interactions via callbacks. Elbow (orthogonal) edge routing,
+typed connection ports, drag-to-move, drag-to-connect, click-to-select, Delete-to-remove.
+
+```jsx
+import { NodeGraph } from './forge/graph';
+
+<NodeGraph
+  nodes={[{ id: 'fetch', x: 40, y: 60, title: 'HTTP request',
+            inputs:  [{ id: 'run',  type: 'trigger' }],
+            outputs: [{ id: 'body', type: 'object' }, { id: 'status', type: 'number' }] }]}
+  edges={[{ id: 'e1', from: { node: 'fetch', port: 'body' },
+            to: { node: 'parse', port: 'raw' }, state: 'active' }]}  // 'active' | 'broken' | default
+  selected={sel()}                          // null | {kind: 'node'|'edge', id}
+  onNodeMove={(id, x, y) => …}              // fires per pointermove — write to your store
+  onConnect={({ from, to }) => …}           // append the edge (types already validated)
+  onSelect={setSel}                         // null on background click
+  onDelete={(sel) => …}                     // Delete/Backspace with a selection
+  style={{ height: '460px' }}               // consumer sizes the canvas
+/>
+```
+
+- Edge `state`: `active` = marching-ants animation (flow direction out → in); `broken` =
+  flashing danger; default = solid in the source port's type colour. Under reduced motion
+  both fall back to static, legible styles.
+- Port types → colours (`PORT_COLORS` export): trigger `--fg-0`, string `--success`,
+  number `--info`, boolean `--danger`, object `--accent`, array `--warning`, any `--fg-3`.
+  `any` connects to everything; otherwise types must match.
+- Nodes are fixed-width (`--fgraph-node-w`, 180px; per-node `w` override) so edge anchors
+  are computed without DOM measurement. Optional per-node body: pass a render-prop child
+  `{(node) => JSX}`.
+- Future work (not yet built): pan/zoom viewport, auto-width nodes.
 
 <examples>
 <example name="dashboard-card">

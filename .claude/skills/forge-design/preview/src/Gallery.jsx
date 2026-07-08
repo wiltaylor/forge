@@ -4,19 +4,23 @@ import {
   AppShell, NavSection, NavLink, Crumbs, IconButton, Badge,
 } from '@forge/ui.jsx';
 import Primitives from './sections/Primitives';
+import FormsDemo from './sections/FormsDemo';
 import Layout from './sections/Layout';
 import TableDemo from './sections/TableDemo';
 import LogsDemo from './sections/LogsDemo';
 import SettingsDemo from './sections/SettingsDemo';
 import ModalDemo from './sections/ModalDemo';
+import GraphDemo from './sections/GraphDemo';
 
 const SECTIONS = [
   ['primitives', 'Primitives', Primitives],
+  ['forms', 'Forms', FormsDemo],
   ['layout', 'Page & layout', Layout],
   ['tables', 'Tables', TableDemo],
   ['logs', 'Logs', LogsDemo],
   ['settings', 'Settings', SettingsDemo],
   ['modal', 'Modal', ModalDemo],
+  ['graph', 'Node graph', GraphDemo],
 ];
 
 function useViewport() {

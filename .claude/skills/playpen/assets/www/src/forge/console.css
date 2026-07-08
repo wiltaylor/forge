@@ -305,6 +305,231 @@
   padding: 12px 16px; border-top: 1px solid var(--border-subtle);
 }
 
+/* ---------------- Form controls -------------------------------------------- */
+/* Checkbox / Toggle / Radio hide a native input (kept for a11y + form
+   semantics) and draw their own control. */
+.fcheck, .ftoggle, .fradio {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 13px; color: var(--fg-0); cursor: pointer; user-select: none;
+}
+.fcheck input, .ftoggle input, .fradio input {
+  position: absolute; width: 1px; height: 1px; opacity: 0;
+  margin: 0; pointer-events: none;
+}
+.fcheck input:disabled ~ *, .ftoggle input:disabled ~ *, .fradio input:disabled ~ * {
+  opacity: 0.4; cursor: not-allowed;
+}
+
+.fcheck-box {
+  width: 16px; height: 16px; flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--bg-1); border: 1px solid var(--border); border-radius: var(--r-sm);
+  color: var(--accent-contrast);
+  transition: background var(--dur-1) var(--ease-out), border-color var(--dur-1) var(--ease-out);
+}
+.fcheck-box svg { opacity: 0; }
+.fcheck input:checked + .fcheck-box,
+.fcheck input:indeterminate + .fcheck-box {
+  background: var(--accent); border-color: var(--accent);
+}
+.fcheck input:checked + .fcheck-box svg.fcheck-mark { opacity: 1; }
+.fcheck input:indeterminate + .fcheck-box svg.fcheck-dash { opacity: 1; }
+.fcheck input:indeterminate + .fcheck-box svg.fcheck-mark { opacity: 0; }
+.fcheck input:focus-visible + .fcheck-box {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+
+/* Toggle track is the sanctioned pill exception (see tokens.md radius rule). */
+.ftoggle-track {
+  width: 32px; height: 18px; flex: none; position: relative;
+  background: var(--bg-3); border: 1px solid var(--border); border-radius: var(--r-pill);
+  transition: background var(--dur-2) var(--ease-out), border-color var(--dur-2) var(--ease-out);
+}
+.ftoggle-knob {
+  position: absolute; top: 1px; left: 1px;
+  width: 14px; height: 14px; border-radius: var(--r-pill);
+  background: var(--fg-1);
+  transition: translate var(--dur-2) var(--ease-out), background var(--dur-2) var(--ease-out);
+}
+.ftoggle input:checked + .ftoggle-track { background: var(--accent); border-color: var(--accent); }
+.ftoggle input:checked + .ftoggle-track .ftoggle-knob { translate: 14px 0; background: var(--accent-contrast); }
+.ftoggle input:focus-visible + .ftoggle-track { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.fradio-dot {
+  width: 16px; height: 16px; flex: none; position: relative;
+  background: var(--bg-1); border: 1px solid var(--border); border-radius: var(--r-pill);
+  transition: border-color var(--dur-1) var(--ease-out);
+}
+.fradio-dot::after {
+  content: ''; position: absolute; inset: 4px; border-radius: var(--r-pill);
+  background: var(--accent); opacity: 0;
+  transition: opacity var(--dur-1) var(--ease-out);
+}
+.fradio input:checked + .fradio-dot { border-color: var(--accent); }
+.fradio input:checked + .fradio-dot::after { opacity: 1; }
+.fradio input:focus-visible + .fradio-dot { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fradio-group { display: flex; flex-direction: column; gap: 8px; }
+.fradio-group.is-row { flex-direction: row; gap: 16px; flex-wrap: wrap; }
+
+.fselect { position: relative; }
+.fselect-btn {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  height: var(--h-md); padding: 0 10px;
+  background: var(--bg-1); border: 1px solid var(--border); border-radius: 4px;
+  color: var(--fg-0); font: inherit; font-size: 13px; text-align: left; cursor: pointer;
+  transition: border-color var(--dur-1) var(--ease-out);
+}
+.fselect-btn .fselect-value { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fselect-btn .is-placeholder { color: var(--fg-3); }
+.fselect-btn svg { color: var(--fg-2); flex: none; }
+.fselect-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.fselect.is-open .fselect-btn { border-color: var(--accent); }
+.fselect-pop {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+  z-index: 60;  /* must beat .fmodal (50) so selects work inside modals */
+  background: var(--bg-4); border: 1px solid var(--border-strong); border-radius: var(--r-md);
+  max-height: 240px; overflow-y: auto; padding: 4px;
+  animation: fmodal-in var(--dur-2) var(--ease-out);
+}
+.fselect-opt {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 8px; border-radius: var(--r-sm);
+  font-size: 13px; color: var(--fg-0); cursor: pointer;
+}
+.fselect-opt.is-active { background: var(--bg-2); }
+.fselect-opt.is-selected { color: var(--accent-fg); }
+.fselect-opt.is-disabled { opacity: 0.4; cursor: not-allowed; }
+.fselect-opt .fselect-check { margin-left: auto; }
+
+.flistbox {
+  background: var(--bg-1); border: 1px solid var(--border); border-radius: var(--r-md);
+  max-height: 200px; overflow-y: auto; padding: 4px; outline: none;
+}
+.flistbox:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg); }
+.flistbox-opt {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 8px; border-radius: var(--r-sm);
+  font-size: 13px; color: var(--fg-0); cursor: pointer;
+}
+.flistbox-opt:hover { background: var(--bg-2); }
+.flistbox-opt.is-active { background: var(--bg-2); }
+.flistbox-opt.is-selected { background: var(--accent-bg); color: var(--accent-fg); }
+.flistbox-check {
+  width: 14px; height: 14px; flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border-strong); border-radius: var(--r-sm);
+  color: var(--accent-fg);
+}
+.flistbox-check svg { opacity: 0; }
+.flistbox-opt.is-selected .flistbox-check { border-color: var(--accent); }
+.flistbox-opt.is-selected .flistbox-check svg { opacity: 1; }
+
+.fprogress { display: flex; flex-direction: column; gap: 6px; }
+.fprogress-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-size: 12px; color: var(--fg-1);
+}
+.fprogress-head .fprogress-value { font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: var(--fg-2); }
+.fprogress-track {
+  height: 4px; background: var(--bg-3); border-radius: var(--r-sm); overflow: hidden;
+}
+.fprogress-fill {
+  height: 100%; background: var(--accent); border-radius: var(--r-sm);
+  transition: width var(--dur-2) var(--ease-out);
+}
+.fprogress-fill.tone-success { background: var(--success); }
+.fprogress-fill.tone-warning { background: var(--warning); }
+.fprogress-fill.tone-danger  { background: var(--danger); }
+
+.fspinner { display: inline-block; vertical-align: middle; }
+
+/* ---------------- Node graph ------------------------------------------------ */
+/* Canvas is a consumer-sized, position:relative box; nodes are absolutely
+   positioned cards; edges live in an SVG overlay. All z-indices stay below
+   the topbar (10). */
+.fgraph {
+  position: relative; overflow: hidden;
+  background: var(--bg-0);
+  background-image: radial-gradient(var(--border) 1px, transparent 1px);
+  background-size: 20px 20px;
+  border: 1px solid var(--border); border-radius: var(--r-md);
+  outline: none;
+}
+.fgraph:focus-visible { border-color: var(--accent); }
+.fgraph-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.fgraph-node {
+  position: absolute; z-index: 1;
+  width: var(--fgraph-node-w, 180px);
+  background: var(--bg-1); border: 1px solid var(--border); border-radius: var(--r-md);
+  font-size: 12px;
+}
+.fgraph-node.is-selected { border-color: var(--accent); z-index: 2; }
+.fgraph-node-head {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 10px; border-bottom: 1px solid var(--border-subtle);
+  cursor: grab; height: 33px; box-sizing: border-box;
+}
+.fgraph-node-head:active { cursor: grabbing; }
+.fgraph-node-title { font-weight: 600; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fgraph-node-body { padding: 8px 10px; border-top: 1px solid var(--border-subtle); color: var(--fg-1); }
+.fgraph-row {
+  display: flex; align-items: center; height: 24px; padding: 0 12px;
+  color: var(--fg-1); position: relative;
+}
+.fgraph-row-out { justify-content: flex-end; }
+/* Port dots — pill radius sanctioned for dots (see tokens.md). Colour is set
+   inline from the port type. */
+.fgraph-port {
+  position: absolute; top: 50%; width: 10px; height: 10px;
+  translate: 0 -50%; border-radius: var(--r-pill);
+  background: var(--fg-3); border: 2px solid var(--bg-0);
+  cursor: crosshair;
+}
+.fgraph-port::after { content: ''; position: absolute; inset: -4px; }  /* hit area */
+.fgraph-port-in  { left: -5px; }
+.fgraph-port-out { right: -5px; }
+.fgraph-edge { fill: none; stroke: var(--border-strong); stroke-width: 1.5; pointer-events: none; }
+.fgraph-edge.is-selected { stroke: var(--accent); stroke-width: 2; }
+.fgraph-edge-hit {
+  fill: none; stroke: transparent; stroke-width: 12;
+  pointer-events: stroke; cursor: pointer;
+}
+.fgraph-pending {
+  fill: none; stroke: var(--accent); stroke-width: 1.5;
+  stroke-dasharray: 4 4; pointer-events: none;
+}
+
+/* Continuous loops use linear — --ease-out is for enter/exit only (tokens.md). */
+@keyframes fgraph-ants   { to { stroke-dashoffset: -10; } }  /* period = 6+4 dash cycle */
+@keyframes fgraph-broken { 50% { opacity: 0.3; } }
+@keyframes fspinner-spin { to { transform: rotate(360deg); } }
+@keyframes fprogress-slide { from { translate: -100% 0; } to { translate: 350% 0; } }
+
+/* Static fallbacks (also what reduced-motion users see): states stay legible
+   with no animation to freeze mid-frame. */
+.fgraph-edge.is-active { stroke: var(--accent); }
+.fgraph-edge.is-broken { stroke: var(--danger); stroke-dasharray: 2 3; }
+.fprogress.is-indeterminate .fprogress-fill { width: 100%; background: var(--accent-bg); transition: none; }
+
+/* Animated treatments only when motion is allowed. */
+@media (prefers-reduced-motion: no-preference) {
+  .fgraph-edge.is-active {
+    stroke-dasharray: 6 4;
+    animation: fgraph-ants 500ms linear infinite;  /* dashes flow output -> input */
+  }
+  .fgraph-edge.is-broken {
+    stroke-dasharray: none;
+    animation: fgraph-broken 800ms linear infinite;
+  }
+  .fprogress.is-indeterminate .fprogress-fill {
+    width: 40%; background: var(--accent);
+    animation: fprogress-slide 1.2s linear infinite;
+  }
+}
+/* Spinner needs no gating: the global reduced-motion kill switch freezes it
+   into a legible static arc. */
+.fspinner { animation: fspinner-spin 800ms linear infinite; }
+
 /* ---------------- Responsive ----------------------------------------------- */
 /* Desktop-first overrides only — nothing above this line changes on desktop.
    Breakpoints are documented in colors_and_type.css (compact 1024 / mobile 768). */
@@ -363,4 +588,7 @@
 @media (pointer: coarse) {
   .fsidebar a { min-height: var(--h-md); }
   .ftable td { padding: 12px 14px; }
+  .fcheck-box, .fradio-dot { width: 20px; height: 20px; }
+  .fcheck, .ftoggle, .fradio { min-height: var(--h-sm); }
+  .fgraph-port::after { inset: -8px; }
 }

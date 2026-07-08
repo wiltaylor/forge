@@ -8,6 +8,12 @@ The heaviest canvas template. Build on the **pointer-drag + SVG edge pattern** i
 `reference/solid-patterns.md`, extended with ports, a temporary drag-connection, and a
 viewport transform.
 
+> **Prefer the Forge `NodeGraph` component** (`forge-design/assets/graph.jsx` — elbow
+> edges, typed ports, animated/broken edge states, drag + connect built in) over
+> hand-rolling this from scratch; this template remains useful for its palette/
+> properties/persistence structure and for viewport panning, which NodeGraph doesn't
+> do yet.
+
 ## Layout
 
 Node palette + properties + actions (left), zoomable/pannable canvas (right,
