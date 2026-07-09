@@ -75,9 +75,10 @@ async fn term_upgrades_with_query_token() {
     let token = body["data"]["token"].as_str().unwrap().to_string();
 
     let addr = spawn(router).await;
-    let (mut ws, _) = tokio_tungstenite::connect_async(format!("ws://{addr}/api/term?token={token}"))
-        .await
-        .expect("ws connect with ?token=");
+    let (mut ws, _) =
+        tokio_tungstenite::connect_async(format!("ws://{addr}/api/term?token={token}"))
+            .await
+            .expect("ws connect with ?token=");
 
     // A malformed first frame draws an error control frame — receiving it
     // proves auth passed and the upgrade completed. Session behaviour proper

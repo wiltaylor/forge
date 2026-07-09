@@ -19,5 +19,9 @@ pub fn ok_empty() -> Response {
 
 /// Error envelope: `{"ok": false, "error": "<message>"}` with the given status.
 pub fn err(status: StatusCode, message: impl Into<String>) -> Response {
-    (status, Json(json!({ "ok": false, "error": message.into() }))).into_response()
+    (
+        status,
+        Json(json!({ "ok": false, "error": message.into() })),
+    )
+        .into_response()
 }

@@ -120,7 +120,11 @@ async fn list_metadata() {
     assert_eq!(body["data"], json!([]));
 
     send(&router, json_req("PUT", "/api/data/beta", &json!({"b": 2}))).await;
-    send(&router, json_req("PUT", "/api/data/alpha", &json!({"a": 1}))).await;
+    send(
+        &router,
+        json_req("PUT", "/api/data/alpha", &json!({"a": 1})),
+    )
+    .await;
 
     let (status, body) = send(&router, get("/api/data")).await;
     assert_eq!(status, StatusCode::OK);

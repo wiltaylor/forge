@@ -21,10 +21,7 @@ async fn sse_yields_published_events() {
     let bus = app.event_bus();
     let router = app.router();
 
-    let res = router
-        .oneshot(get("/api/events"))
-        .await
-        .unwrap();
+    let res = router.oneshot(get("/api/events")).await.unwrap();
     assert_eq!(res.status(), 200);
     assert_eq!(
         res.headers().get("content-type").unwrap(),

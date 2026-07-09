@@ -134,17 +134,17 @@ impl DocStore {
 }
 
 pub(crate) fn routes() -> Router<ForgeState> {
-    Router::new()
-        .route("/api/data", get(list_docs))
-        .route(
-            "/api/data/{name}",
-            get(get_doc).put(put_doc).delete(delete_doc),
-        )
+    Router::new().route("/api/data", get(list_docs)).route(
+        "/api/data/{name}",
+        get(get_doc).put(put_doc).delete(delete_doc),
+    )
 }
 
 fn store(state: &ForgeState) -> &DocStore {
     // Routes are only mounted when the doc store is configured.
-    state.docstore().expect("docstore routes mounted without a store")
+    state
+        .docstore()
+        .expect("docstore routes mounted without a store")
 }
 
 async fn list_docs(State(state): State<ForgeState>) -> Response {
@@ -172,7 +172,10 @@ async fn put_doc(
         match serde_json::from_slice(&body) {
             Ok(v) => v,
             Err(e) => {
-                return err(StatusCode::BAD_REQUEST, format!("body is not valid JSON: {e}"))
+                return err(
+                    StatusCode::BAD_REQUEST,
+                    format!("body is not valid JSON: {e}"),
+                )
             }
         }
     };

@@ -69,8 +69,15 @@ pub enum DesktopClientMsg {
         down: bool,
     },
     /// Framebuffer coordinates; `buttons` is the PointerEvent.buttons bitmask.
-    Mouse { x: u16, y: u16, buttons: u8 },
-    Wheel { dx: f64, dy: f64 },
+    Mouse {
+        x: u16,
+        y: u16,
+        buttons: u8,
+    },
+    Wheel {
+        dx: f64,
+        dy: f64,
+    },
     /// Ctrl+Alt+Del: the backend synthesizes the three-key press/release.
     Cad,
 }
@@ -154,7 +161,10 @@ mod tests {
 
     #[test]
     fn term_client_resize_round_trips() {
-        let msg = TermClientMsg::Resize { cols: 100, rows: 30 };
+        let msg = TermClientMsg::Resize {
+            cols: 100,
+            rows: 30,
+        };
         let v = to_value(&msg).unwrap();
         assert_eq!(v, json!({"type":"resize","cols":100,"rows":30}));
         assert_eq!(from_str::<TermClientMsg>(&v.to_string()).unwrap(), msg);
@@ -162,23 +172,28 @@ mod tests {
 
     #[test]
     fn term_server_msgs_serialize_to_widget_shapes() {
-        assert_eq!(to_value(TermServerMsg::Ready).unwrap(), json!({"type":"ready"}));
+        assert_eq!(
+            to_value(TermServerMsg::Ready).unwrap(),
+            json!({"type":"ready"})
+        );
         assert_eq!(
             to_value(TermServerMsg::Exit { code: 130 }).unwrap(),
             json!({"type":"exit","code":130})
         );
         assert_eq!(
-            to_value(TermServerMsg::Error { message: "boom".into() }).unwrap(),
+            to_value(TermServerMsg::Error {
+                message: "boom".into()
+            })
+            .unwrap(),
             json!({"type":"error","message":"boom"})
         );
     }
 
     #[test]
     fn desktop_client_msgs_parse_frontend_frames() {
-        let connect: DesktopClientMsg = from_str(
-            r#"{"type":"connect","host":"vm","port":5900,"username":"u","password":"p"}"#,
-        )
-        .unwrap();
+        let connect: DesktopClientMsg =
+            from_str(r#"{"type":"connect","host":"vm","port":5900,"username":"u","password":"p"}"#)
+                .unwrap();
         assert_eq!(
             connect,
             DesktopClientMsg::Connect {
@@ -193,16 +208,32 @@ mod tests {
             from_str(r#"{"type":"key","code":"KeyA","key":"a","down":true}"#).unwrap();
         assert_eq!(
             key,
-            DesktopClientMsg::Key { code: "KeyA".into(), key: Some("a".into()), down: true }
+            DesktopClientMsg::Key {
+                code: "KeyA".into(),
+                key: Some("a".into()),
+                down: true
+            }
         );
 
         let mouse: DesktopClientMsg =
             from_str(r#"{"type":"mouse","x":10,"y":20,"buttons":1}"#).unwrap();
-        assert_eq!(mouse, DesktopClientMsg::Mouse { x: 10, y: 20, buttons: 1 });
+        assert_eq!(
+            mouse,
+            DesktopClientMsg::Mouse {
+                x: 10,
+                y: 20,
+                buttons: 1
+            }
+        );
 
-        let wheel: DesktopClientMsg =
-            from_str(r#"{"type":"wheel","dx":0,"dy":-102.5}"#).unwrap();
-        assert_eq!(wheel, DesktopClientMsg::Wheel { dx: 0.0, dy: -102.5 });
+        let wheel: DesktopClientMsg = from_str(r#"{"type":"wheel","dx":0,"dy":-102.5}"#).unwrap();
+        assert_eq!(
+            wheel,
+            DesktopClientMsg::Wheel {
+                dx: 0.0,
+                dy: -102.5
+            }
+        );
 
         let cad: DesktopClientMsg = from_str(r#"{"type":"cad"}"#).unwrap();
         assert_eq!(cad, DesktopClientMsg::Cad);
@@ -211,14 +242,25 @@ mod tests {
     #[test]
     fn desktop_server_msgs_serialize_to_widget_shapes() {
         assert_eq!(
-            to_value(DesktopServerMsg::Ready { width: 1280, height: 800 }).unwrap(),
+            to_value(DesktopServerMsg::Ready {
+                width: 1280,
+                height: 800
+            })
+            .unwrap(),
             json!({"type":"ready","width":1280,"height":800})
         );
         assert_eq!(
-            to_value(DesktopServerMsg::Resize { width: 640, height: 480 }).unwrap(),
+            to_value(DesktopServerMsg::Resize {
+                width: 640,
+                height: 480
+            })
+            .unwrap(),
             json!({"type":"resize","width":640,"height":480})
         );
-        assert_eq!(to_value(DesktopServerMsg::Closed).unwrap(), json!({"type":"closed"}));
+        assert_eq!(
+            to_value(DesktopServerMsg::Closed).unwrap(),
+            json!({"type":"closed"})
+        );
     }
 
     #[test]

@@ -56,7 +56,10 @@ pub(crate) async fn run_action(
         match serde_json::from_slice(&body) {
             Ok(v) => v,
             Err(e) => {
-                return err(StatusCode::BAD_REQUEST, format!("body is not valid JSON: {e}"))
+                return err(
+                    StatusCode::BAD_REQUEST,
+                    format!("body is not valid JSON: {e}"),
+                )
             }
         }
     };

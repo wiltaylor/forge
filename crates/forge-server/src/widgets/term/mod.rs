@@ -55,9 +55,7 @@ async fn session(mut socket: WebSocket, config: Arc<TermConfig>) {
                 }) => break (mode, host, port, username, password, cols, rows),
                 _ => return fail(socket, "first frame must be a start message").await,
             },
-            Message::Binary(_) => {
-                return fail(socket, "first frame must be a start message").await
-            }
+            Message::Binary(_) => return fail(socket, "first frame must be a start message").await,
             Message::Close(_) => return,
             // axum answers protocol-level pings itself.
             _ => {}

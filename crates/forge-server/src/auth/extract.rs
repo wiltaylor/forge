@@ -34,7 +34,11 @@ pub(crate) fn token_from(headers: &axum::http::HeaderMap, uri: &Uri) -> Option<S
     None
 }
 
-fn authenticate(state: &ForgeState, headers: &axum::http::HeaderMap, uri: &Uri) -> Result<Claims, ForgeError> {
+fn authenticate(
+    state: &ForgeState,
+    headers: &axum::http::HeaderMap,
+    uri: &Uri,
+) -> Result<Claims, ForgeError> {
     let Some(auth) = state.auth() else {
         // Auth-disabled mode is first-class: everything is open, handlers
         // see an anonymous identity.

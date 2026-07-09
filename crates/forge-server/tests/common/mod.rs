@@ -25,14 +25,15 @@ pub async fn send_raw(
     let status = res.status();
     let headers = res.headers().clone();
     let bytes = res.into_body().collect().await.unwrap().to_bytes();
-    (status, headers, String::from_utf8_lossy(&bytes).into_owned())
+    (
+        status,
+        headers,
+        String::from_utf8_lossy(&bytes).into_owned(),
+    )
 }
 
 pub fn get(path: &str) -> Request<Body> {
-    Request::builder()
-        .uri(path)
-        .body(Body::empty())
-        .unwrap()
+    Request::builder().uri(path).body(Body::empty()).unwrap()
 }
 
 pub fn get_bearer(path: &str, token: &str) -> Request<Body> {

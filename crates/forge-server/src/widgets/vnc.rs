@@ -12,7 +12,9 @@ use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
 use axum::extract::State;
 use axum::response::Response;
 use tokio::net::TcpStream;
-use vnc::{ClientKeyEvent, ClientMouseEvent, PixelFormat, VncClient, VncConnector, VncEvent, X11Event};
+use vnc::{
+    ClientKeyEvent, ClientMouseEvent, PixelFormat, VncClient, VncConnector, VncEvent, X11Event,
+};
 
 use super::keymap::keysym;
 use super::proto::{encode_rect, DesktopClientMsg, DesktopServerMsg};
@@ -77,8 +79,7 @@ async fn session(mut socket: WebSocket, config: Arc<DesktopConfig>) {
         return fail(socket, "host is not in the allowed hosts list").await;
     }
 
-    let client = match tokio::time::timeout(CONNECT_TIMEOUT, connect(&host, port, password)).await
-    {
+    let client = match tokio::time::timeout(CONNECT_TIMEOUT, connect(&host, port, password)).await {
         Ok(Ok(client)) => client,
         Ok(Err(message)) => return fail(socket, message).await,
         Err(_) => return fail(socket, format!("vnc connect to {host}:{port} timed out")).await,

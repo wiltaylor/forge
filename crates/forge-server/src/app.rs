@@ -178,7 +178,9 @@ impl ForgeApp {
             return self;
         }
         self.with_term_config(crate::widgets::TermConfig {
-            shell: std::env::var("FORGE_TERM_SHELL").ok().filter(|s| !s.is_empty()),
+            shell: std::env::var("FORGE_TERM_SHELL")
+                .ok()
+                .filter(|s| !s.is_empty()),
             ..Default::default()
         })
     }
@@ -243,7 +245,11 @@ impl ForgeApp {
     /// extract [`crate::Claims`], `State<ForgeState>` and `State<EventBus>`.
     /// Custom routes are NOT behind the auth middleware — extract
     /// [`crate::Claims`] to require a token.
-    pub fn route(mut self, path: impl Into<String>, method_router: MethodRouter<ForgeState>) -> Self {
+    pub fn route(
+        mut self,
+        path: impl Into<String>,
+        method_router: MethodRouter<ForgeState>,
+    ) -> Self {
         self.routes.push((path.into(), method_router));
         self
     }
@@ -281,7 +287,8 @@ impl ForgeApp {
     /// `FORGE_AUTH_USERS`, ...). Use [`ForgeApp::try_router`] or
     /// [`ForgeApp::serve`] for a `Result`.
     pub fn router(self) -> Router {
-        self.try_router().expect("invalid forge-server configuration")
+        self.try_router()
+            .expect("invalid forge-server configuration")
     }
 
     /// Build the router, surfacing configuration errors.
@@ -446,9 +453,10 @@ fn build_cors(origins: Option<Vec<String>>) -> Result<CorsLayer, ForgeError> {
     // Never a wildcard: an explicit origin list, always.
     let mut values = Vec::with_capacity(origins.len());
     for origin in &origins {
-        values.push(HeaderValue::from_str(origin).map_err(|_| {
-            ForgeError::Config(format!("invalid CORS origin: {origin:?}"))
-        })?);
+        values.push(
+            HeaderValue::from_str(origin)
+                .map_err(|_| ForgeError::Config(format!("invalid CORS origin: {origin:?}")))?,
+        );
     }
     Ok(CorsLayer::new()
         .allow_origin(values)
