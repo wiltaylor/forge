@@ -1,0 +1,78 @@
+/* Forge block grid + palette — component CSS. All colours route through
+   var(--token) from @forge/tokens. */
+
+/* ---------------- Block grid ------------------------------------------------ */
+/* Canvas is a consumer-sized, position:relative box (same treatment as
+   .fgraph); blocks are absolutely positioned cards. Height is driven inline
+   by the component from the row count. All z-indices stay below the topbar
+   (10). */
+.fblockgrid {
+  position: relative; overflow: hidden;
+  background: var(--bg-0);
+  background-image: radial-gradient(var(--border) 1px, transparent 1px);
+  background-size: 20px 20px;
+  border: 1px solid var(--border); border-radius: var(--r-md);
+}
+.fblockgrid-block {
+  position: absolute; z-index: 1;
+  background: var(--bg-1); border: 1px solid var(--border); border-radius: var(--r-md);
+  box-sizing: border-box; padding: 10px; overflow: hidden;
+  font-size: 12px; color: var(--fg-0);
+  cursor: grab; touch-action: none; user-select: none;
+  transition:
+    left var(--dur-2) var(--ease-out), top var(--dur-2) var(--ease-out),
+    width var(--dur-2) var(--ease-out), height var(--dur-2) var(--ease-out);
+}
+.fblockgrid-block:active { cursor: grabbing; }
+/* The pointer-following block is pixel-driven — transitions off, above the rest. */
+.fblockgrid-block.is-dragging,
+.fblockgrid-block.is-resizing {
+  transition: none; z-index: 3;
+  border-color: var(--accent);
+}
+.fblockgrid-block.is-dragging { opacity: 0.9; }
+/* Landing-spot outline; sits under the blocks. */
+.fblockgrid-placeholder {
+  position: absolute; z-index: 0; pointer-events: none;
+  border: 1px dashed var(--accent); border-radius: var(--r-md);
+  background: var(--accent-bg); box-sizing: border-box;
+  transition:
+    left var(--dur-1) var(--ease-out), top var(--dur-1) var(--ease-out),
+    width var(--dur-1) var(--ease-out), height var(--dur-1) var(--ease-out);
+}
+/* Corner resize handle — hover-revealed diagonal notch. */
+.fblockgrid-resize {
+  position: absolute; right: 2px; bottom: 2px; width: 14px; height: 14px;
+  cursor: nwse-resize; touch-action: none;
+  border-right: 2px solid var(--fg-3); border-bottom: 2px solid var(--fg-3);
+  border-bottom-right-radius: var(--r-md);
+  opacity: 0; transition: opacity var(--dur-1) var(--ease-out);
+}
+.fblockgrid-block:hover .fblockgrid-resize,
+.fblockgrid-block.is-resizing .fblockgrid-resize { opacity: 1; }
+
+/* ---------------- Palette ---------------------------------------------------- */
+.fpalette { display: flex; flex-wrap: wrap; gap: 8px; }
+.fpalette-item {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 10px;
+  background: var(--bg-1); border: 1px solid var(--border); border-radius: var(--r-md);
+  font-size: 12px; color: var(--fg-0);
+  cursor: grab; touch-action: none; user-select: none;
+}
+.fpalette-item:hover { border-color: var(--border-strong); }
+.fpalette-item.is-dragging { cursor: grabbing; border-color: var(--accent); }
+/* Floating copy that follows the pointer during a palette drag. pointer-events
+   must stay off or it would swallow the very coordinates it reports. */
+.fpalette-ghost {
+  position: fixed; z-index: 9; pointer-events: none;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--accent-bg); border: 1px dashed var(--accent); border-radius: var(--r-md);
+  font-size: 12px; color: var(--accent-fg);
+  opacity: 0.9; box-sizing: border-box;
+}
+
+/* Touch: keep the resize handle discoverable and give it a real hit area. */
+@media (pointer: coarse) {
+  .fblockgrid-resize { opacity: 1; width: 18px; height: 18px; }
+}

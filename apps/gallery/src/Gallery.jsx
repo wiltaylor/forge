@@ -15,6 +15,7 @@ import LogsDemo from './sections/LogsDemo';
 import SettingsDemo from './sections/SettingsDemo';
 import ModalDemo from './sections/ModalDemo';
 import GraphDemo from './sections/GraphDemo';
+import GridDemo from './sections/GridDemo';
 import CodeDemo from './sections/CodeDemo';
 import ChartsDemo from './sections/ChartsDemo';
 import LiveDemo from './sections/LiveDemo';
@@ -33,6 +34,7 @@ const SECTIONS = [
   ['modal', 'Modal', ModalDemo],
   ['overlays', 'Overlays & menus', OverlaysDemo],
   ['graph', 'Node graph', GraphDemo],
+  ['grid', 'Dashboard grid', GridDemo],
   ['code', 'Code', CodeDemo],
   ['charts', 'Charts', ChartsDemo],
 ];

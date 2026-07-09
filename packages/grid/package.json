@@ -1,0 +1,35 @@
+{
+  "name": "@forge/grid",
+  "version": "0.1.0",
+  "description": "Forge design system draggable dashboard block grid for SolidJS.",
+  "type": "module",
+  "license": "MIT",
+  "sideEffects": ["**/*.css"],
+  "files": ["dist", "styles"],
+  "exports": {
+    ".": {
+      "solid": "./dist/index.jsx",
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    },
+    "./styles.css": "./styles/grid.css"
+  },
+  "scripts": {
+    "build": "tsup",
+    "prepare": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "solid-js": "^1.9.0"
+  },
+  "devDependencies": {
+    "solid-js": "^1.9.0",
+    "tsup": "^8.4.0",
+    "tsup-preset-solid": "^2.2.0",
+    "typescript": "^5.8.0",
+    "vitest": "^3.2.4"
+  }
+}
