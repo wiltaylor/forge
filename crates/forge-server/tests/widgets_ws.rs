@@ -11,7 +11,7 @@ use axum::body::Body;
 use axum::http::Request;
 use common::*;
 use forge_server::ForgeApp;
-use futures_util::StreamExt;
+use futures_util::{SinkExt, StreamExt};
 use serde_json::json;
 use tokio::time::timeout;
 use tokio_tungstenite::tungstenite::Message;
@@ -79,8 +79,12 @@ async fn term_upgrades_with_query_token() {
         .await
         .expect("ws connect with ?token=");
 
-    // The stub session answers with an error control frame — receiving it
-    // proves auth passed and the upgrade completed.
+    // A malformed first frame draws an error control frame — receiving it
+    // proves auth passed and the upgrade completed. Session behaviour proper
+    // is term_ws.rs territory.
+    ws.send(Message::Text("not a start frame".into()))
+        .await
+        .expect("ws send");
     let msg = timeout(WAIT, ws.next())
         .await
         .expect("timed out waiting for ws frame")
