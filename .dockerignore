@@ -1,0 +1,8 @@
+# Keep this repo lean when used as a Docker build context (forge-auth and
+# other consumers pass it as a BuildKit named context).
+node_modules
+**/node_modules
+target
+**/dist
+**/dist-remote
+.git
