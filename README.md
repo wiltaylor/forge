@@ -15,6 +15,7 @@ throughout, global **theming**, and **component federation** between apps.
 | `@forge/graph` | NodeGraph editor + auto-layout Flowchart | solid-js (peer) |
 | `@forge/code` | CodeMirror 6 editor/diff with Forge theme | solid-js (peer), CodeMirror (bundled deps) |
 | `@forge/client` | Typed API client: REST + SSE + WebSocket + JWT | nothing |
+| `@forge/tauri` | The same `ForgeClient` interface over Tauri IPC + widget transports | client, `@tauri-apps/api` |
 | `@forge/remote` | Component federation: export web-component bundles, mount remote ones | solid-js (peer), ui; `/vite` helper |
 
 Backends:
@@ -24,8 +25,11 @@ Backends:
   embedding** (rust-embed). The default choice.
 - `python/forge-server` — Python (FastAPI), same contract, uv-friendly for
   single-file hack tools.
+- `crates/forge-tauri` — Tauri v2 plugin serving the same contract (and the
+  streaming widgets) over **pure IPC** — desktop apps with no HTTP server.
+  Shares `crates/forge-core` with forge-server.
 
-The contract both implement: [`docs/api-contract.md`](docs/api-contract.md).
+The contract all of them implement: [`docs/api-contract.md`](docs/api-contract.md).
 
 ## Example apps
 
@@ -35,6 +39,8 @@ The contract both implement: [`docs/api-contract.md`](docs/api-contract.md).
   (`dist-remote/`) that the demos serve at `/api/components`.
 - `examples/rust-demo` — single-binary Rust app embedding the gallery.
 - `examples/python-demo` — single-file uv script serving the gallery.
+- `examples/tauri-demo` — native Tauri app: doc store, actions, live events,
+  local-PTY terminal and VNC/RDP viewers, all over IPC (`just tauri-demo`).
 - `examples/parity` — black-box contract tests run against either backend.
 
 ## Quick start
@@ -86,6 +92,64 @@ Python (uv script):
 
 > Note: the `@forge` npm scope is taken on npmjs.com — if these packages are
 > ever published to a registry they must be renamed (e.g. `@wiltaylor/*`).
+
+## Tauri
+
+`forge-tauri` makes a Tauri v2 desktop app a conforming Forge backend over
+pure IPC — the frozen contract (`docs/api-contract.md`) and widgets protocol
+(`docs/widgets-protocol.md`) are untouched; only the carrier differs. The
+whole backend is a plugin:
+
+```rust
+fn main() {
+    let forge = forge_tauri::Builder::new("my-app")
+        .with_docstore_default()             // <app_data_dir>/data
+        .with_term().with_vnc().with_rdp()   // opt-in widgets (cargo features)
+        .action("echo", |payload, _ctx| async move { Ok(payload) });
+    tauri::Builder::default()
+        .plugin(forge.build())
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
+}
+```
+
+Frontend-side, the only change versus a web app is the client import —
+`@forge/tauri`'s `createClient()` implements `@forge/client`'s `ForgeClient`
+interface over `invoke`/`listen` (`ws.connect()`/`wsUrl()` throw; events ride
+one `forge://event` Tauri event). Widgets take a transport instead of a URL:
+
+```jsx
+const api = createClient();                            // from '@forge/tauri'
+<Terminal transport={() => api.widget('term')} />      // local PTY in-app
+<DesktopViewer transport={() => api.widget('vnc')} … />
+```
+
+Wiring checklist for your own app (or scaffold via the
+`.claude/skills/forge-tauri` skill, which copies `examples/tauri-demo`):
+
+```toml
+# src-tauri/Cargo.toml — forge-tauri is NOT in the root workspace; use git
+forge-tauri = { git = "https://github.com/wiltaylor/forge", features = ["widgets"] }
+
+# REQUIRED when the `rdp` feature is on: your app is its own workspace, so it
+# must carry the vendored ironrdp-session patch itself (xrdp stride fix —
+# without it RDP against xrdp shears diagonally):
+[patch.crates-io]
+ironrdp-session = { git = "https://github.com/wiltaylor/forge" }
+```
+
+Capability: add `"forge:default"` (plus `"core:default"`) to
+`src-tauri/capabilities/default.json`. Trim widget features you don't use —
+they dominate compile time.
+
+Linux prereqs: `webkit2gtk-4.1`, `gtk3`, `librsvg` (Arch/CachyOS package
+names; see Tauri docs for other distros). On NVIDIA, if the window renders
+blank set `WEBKIT_DISABLE_DMABUF_RENDERER=1`. AppImage bundling needs
+`NO_STRIP=true` on distros with recent binutils (the `just tauri-demo-build`
+recipe sets it). Inside webkitgtk, xterm.js's WebGL addon composites a black
+canvas — pass `webgl={false}` to `<Terminal>` in Tauri apps (the demo does;
+web browsers are unaffected). Widgets must also mount in a visible container
+(xterm can't initialize at zero size), so lazy-mount tab panels.
 
 ## Theming
 

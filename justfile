@@ -24,6 +24,16 @@ rust-build:
 rust-demo-build: frontend-build
 	cargo build --release -p rust-demo
 
+# Build the forge-tauri plugin crate with all widgets (own workspace — heavy tauri tree)
+[group('build')]
+tauri-build:
+	cargo build --manifest-path crates/forge-tauri/Cargo.toml --features widgets
+
+# Build tauri-demo release bundles (deb + AppImage; NO_STRIP: linuxdeploy chokes on new binutils)
+[group('build')]
+tauri-demo-build: frontend-install
+	cd examples/tauri-demo && NO_STRIP=true pnpm tauri build
+
 # Build everything
 [group('build')]
 build: frontend-build rust-build
@@ -48,6 +58,11 @@ python-test:
 parity-test base_url='http://127.0.0.1:8765':
 	FORGE_TEST_BASE_URL={{base_url}} uv run --with 'httpx>=0.27' --with 'pytest>=8' --with 'websockets>=13' pytest examples/parity
 
+# Run forge-tauri tests (own workspace — heavy tauri tree, so not part of `just test`)
+[group('test')]
+tauri-test:
+	cargo test --manifest-path crates/forge-tauri/Cargo.toml --features widgets
+
 # Run all test suites
 [group('test')]
 test: frontend-test rust-test python-test
@@ -61,6 +76,11 @@ rust-demo: frontend-build
 [group('demo')]
 python-demo: frontend-build
 	cd examples/python-demo && uv run demo.py
+
+# Run the Tauri demo app (native window; contract + widgets over pure IPC)
+[group('demo')]
+tauri-demo: frontend-install
+	cd examples/tauri-demo && pnpm tauri dev
 
 # Start the gallery frontend dev server (Vite, proxies /api to FORGE_PORT)
 [group('dev')]
