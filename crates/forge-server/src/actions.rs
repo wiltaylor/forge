@@ -1,53 +1,29 @@
-//! Action registry: named async handlers dispatched via
-//! `POST /api/actions/{name}` — JSON payload in, JSON out.
-
-use std::future::Future;
-use std::pin::Pin;
-use std::sync::Arc;
+//! Action dispatch over HTTP: `POST /api/actions/{name}` — JSON payload in,
+//! JSON out. Registry types live in [`forge_core::actions`].
 
 use axum::body::Bytes;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
-use axum::response::{IntoResponse, Response};
+use axum::response::Response;
 use serde_json::Value;
 
-use crate::auth::jwt::Claims;
+use crate::auth::extract::RequireClaims;
 use crate::envelope::{err, ok};
-use crate::error::ForgeError;
-use crate::events::EventBus;
+use crate::error::error_response;
 use crate::state::ForgeState;
 
-/// Context handed to every action: the caller's claims and the event bus.
-#[derive(Clone)]
-pub struct ActionCtx {
-    pub claims: Claims,
-    pub events: EventBus,
-}
-
-pub(crate) type ActionFuture = Pin<Box<dyn Future<Output = Result<Value, ForgeError>> + Send>>;
-pub(crate) type BoxedAction = Arc<dyn Fn(Value, ActionCtx) -> ActionFuture + Send + Sync>;
-
-/// Box a user handler into the registry shape.
-pub(crate) fn box_action<F, Fut>(handler: F) -> BoxedAction
-where
-    F: Fn(Value, ActionCtx) -> Fut + Send + Sync + 'static,
-    Fut: Future<Output = Result<Value, ForgeError>> + Send + 'static,
-{
-    Arc::new(move |payload, ctx| Box::pin(handler(payload, ctx)))
-}
+pub use forge_core::actions::{
+    box_action, unknown_action_error, ActionCtx, ActionFuture, BoxedAction,
+};
 
 pub(crate) async fn run_action(
     State(state): State<ForgeState>,
     Path(name): Path<String>,
-    claims: Claims,
+    RequireClaims(claims): RequireClaims,
     body: Bytes,
 ) -> Response {
     let Some(action) = state.inner.actions.get(&name) else {
-        let names = state.action_names().join(", ");
-        return err(
-            StatusCode::NOT_FOUND,
-            format!("unknown action {name:?} (have: [{names}])"),
-        );
+        return error_response(unknown_action_error(&name, &state.action_names()));
     };
 
     let payload: Value = if body.is_empty() {
@@ -70,6 +46,6 @@ pub(crate) async fn run_action(
     };
     match action(payload, ctx).await {
         Ok(data) => ok(data),
-        Err(e) => e.into_response(),
+        Err(e) => error_response(e),
     }
 }

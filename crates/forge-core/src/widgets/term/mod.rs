@@ -1,8 +1,9 @@
-//! GET /api/term — PTY terminal WebSocket (local shell + SSH).
+//! PTY terminal session engine (local shell + SSH).
 //!
 //! Binary frames carry raw tty bytes both ways; JSON text frames carry
 //! control ([`TermClientMsg`] / [`TermServerMsg`]). The first client frame
-//! must be `start`, which picks local vs ssh.
+//! must be `start`, which picks local vs ssh. Transport-agnostic: drive it
+//! with any [`WidgetStream`].
 
 mod local;
 #[cfg(feature = "term-ssh")]
@@ -11,39 +12,21 @@ mod ssh;
 use std::sync::Arc;
 use std::time::Duration;
 
-use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
-use axum::extract::State;
-use axum::response::Response;
-
 use super::proto::{TermClientMsg, TermMode, TermServerMsg};
-use super::TermConfig;
-use crate::auth::jwt::Claims;
-use crate::state::ForgeState;
+use super::{TermConfig, WidgetMsg, WidgetStream};
 
 /// How long to wait for the child's exit code after its tty reaches EOF.
 const EXIT_WAIT: Duration = Duration::from_secs(5);
 
-pub(crate) async fn ws_handler(
-    ws: WebSocketUpgrade,
-    State(state): State<ForgeState>,
-    _claims: Claims,
-) -> Response {
-    let config = state
-        .inner
-        .term
-        .clone()
-        .expect("route mounted without term config");
-    ws.on_upgrade(move |socket| session(socket, config))
-}
-
-async fn session(mut socket: WebSocket, config: Arc<TermConfig>) {
-    // The first frame must be a valid `start`.
+/// Run one terminal session over `stream`. The first frame must be a valid
+/// `start` message.
+pub async fn session<S: WidgetStream>(mut stream: S, config: Arc<TermConfig>) {
     let (mode, host, port, username, password, cols, rows) = loop {
-        let Some(Ok(msg)) = socket.recv().await else {
+        let Some(msg) = stream.recv().await else {
             return;
         };
         match msg {
-            Message::Text(text) => match serde_json::from_str::<TermClientMsg>(&text) {
+            WidgetMsg::Text(text) => match serde_json::from_str::<TermClientMsg>(&text) {
                 Ok(TermClientMsg::Start {
                     mode,
                     host,
@@ -53,19 +36,19 @@ async fn session(mut socket: WebSocket, config: Arc<TermConfig>) {
                     cols,
                     rows,
                 }) => break (mode, host, port, username, password, cols, rows),
-                _ => return fail(socket, "first frame must be a start message").await,
+                _ => return fail(stream, "first frame must be a start message").await,
             },
-            Message::Binary(_) => return fail(socket, "first frame must be a start message").await,
-            Message::Close(_) => return,
-            // axum answers protocol-level pings itself.
-            _ => {}
+            WidgetMsg::Binary(_) => {
+                return fail(stream, "first frame must be a start message").await
+            }
+            WidgetMsg::Close => return,
         }
     };
 
     match mode {
         TermMode::Local => {
             if !config.allow_local {
-                return fail(socket, "local terminal sessions are disabled").await;
+                return fail(stream, "local terminal sessions are disabled").await;
             }
             let shell = config
                 .shell
@@ -74,22 +57,22 @@ async fn session(mut socket: WebSocket, config: Arc<TermConfig>) {
                 .unwrap_or_else(|| "/bin/sh".into());
             let (ctrl, io) = match local::spawn(&shell, cols, rows) {
                 Ok(v) => v,
-                Err(e) => return fail(socket, e).await,
+                Err(e) => return fail(stream, e).await,
             };
-            if send_ctrl(&mut socket, &TermServerMsg::Ready).await.is_err() {
+            if send_ctrl(&mut stream, &TermServerMsg::Ready).await.is_err() {
                 return;
             }
-            run_local(socket, ctrl, io).await;
+            run_local(stream, ctrl, io).await;
         }
         TermMode::Ssh => {
             if !config.allow_ssh {
-                return fail(socket, "ssh terminal sessions are disabled").await;
+                return fail(stream, "ssh terminal sessions are disabled").await;
             }
             #[cfg(not(feature = "term-ssh"))]
             {
                 let _ = (host, port, username, password);
                 fail(
-                    socket,
+                    stream,
                     "ssh support is not compiled into this server (term-ssh feature)",
                 )
                 .await;
@@ -98,17 +81,17 @@ async fn session(mut socket: WebSocket, config: Arc<TermConfig>) {
             {
                 let (Some(host), Some(username), Some(password)) = (host, username, password)
                 else {
-                    return fail(socket, "ssh requires host, username and password").await;
+                    return fail(stream, "ssh requires host, username and password").await;
                 };
                 if !config
                     .allow_hosts
                     .as_ref()
                     .is_none_or(|allowed| allowed.iter().any(|a| a == &host))
                 {
-                    return fail(socket, "host is not in the allowed hosts list").await;
+                    return fail(stream, "host is not in the allowed hosts list").await;
                 }
                 ssh::run(
-                    socket,
+                    stream,
                     host,
                     port.unwrap_or(22),
                     username,
@@ -122,9 +105,9 @@ async fn session(mut socket: WebSocket, config: Arc<TermConfig>) {
     }
 }
 
-/// Pump a local PTY: socket binary ⇄ tty bytes, resize control frames, and
+/// Pump a local PTY: stream binary ⇄ tty bytes, resize control frames, and
 /// an `exit` frame once the tty reaches EOF.
-async fn run_local(mut socket: WebSocket, ctrl: local::PtyControl, io: local::PtyIo) {
+async fn run_local<S: WidgetStream>(mut stream: S, ctrl: local::PtyControl, io: local::PtyIo) {
     let local::PtyIo {
         input,
         mut output,
@@ -132,25 +115,24 @@ async fn run_local(mut socket: WebSocket, ctrl: local::PtyControl, io: local::Pt
     } = io;
     loop {
         tokio::select! {
-            msg = socket.recv() => {
-                let Some(Ok(msg)) = msg else { break };
+            msg = stream.recv() => {
+                let Some(msg) = msg else { break };
                 match msg {
-                    Message::Binary(bytes) => {
+                    WidgetMsg::Binary(bytes) => {
                         // Writer gone = child exited; the output arm reports
                         // the exit shortly, so a failed send is fine.
-                        let _ = input.send(bytes.to_vec()).await;
+                        let _ = input.send(bytes).await;
                     }
-                    Message::Text(text) => match serde_json::from_str::<TermClientMsg>(&text) {
+                    WidgetMsg::Text(text) => match serde_json::from_str::<TermClientMsg>(&text) {
                         Ok(TermClientMsg::Resize { cols, rows }) => ctrl.resize(cols, rows),
                         _ => tracing::debug!("ignoring unexpected term control frame"),
                     },
-                    Message::Close(_) => break,
-                    _ => {}
+                    WidgetMsg::Close => break,
                 }
             }
             out = output.recv() => match out {
                 Some(bytes) => {
-                    if socket.send(Message::Binary(bytes.into())).await.is_err() {
+                    if stream.send(WidgetMsg::Binary(bytes)).await.is_err() {
                         break;
                     }
                 }
@@ -160,26 +142,29 @@ async fn run_local(mut socket: WebSocket, ctrl: local::PtyControl, io: local::Pt
                         Ok(Ok(code)) => code,
                         _ => -1,
                     };
-                    let _ = send_ctrl(&mut socket, &TermServerMsg::Exit { code }).await;
+                    let _ = send_ctrl(&mut stream, &TermServerMsg::Exit { code }).await;
                     break;
                 }
             }
         }
     }
-    let _ = socket.send(Message::Close(None)).await;
+    let _ = stream.send(WidgetMsg::Close).await;
     // ctrl drops here, killing the child if it is still running.
 }
 
-async fn send_ctrl(socket: &mut WebSocket, msg: &TermServerMsg) -> Result<(), axum::Error> {
+async fn send_ctrl<S: WidgetStream>(
+    stream: &mut S,
+    msg: &TermServerMsg,
+) -> Result<(), super::StreamClosed> {
     let text = serde_json::to_string(msg).expect("TermServerMsg serializes");
-    socket.send(Message::Text(text.into())).await
+    stream.send(WidgetMsg::Text(text)).await
 }
 
 /// Send an error control frame, then close.
-async fn fail(mut socket: WebSocket, message: impl Into<String>) {
+async fn fail<S: WidgetStream>(mut stream: S, message: impl Into<String>) {
     let msg = TermServerMsg::Error {
         message: message.into(),
     };
-    let _ = send_ctrl(&mut socket, &msg).await;
-    let _ = socket.send(Message::Close(None)).await;
+    let _ = send_ctrl(&mut stream, &msg).await;
+    let _ = stream.send(WidgetMsg::Close).await;
 }

@@ -1,17 +1,17 @@
-//! SSH sessions for `/api/term` (russh, feature `term-ssh`).
+//! SSH terminal sessions (russh, feature `term-ssh`).
 //!
-//! Fully async — the russh channel pumps straight into the socket select
+//! Fully async — the russh channel pumps straight into the stream select
 //! loop, no bridge threads. Host-key checking is dev-permissive (any server
 //! key accepted) — see docs/widgets-protocol.md.
 
 use std::sync::Arc;
 
-use axum::extract::ws::{Message, WebSocket};
 use russh::client;
 use russh::ChannelMsg;
 
 use super::{fail, send_ctrl};
 use crate::widgets::proto::{TermClientMsg, TermServerMsg};
+use crate::widgets::{WidgetMsg, WidgetStream};
 
 struct AcceptAllKeys;
 
@@ -27,8 +27,8 @@ impl client::Handler for AcceptAllKeys {
     }
 }
 
-pub(super) async fn run(
-    mut socket: WebSocket,
+pub(super) async fn run<S: WidgetStream>(
+    mut stream: S,
     host: String,
     port: u16,
     username: String,
@@ -38,24 +38,24 @@ pub(super) async fn run(
 ) {
     let (handle, mut channel) = match connect(&host, port, username, password, cols, rows).await {
         Ok(v) => v,
-        Err(message) => return fail(socket, message).await,
+        Err(message) => return fail(stream, message).await,
     };
-    if send_ctrl(&mut socket, &TermServerMsg::Ready).await.is_err() {
+    if send_ctrl(&mut stream, &TermServerMsg::Ready).await.is_err() {
         return;
     }
 
     let mut exit_code: Option<i32> = None;
     loop {
         tokio::select! {
-            msg = socket.recv() => {
-                let Some(Ok(msg)) = msg else { break };
+            msg = stream.recv() => {
+                let Some(msg) = msg else { break };
                 match msg {
-                    Message::Binary(bytes) => {
+                    WidgetMsg::Binary(bytes) => {
                         if channel.data(&bytes[..]).await.is_err() {
                             break;
                         }
                     }
-                    Message::Text(text) => match serde_json::from_str::<TermClientMsg>(&text) {
+                    WidgetMsg::Text(text) => match serde_json::from_str::<TermClientMsg>(&text) {
                         Ok(TermClientMsg::Resize { cols, rows }) => {
                             let _ = channel
                                 .window_change(u32::from(cols), u32::from(rows), 0, 0)
@@ -63,15 +63,14 @@ pub(super) async fn run(
                         }
                         _ => tracing::debug!("ignoring unexpected term control frame"),
                     },
-                    Message::Close(_) => break,
-                    _ => {}
+                    WidgetMsg::Close => break,
                 }
             }
             msg = channel.wait() => {
                 match msg {
                     Some(ChannelMsg::Data { data })
                     | Some(ChannelMsg::ExtendedData { data, .. }) => {
-                        if socket.send(Message::Binary(data.to_vec().into())).await.is_err() {
+                        if stream.send(WidgetMsg::Binary(data.to_vec())).await.is_err() {
                             break;
                         }
                     }
@@ -83,7 +82,7 @@ pub(super) async fn run(
                         let msg = TermServerMsg::Exit {
                             code: exit_code.unwrap_or(0),
                         };
-                        let _ = send_ctrl(&mut socket, &msg).await;
+                        let _ = send_ctrl(&mut stream, &msg).await;
                         break;
                     }
                     Some(_) => {}
@@ -95,7 +94,7 @@ pub(super) async fn run(
     let _ = handle
         .disconnect(russh::Disconnect::ByApplication, "", "")
         .await;
-    let _ = socket.send(Message::Close(None)).await;
+    let _ = stream.send(WidgetMsg::Close).await;
 }
 
 async fn connect(

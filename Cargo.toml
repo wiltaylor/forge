@@ -1,6 +1,10 @@
 [workspace]
 resolver = "2"
-members = ["crates/forge-server", "examples/rust-demo"]
+members = ["crates/forge-core", "crates/forge-server", "examples/rust-demo"]
+# Tauri crates are standalone workspaces: tauri pulls wry/tao/gtk, which would
+# force webkit system deps onto every root build and rust-analyzer session.
+# Build them via `just tauri-*` recipes instead.
+exclude = ["crates/forge-tauri", "examples/tauri-demo/src-tauri"]
 
 [workspace.package]
 version = "0.1.0"
@@ -9,6 +13,7 @@ license = "MIT"
 repository = "https://github.com/wiltaylor/forge"
 
 [workspace.dependencies]
+forge-core = { path = "crates/forge-core" }
 forge-server = { path = "crates/forge-server" }
 
 # Vendored ironrdp-session 0.10.0 with the xrdp bitmap-stride fix applied

@@ -213,14 +213,17 @@ async fn health_reports_auth_enabled() {
 #[tokio::test]
 async fn custom_route_can_extract_claims() {
     use axum::routing::get as axum_get;
+    use forge_server::RequireClaims;
     let router = ForgeApp::new("t")
         .auth(auth_config())
         .route(
             "/api/whoami",
-            axum_get(|claims: Claims| async move { forge_server::ok(claims.sub) }),
+            axum_get(
+                |RequireClaims(claims): RequireClaims| async move { forge_server::ok(claims.sub) },
+            ),
         )
         .router();
-    // No token → the Claims extractor rejects with a 401 envelope.
+    // No token → the RequireClaims extractor rejects with a 401 envelope.
     let (status, body) = send(&router, get("/api/whoami")).await;
     assert_eq!(status, StatusCode::UNAUTHORIZED);
     assert_eq!(body["ok"], json!(false));

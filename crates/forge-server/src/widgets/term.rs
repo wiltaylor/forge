@@ -1,6 +1,6 @@
-//! GET /api/desktop/rdp — RDP viewer WebSocket route (IronRDP).
+//! GET /api/term — PTY terminal WebSocket route.
 //!
-//! Session logic lives in [`forge_core::widgets::rdp`]; this handler only
+//! Session logic lives in [`forge_core::widgets::term`]; this handler only
 //! authenticates, pulls the runtime config and hands the upgraded socket to
 //! the engine.
 
@@ -19,8 +19,8 @@ pub(crate) async fn ws_handler(
 ) -> Response {
     let config = state
         .inner
-        .rdp
+        .term
         .clone()
-        .expect("route mounted without rdp config");
-    ws.on_upgrade(move |socket| forge_core::widgets::rdp::session(WsStream(socket), config))
+        .expect("route mounted without term config");
+    ws.on_upgrade(move |socket| forge_core::widgets::term::session(WsStream(socket), config))
 }

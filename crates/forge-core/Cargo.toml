@@ -1,0 +1,37 @@
+[package]
+name = "forge-core"
+description = "Transport-agnostic core of the Forge backend: doc store, actions, events, claims, envelope shapes."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[features]
+# Interactive remote-access widget engines (see docs/widgets-protocol.md).
+# Not part of the frozen v1.0 API contract; the terminal engine exposes a
+# real shell, so these are opt-in at compile time AND at runtime (transport
+# builders gate them again).
+term = ["dep:portable-pty", "tokio/time"]
+term-ssh = ["term", "dep:russh"]
+vnc = ["dep:vnc-rs", "tokio/net", "tokio/time"]
+rdp = ["dep:ironrdp", "dep:ironrdp-tokio", "dep:ironrdp-tls", "tokio/net", "tokio/time"]
+widgets = ["term", "term-ssh", "vnc", "rdp"]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+tokio = { version = "1", features = ["fs", "sync", "macros", "rt"] }
+tracing = "0.1"
+# Widget backends — all optional, behind the cargo features above.
+portable-pty = { version = "0.9", optional = true }
+# 0.60 (not 0.62): russh 0.61+ pins curve25519-dalek =5.0.0-rc.*, which
+# conflicts with the =5.0.0-pre.6 pin in ironrdp's picky dependency.
+russh = { version = "0.60", optional = true }
+vnc-rs = { version = "0.5", optional = true }
+ironrdp = { version = "0.16", features = ["connector", "session", "graphics", "input", "pdu"], optional = true }
+ironrdp-tokio = { version = "0.9", optional = true }
+ironrdp-tls = { version = "0.2", features = ["rustls"], optional = true }
+
+[dev-dependencies]
+tempfile = "3"

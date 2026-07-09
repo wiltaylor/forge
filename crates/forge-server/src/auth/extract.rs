@@ -7,11 +7,11 @@ use axum::http::header::AUTHORIZATION;
 use axum::http::request::Parts;
 use axum::http::{StatusCode, Uri};
 use axum::middleware::Next;
-use axum::response::{IntoResponse, Response};
+use axum::response::Response;
 
 use crate::auth::jwt::Claims;
 use crate::envelope;
-use crate::error::ForgeError;
+use crate::error::{error_response, ForgeError};
 use crate::state::ForgeState;
 
 /// Pull the token from the Authorization header or `?token=` query param.
@@ -54,7 +54,14 @@ fn authenticate(
 
 /// Extractor for the authenticated identity. Rejects with a 401 envelope
 /// when auth is enabled and no valid token accompanies the request.
-impl<S> FromRequestParts<S> for Claims
+///
+/// A wrapper rather than an impl on [`Claims`] directly: `Claims` lives in
+/// forge-core, so the orphan rule forbids implementing axum's
+/// `FromRequestParts` for it here.
+#[derive(Debug, Clone)]
+pub struct RequireClaims(pub Claims);
+
+impl<S> FromRequestParts<S> for RequireClaims
 where
     S: Send + Sync,
     ForgeState: FromRef<S>,
@@ -64,10 +71,12 @@ where
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         // The auth route-layer middleware stashes claims in extensions.
         if let Some(claims) = parts.extensions.get::<Claims>() {
-            return Ok(claims.clone());
+            return Ok(RequireClaims(claims.clone()));
         }
         let state = ForgeState::from_ref(state);
-        authenticate(&state, &parts.headers, &parts.uri).map_err(IntoResponse::into_response)
+        authenticate(&state, &parts.headers, &parts.uri)
+            .map(RequireClaims)
+            .map_err(error_response)
     }
 }
 

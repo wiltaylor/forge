@@ -67,10 +67,12 @@ async fn login(State(state): State<ForgeState>, body: Bytes) -> Response {
             "expires_at": claims.exp,
             "user": { "name": user.name, "roles": user.roles },
         })),
-        Err(e) => axum::response::IntoResponse::into_response(e),
+        Err(e) => crate::error::error_response(e),
     }
 }
 
-async fn me(claims: Claims) -> Response {
+async fn me(
+    crate::auth::extract::RequireClaims(claims): crate::auth::extract::RequireClaims,
+) -> Response {
     ok(claims)
 }

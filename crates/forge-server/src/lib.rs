@@ -36,7 +36,7 @@ pub mod widgets;
 
 pub use actions::ActionCtx;
 pub use app::ForgeApp;
-pub use auth::extract::OptionalClaims;
+pub use auth::extract::{OptionalClaims, RequireClaims};
 pub use auth::jwt::Claims;
 pub use auth::{AuthConfig, AuthUser, Hs256Validator, TokenValidator};
 pub use docstore::DocStore;

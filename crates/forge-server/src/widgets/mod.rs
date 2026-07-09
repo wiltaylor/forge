@@ -4,13 +4,12 @@
 //! `vnc`, `rdp`, or all via `widgets`) — NOT part of the frozen v1.0 API
 //! contract. Each widget is a dedicated per-connection WebSocket under the
 //! protected router group, enabled at runtime by a `with_*()` builder or env
-//! flag. `/api/term` hands authenticated users a real shell (RCE by design);
-//! VNC/RDP open outbound connections. Trusted dev contexts only — see
-//! docs/widgets-protocol.md.
+//! flag. The session engines live in [`forge_core::widgets`]; this module is
+//! the WebSocket route layer, adapting each connection to a
+//! [`WidgetStream`]. `/api/term` hands authenticated users a real shell (RCE
+//! by design); VNC/RDP open outbound connections. Trusted dev contexts only —
+//! see docs/widgets-protocol.md.
 
-#[cfg(any(feature = "vnc", feature = "rdp"))]
-pub mod keymap;
-pub mod proto;
 #[cfg(feature = "rdp")]
 pub mod rdp;
 #[cfg(feature = "term")]
@@ -18,43 +17,39 @@ pub mod term;
 #[cfg(feature = "vnc")]
 pub mod vnc;
 
-/// Capacity of the bounded per-connection channels bridging protocol tasks to
-/// the WebSocket writer. Backpressure, not unbounded buffering, on slow
-/// clients.
-pub const CHANNEL_CAP: usize = 256;
-
-/// Runtime configuration for `/api/term` (set via
-/// [`crate::ForgeApp::with_term_config`]).
+#[cfg(any(feature = "vnc", feature = "rdp"))]
+pub use forge_core::widgets::keymap;
+#[cfg(any(feature = "vnc", feature = "rdp"))]
+pub use forge_core::widgets::DesktopConfig;
 #[cfg(feature = "term")]
-#[derive(Debug, Clone)]
-pub struct TermConfig {
-    /// Shell for local sessions. `None` = `$SHELL`, falling back to `/bin/sh`.
-    pub shell: Option<String>,
-    /// Permit `mode: "local"` sessions (a real shell as the server uid).
-    pub allow_local: bool,
-    /// Permit `mode: "ssh"` sessions (requires the `term-ssh` feature).
-    pub allow_ssh: bool,
-    /// Hosts SSH sessions may target. `None` = any host.
-    pub allow_hosts: Option<Vec<String>>,
-}
+pub use forge_core::widgets::TermConfig;
+pub use forge_core::widgets::{proto, StreamClosed, WidgetMsg, WidgetStream, CHANNEL_CAP};
 
-#[cfg(feature = "term")]
-impl Default for TermConfig {
-    fn default() -> Self {
-        Self {
-            shell: None,
-            allow_local: true,
-            allow_ssh: true,
-            allow_hosts: None,
+use axum::extract::ws::{Message, WebSocket};
+
+/// [`WidgetStream`] over an axum WebSocket: text = control JSON, binary =
+/// payload. axum answers protocol-level pings itself, so they never surface.
+pub struct WsStream(pub WebSocket);
+
+impl WidgetStream for WsStream {
+    async fn recv(&mut self) -> Option<WidgetMsg> {
+        loop {
+            match self.0.recv().await {
+                Some(Ok(Message::Text(text))) => return Some(WidgetMsg::Text(text.to_string())),
+                Some(Ok(Message::Binary(bytes))) => return Some(WidgetMsg::Binary(bytes.to_vec())),
+                Some(Ok(Message::Close(_))) => return Some(WidgetMsg::Close),
+                Some(Ok(_)) => {}
+                Some(Err(_)) | None => return None,
+            }
         }
     }
-}
 
-/// Runtime configuration for `/api/desktop/vnc` and `/api/desktop/rdp`
-/// (set via [`crate::ForgeApp::with_vnc_config`] / `with_rdp_config`).
-#[cfg(any(feature = "vnc", feature = "rdp"))]
-#[derive(Debug, Clone, Default)]
-pub struct DesktopConfig {
-    /// Hosts outbound connections may target. `None` = any host.
-    pub allow_hosts: Option<Vec<String>>,
+    async fn send(&mut self, msg: WidgetMsg) -> Result<(), StreamClosed> {
+        let msg = match msg {
+            WidgetMsg::Text(text) => Message::Text(text.into()),
+            WidgetMsg::Binary(bytes) => Message::Binary(bytes.into()),
+            WidgetMsg::Close => Message::Close(None),
+        };
+        self.0.send(msg).await.map_err(|_| StreamClosed)
+    }
 }
