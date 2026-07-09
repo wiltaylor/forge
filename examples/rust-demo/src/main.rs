@@ -17,6 +17,11 @@ async fn main() -> Result<(), ForgeError> {
         .with_docstore_from_env()
         .with_events()
         .with_components_from_env()
+        // Remote-access widgets: off unless FORGE_TERM_ENABLE / FORGE_VNC_ENABLE /
+        // FORGE_RDP_ENABLE are set (see docs/widgets-protocol.md).
+        .with_term_from_env()
+        .with_vnc_from_env()
+        .with_rdp_from_env()
         .action("echo", |payload, _ctx| async move { Ok(payload) })
         .action("publish", |payload: Value, ctx| async move {
             let topic = payload

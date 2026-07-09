@@ -26,6 +26,9 @@ importers:
       '@forge/code':
         specifier: workspace:^
         version: link:../../packages/code
+      '@forge/desktop':
+        specifier: workspace:^
+        version: link:../../packages/desktop
       '@forge/graph':
         specifier: workspace:^
         version: link:../../packages/graph
@@ -38,6 +41,9 @@ importers:
       '@forge/remote':
         specifier: workspace:^
         version: link:../../packages/remote
+      '@forge/term':
+        specifier: workspace:^
+        version: link:../../packages/term
       '@forge/tokens':
         specifier: workspace:^
         version: link:../../packages/tokens

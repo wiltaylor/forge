@@ -22,6 +22,8 @@ import ChartsDemo from './sections/ChartsDemo';
 import LiveDemo from './sections/LiveDemo';
 import DataDemo from './sections/DataDemo';
 import RemoteDemo from './sections/RemoteDemo';
+import TermDemo from './sections/TermDemo';
+import DesktopDemo from './sections/DesktopDemo';
 
 const SECTIONS = [
   ['primitives', 'Primitives', Primitives],
@@ -45,6 +47,8 @@ const BACKEND_SECTIONS = [
   ['live', 'Live events', LiveDemo],
   ['data', 'Document store', DataDemo],
   ['remote', 'Remote components', RemoteDemo],
+  ['term', 'Terminal', TermDemo],
+  ['desktop', 'Remote desktop', DesktopDemo],
 ];
 
 /* A custom brand theme — proves applyTheme() recolors everything, including
