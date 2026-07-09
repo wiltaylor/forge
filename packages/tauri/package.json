@@ -1,0 +1,30 @@
+{
+  "name": "@forge/tauri",
+  "version": "0.1.0",
+  "description": "Forge client over Tauri IPC: the @forge/client interface with no HTTP server, plus widget transports.",
+  "type": "module",
+  "license": "MIT",
+  "sideEffects": false,
+  "files": ["dist"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "prepare": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@forge/client": "workspace:^",
+    "@tauri-apps/api": "^2.5.0"
+  },
+  "devDependencies": {
+    "tsup": "^8.4.0",
+    "typescript": "^5.8.0",
+    "vitest": "^3.2.4"
+  }
+}
