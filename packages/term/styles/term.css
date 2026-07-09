@@ -1,0 +1,27 @@
+/* Forge terminal chrome — component CSS. xterm internals are themed in
+   theme.ts from var(--token) values; this is the wrapper chrome only. */
+@import '@xterm/xterm/css/xterm.css';
+
+.fterm {
+  background: var(--bg-0);
+  border: 1px solid var(--border); border-radius: var(--r-md);
+  overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.fterm:focus-within { border-color: var(--accent); }
+.fterm-toolbar {
+  height: 33px; box-sizing: border-box; flex: none;
+  display: flex; align-items: center; gap: var(--sp-2);
+  padding: 0 var(--sp-2);
+  background: var(--bg-1); border-bottom: 1px solid var(--border-subtle);
+}
+.fterm-key {
+  font-family: var(--font-mono); font-size: var(--fs-xs); font-weight: var(--fw-medium);
+  color: var(--fg-1); background: var(--bg-2);
+  border: 1px solid var(--border); border-radius: var(--r-sm);
+  padding: 3px 8px; cursor: pointer;
+}
+.fterm-key:hover:not(:disabled) { background: var(--bg-3); color: var(--fg-0); }
+.fterm-key:disabled { color: var(--fg-3); cursor: default; }
+.fterm-body { flex: 1; min-height: 0; padding: var(--sp-2); }
+.fterm-body .xterm { height: 100%; }
