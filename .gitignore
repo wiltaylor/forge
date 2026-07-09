@@ -1,0 +1,13 @@
+node_modules/
+dist/
+dist-remote/
+target/
+.turbo/
+*.log
+.env
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+examples/**/data/
+examples/**/components/

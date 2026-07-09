@@ -1,0 +1,18 @@
+{
+  "name": "forge-monorepo",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.34.4",
+  "scripts": {
+    "build": "turbo build",
+    "typecheck": "turbo typecheck",
+    "test": "turbo test",
+    "dev": "pnpm --filter @forge/gallery dev",
+    "gallery:build": "turbo build --filter=@forge/gallery",
+    "remote:build": "turbo build --filter=@forge/remote-widgets"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.0",
+    "typescript": "^5.8.0"
+  }
+}

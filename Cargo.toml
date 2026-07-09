@@ -1,0 +1,12 @@
+[workspace]
+resolver = "2"
+members = ["crates/forge-server", "examples/rust-demo"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/wiltaylor/forge"
+
+[workspace.dependencies]
+forge-server = { path = "crates/forge-server" }
