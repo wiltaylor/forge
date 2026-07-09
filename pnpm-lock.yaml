@@ -15,6 +15,31 @@ importers:
         specifier: ^5.8.0
         version: 5.9.3
 
+  apps/auth:
+    dependencies:
+      '@forge/tokens':
+        specifier: workspace:^
+        version: link:../../packages/tokens
+      '@forge/ui':
+        specifier: workspace:^
+        version: link:../../packages/ui
+      '@solidjs/router':
+        specifier: ^0.15.0
+        version: 0.15.4(solid-js@1.9.14)
+      lucide-solid:
+        specifier: ^0.469.0
+        version: 0.469.0(solid-js@1.9.14)
+      solid-js:
+        specifier: ^1.9.0
+        version: 1.9.14
+    devDependencies:
+      vite:
+        specifier: ^6.0.0
+        version: 6.4.3(@types/node@26.1.1)
+      vite-plugin-solid:
+        specifier: ^2.11.0
+        version: 2.11.12(solid-js@1.9.14)(vite@6.4.3(@types/node@26.1.1))
+
   apps/gallery:
     dependencies:
       '@forge/charts':
@@ -1044,6 +1069,11 @@ packages:
     resolution: {integrity: sha512-BfzEnDJOt9T8M989/lA37EcJgat01wLRnoi5dQf3QzOH7jzpqTAzdDbVfRljVr5r+jzKqpbHeyOfAaXxAd0PAA==}
     cpu: [x64]
     os: [win32]
+
+  '@solidjs/router@0.15.4':
+    resolution: {integrity: sha512-WOpgg9a9T638cR+5FGbFi/IV4l2FpmBs1GpIMSPa0Ce9vyJN7Wts+X2PqMf9IYn0zUj2MlSJtm1gp7/HI/n5TQ==}
+    peerDependencies:
+      solid-js: ^1.8.6
 
   '@tauri-apps/api@2.11.1':
     resolution: {integrity: sha512-M2FPuYND2m+wh5hfW9ZpSdxMPdEJovPBWwoHJmwUpysTYNHaOkVFN419m/K0LIgjb/7KU2vBgsUepJWugQCvAA==}
@@ -2326,6 +2356,10 @@ snapshots:
 
   '@rollup/rollup-win32-x64-msvc@4.62.2':
     optional: true
+
+  '@solidjs/router@0.15.4(solid-js@1.9.14)':
+    dependencies:
+      solid-js: 1.9.14
 
   '@tauri-apps/api@2.11.1': {}
 

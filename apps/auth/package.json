@@ -1,0 +1,22 @@
+{
+  "name": "@forge/auth",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "forge-auth hosted login + admin console (SolidJS on @forge/ui).",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@forge/tokens": "workspace:^",
+    "@forge/ui": "workspace:^",
+    "@solidjs/router": "^0.15.0",
+    "lucide-solid": "^0.469.0",
+    "solid-js": "^1.9.0"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0",
+    "vite-plugin-solid": "^2.11.0"
+  }
+}

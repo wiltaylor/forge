@@ -9,6 +9,7 @@
     "test": "turbo test",
     "dev": "pnpm --filter @forge/gallery dev",
     "gallery:build": "turbo build --filter=@forge/gallery",
+    "auth:build": "turbo build --filter=@forge/auth",
     "remote:build": "turbo build --filter=@forge/remote-widgets"
   },
   "devDependencies": {

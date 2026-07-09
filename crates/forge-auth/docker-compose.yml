@@ -1,0 +1,32 @@
+services:
+  forge-auth:
+    image: forge-auth:latest
+    ports:
+      - "8770:8770"
+    volumes:
+      - forge-auth-data:/data
+    environment:
+      FORGE_AUTH_ISSUER: ${FORGE_AUTH_ISSUER:-http://127.0.0.1:8770}
+      FORGE_AUTH_ADMIN_PASSWORD: ${FORGE_AUTH_ADMIN_PASSWORD:?set in .env}
+      # Plain-http homelab? Uncomment so the session cookie is sent:
+      # FORGE_AUTH_COOKIE_SECURE: "false"
+      # --- Postgres variant: uncomment this and the db service below ---
+      # DATABASE_URL: postgres://forge:${POSTGRES_PASSWORD:-forge}@db/forgeauth
+
+  # db:
+  #   image: postgres:17-alpine
+  #   environment:
+  #     POSTGRES_DB: forgeauth
+  #     POSTGRES_USER: forge
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-forge}
+  #   volumes:
+  #     - pg-data:/var/lib/postgresql/data
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U forge"]
+  #     interval: 5s
+  #     timeout: 3s
+  #     retries: 10
+
+volumes:
+  forge-auth-data:
+  # pg-data:

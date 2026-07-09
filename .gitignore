@@ -13,3 +13,8 @@ examples/**/data/
 examples/**/components/
 examples/tauri-demo/src-tauri/gen/
 .playwright-cli/
+data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm

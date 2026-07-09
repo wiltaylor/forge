@@ -1,6 +1,12 @@
 [workspace]
 resolver = "2"
-members = ["crates/forge-core", "crates/forge-server", "examples/rust-demo"]
+members = [
+    "crates/forge-core",
+    "crates/forge-server",
+    "crates/forge-auth",
+    "examples/rust-demo",
+    "examples/auth-demo",
+]
 # Tauri crates are standalone workspaces: tauri pulls wry/tao/gtk, which would
 # force webkit system deps onto every root build and rust-analyzer session.
 # Build them via `just tauri-*` recipes instead.
@@ -15,6 +21,19 @@ repository = "https://github.com/wiltaylor/forge"
 [workspace.dependencies]
 forge-core = { path = "crates/forge-core" }
 forge-server = { path = "crates/forge-server" }
+
+# RSA keygen and argon2 are unusably slow without optimization; keep the
+# crypto stack optimized even in debug builds.
+[profile.dev.package.rsa]
+opt-level = 3
+[profile.dev.package.num-bigint-dig]
+opt-level = 3
+[profile.dev.package.argon2]
+opt-level = 3
+[profile.dev.package.blake2]
+opt-level = 3
+[profile.dev.package.sha2]
+opt-level = 3
 
 # Vendored ironrdp-session 0.10.0 with the xrdp bitmap-stride fix applied
 # (upstream issue Devolutions/IronRDP#1251; based on unmerged PR #1252 with

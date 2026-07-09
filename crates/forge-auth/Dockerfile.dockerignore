@@ -1,0 +1,13 @@
+# Paths are relative to the build context (repo root).
+target
+**/node_modules
+**/dist
+**/dist-remote
+**/.turbo
+data
+**/*.db*
+.env
+.git
+python
+docs
+.playwright-cli

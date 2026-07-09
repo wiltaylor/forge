@@ -1,0 +1,19 @@
+[package]
+name = "auth-demo"
+description = "Minimal forge relying party: logs in via forge-auth (OIDC code + PKCE)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+forge-server = { workspace = true }
+axum = "0.8"
+axum-extra = { version = "0.10", features = ["cookie"] }
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+serde_json = "1"
+sha2 = "0.10"
+base64 = "0.22"
+rand = "0.8"

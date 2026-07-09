@@ -185,9 +185,14 @@ Set in `.env`: `FORGE_JWT_SECRET` (≥32 chars) and `FORGE_AUTH_USERS`
 (`admin:admin` for dev, `admin:$argon2id$…` for real — hash via `forge-hash`
 or `python -m forge_server.hash`). `POST /api/auth/login` issues an HS256 JWT;
 serious deployments skip the built-in login and validate JWTs from an external
-auth service sharing the same secret (RS256/JWKS is the planned extension
-seam). With no `FORGE_JWT_SECRET`, auth is off and everything is open —
-playpen-style local tools.
+auth service sharing the same secret. With no `FORGE_JWT_SECRET`, auth is off
+and everything is open — playpen-style local tools.
+
+For a full identity provider, `crates/forge-auth` ships a self-hosted OIDC IdP:
+discovery, authorization code + PKCE, RS256/JWKS, RFC 8693 token exchange
+(including legacy HS256 minting for unmodified forge apps), username/password +
+upstream-OIDC + LDAP federation, and an admin console (`apps/auth`). See
+`crates/forge-auth/README.md`; `examples/auth-demo` is a minimal relying party.
 
 ## Skills
 
