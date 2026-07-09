@@ -14,6 +14,7 @@
     "@forge/code": "workspace:^",
     "@forge/graph": "workspace:^",
     "@forge/grid": "workspace:^",
+    "@forge/kanban": "workspace:^",
     "@forge/remote": "workspace:^",
     "@forge/tokens": "workspace:^",
     "@forge/ui": "workspace:^",

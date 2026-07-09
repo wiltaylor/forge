@@ -16,6 +16,7 @@ import SettingsDemo from './sections/SettingsDemo';
 import ModalDemo from './sections/ModalDemo';
 import GraphDemo from './sections/GraphDemo';
 import GridDemo from './sections/GridDemo';
+import KanbanDemo from './sections/KanbanDemo';
 import CodeDemo from './sections/CodeDemo';
 import ChartsDemo from './sections/ChartsDemo';
 import LiveDemo from './sections/LiveDemo';
@@ -35,6 +36,7 @@ const SECTIONS = [
   ['overlays', 'Overlays & menus', OverlaysDemo],
   ['graph', 'Node graph', GraphDemo],
   ['grid', 'Dashboard grid', GridDemo],
+  ['kanban', 'Kanban board', KanbanDemo],
   ['code', 'Code', CodeDemo],
   ['charts', 'Charts', ChartsDemo],
 ];

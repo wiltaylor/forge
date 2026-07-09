@@ -1,0 +1,84 @@
+/* Forge kanban — component CSS. All colours route through var(--token) from
+   @forge/tokens; control styling comes from @forge/ui/styles.css. */
+
+/* ---------------- Board ------------------------------------------------------ */
+/* Horizontal row of fixed-width columns; the consumer sizes the board (height
+   bounds the columns, which scroll internally). */
+.fkanban {
+  display: flex; gap: 12px; align-items: stretch;
+  overflow-x: auto; padding: 2px;
+}
+.fkanban-col {
+  flex: 0 0 280px; min-width: 0;
+  display: flex; flex-direction: column; max-height: 100%;
+  background: var(--bg-0);
+  border: 1px solid var(--border); border-radius: var(--r-md);
+}
+.fkanban-col.is-drop-target { border-color: var(--accent); }
+.fkanban-col-head {
+  display: flex; align-items: center; gap: 6px; flex: 0 0 auto;
+  padding: 8px 10px; border-bottom: 1px solid var(--border-subtle);
+}
+.fkanban-col-title {
+  font-size: 13px; font-weight: 600; color: var(--fg-0);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.fkanban-col-spacer { flex: 1; }
+.fkanban-col-toggle {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; padding: 0; flex: 0 0 auto;
+  background: none; border: none; border-radius: var(--r-sm);
+  color: var(--fg-2); cursor: pointer;
+}
+.fkanban-col-toggle:hover { background: var(--bg-2); color: var(--fg-0); }
+.fkanban-col-toggle svg { transition: rotate var(--dur-2) var(--ease-out); }
+
+/* Collapsed column: slim vertical bar, header rotated, body removed. */
+.fkanban-col.is-collapsed { flex-basis: 40px; }
+.fkanban-col.is-collapsed .fkanban-col-head {
+  flex-direction: column; border-bottom: none; padding: 10px 8px; gap: 8px;
+}
+.fkanban-col.is-collapsed .fkanban-col-title { writing-mode: vertical-rl; }
+.fkanban-col.is-collapsed .fkanban-col-toggle svg { rotate: 180deg; }
+.fkanban-col.is-collapsed.is-drop-target { background: var(--accent-bg); }
+
+/* ---------------- Card list -------------------------------------------------- */
+/* min-height keeps empty columns droppable. Cards carry inline order: i*2 and
+   the drop placeholder order: index*2-1, so mid-drag the <For> list never
+   changes — only flex order does. */
+.fkanban-body {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 8px; overflow-y: auto; min-height: 48px; flex: 1;
+}
+.fkanban-card {
+  background: var(--bg-1); border: 1px solid var(--border); border-radius: var(--r-md);
+  padding: 10px; font-size: 12px; color: var(--fg-0);
+  cursor: grab; touch-action: none; user-select: none;
+  flex: 0 0 auto;
+}
+.fkanban-card:hover { border-color: var(--border-strong); }
+.fkanban-card:active { cursor: grabbing; }
+/* Typing/selecting inside embedded controls must still work. */
+.fkanban-card input, .fkanban-card textarea { user-select: text; }
+/* The pointer-following card: fixed escapes the column's overflow clipping;
+   inline left/top/width/height come from the component. z below topbar (10). */
+.fkanban-card.is-dragging {
+  position: fixed; z-index: 9;
+  border-color: var(--accent); opacity: 0.9;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
+  pointer-events: none;
+}
+.fkanban-placeholder {
+  border: 1px dashed var(--accent); background: var(--accent-bg);
+  border-radius: var(--r-md); flex: 0 0 auto; box-sizing: border-box;
+}
+.fkanban-card-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 6px;
+  margin-bottom: 8px;
+}
+.fkanban-card-title {
+  font-weight: 600;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.fkanban-fields { display: flex; flex-direction: column; gap: 8px; }
+.fkanban-badge-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
