@@ -1,0 +1,267 @@
+/* =========================================================================
+   Forge Design System — Tokens + Element Styles
+   Dark default, light via prefers-color-scheme or [data-theme="light"].
+   ========================================================================= */
+/* -------- DARK (default) -------------------------------------------------- */
+:root {
+  color-scheme: dark;
+
+  /* Neutrals — backgrounds rise from 0 (page) to 4 (popovers) */
+  --bg-0: #0B0D10;          /* page */
+  --bg-1: #11141A;          /* card */
+  --bg-2: #171B22;          /* hover / nested card */
+  --bg-3: #1E232C;          /* pressed / active row */
+  --bg-4: #252B36;          /* popover, dropdown */
+
+  /* Foregrounds — descending contrast */
+  --fg-0: #ECEEF2;          /* primary text */
+  --fg-1: #B7BDC8;          /* secondary text */
+  --fg-2: #7C8593;          /* tertiary, captions */
+  --fg-3: #4E5664;          /* disabled, placeholder */
+
+  /* Borders */
+  --border-subtle: #1A1F27;
+  --border: #262C36;
+  --border-strong: #3A4250;
+
+  /* Accent — desaturated blue */
+  --accent: oklch(0.62 0.16 250);
+  --accent-hover: oklch(0.66 0.17 250);
+  --accent-press: oklch(0.56 0.16 250);
+  --accent-bg: oklch(0.62 0.16 250 / 0.14);
+  --accent-fg: oklch(0.82 0.13 250);
+  --accent-contrast: #FFFFFF; /* text on solid accent */
+
+  /* Semantic — each has -bg (tint) and -fg (text on tint) */
+  --success: oklch(0.68 0.14 150);
+  --success-bg: oklch(0.68 0.14 150 / 0.14);
+  --success-fg: oklch(0.82 0.16 150);
+
+  --warning: oklch(0.78 0.14 75);
+  --warning-bg: oklch(0.78 0.14 75 / 0.14);
+  --warning-fg: oklch(0.86 0.13 80);
+
+  --danger: oklch(0.65 0.20 25);
+  --danger-bg: oklch(0.65 0.20 25 / 0.14);
+  --danger-fg: oklch(0.78 0.16 25);
+
+  --info: oklch(0.68 0.13 230);
+  --info-bg: oklch(0.68 0.13 230 / 0.14);
+  --info-fg: oklch(0.82 0.12 230);
+
+  /* Typography */
+  --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  /* Type scale — 1.2 ratio, anchored at 14px */
+  --fs-xs:   11px;
+  --fs-sm:   12px;
+  --fs-base: 14px;
+  --fs-md:   16px;
+  --fs-lg:   18px;
+  --fs-xl:   22px;
+  --fs-2xl:  28px;
+  --fs-3xl:  34px;
+
+  --lh-tight:  1.2;
+  --lh-snug:   1.4;
+  --lh-normal: 1.5;
+  --lh-relaxed: 1.65;
+
+  --fw-regular: 400;
+  --fw-medium:  500;
+  --fw-semibold: 600;
+  --fw-bold:    700;
+
+  --tracking-tight: -0.01em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.04em;
+  --tracking-eyebrow: 0.08em;
+
+  /* Spacing — 4px base */
+  --sp-1:  4px;
+  --sp-2:  8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+  --sp-16: 64px;
+
+  /* Radii */
+  --r-sm: 4px;
+  --r-md: 6px;
+  --r-lg: 8px;
+  --r-pill: 999px;
+
+  /* Shadows — sparingly */
+  --shadow-sm: none;
+  --shadow-md: none;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --dur-1: 80ms;
+  --dur-2: 160ms;
+  --dur-3: 240ms;
+
+  /* Responsive breakpoints — CSS variables cannot be used inside @media
+     conditions, so these are documented constants. Use the literal values:
+       compact: @media (max-width: 1024px)  — sidebar becomes a drawer
+       mobile:  @media (max-width: 768px)   — single-column stacking
+     Touch: @media (pointer: coarse) bumps the --h-* control heights below. */
+
+  /* Component sizes (touch-friendly minimums) */
+  --h-sm: 28px;
+  --h-md: 32px;
+  --h-lg: 36px;
+  --h-xl: 40px;
+
+  /* Shell dimensions — the app-shell grid and the mobile drawer share these */
+  --sidebar-w: 240px;
+  --topbar-h: 48px;
+}
+
+/* -------- LIGHT ----------------------------------------------------------- */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    color-scheme: light;
+
+    --bg-0: #FAFAFA;
+    --bg-1: #FFFFFF;
+    --bg-2: #F4F5F7;
+    --bg-3: #EAECEF;
+    --bg-4: #FFFFFF;
+
+    --fg-0: #0C0F14;
+    --fg-1: #3D4654;
+    --fg-2: #6B7383;
+    --fg-3: #A0A6B2;
+
+    --border-subtle: #EEF0F3;
+    --border: #DCDFE4;
+    --border-strong: #B6BBC4;
+
+    --accent: oklch(0.52 0.18 250);
+    --accent-hover: oklch(0.46 0.19 250);
+    --accent-press: oklch(0.40 0.19 250);
+    --accent-bg: oklch(0.55 0.17 250 / 0.14);
+    --accent-fg: oklch(0.38 0.19 250);
+    --accent-contrast: #FFFFFF;
+
+    --success: oklch(0.50 0.15 150);
+    --success-bg: oklch(0.55 0.15 150 / 0.16);
+    --success-fg: oklch(0.36 0.14 150);
+
+    --warning: oklch(0.62 0.16 70);
+    --warning-bg: oklch(0.65 0.16 70 / 0.20);
+    --warning-fg: oklch(0.40 0.14 60);
+
+    --danger: oklch(0.52 0.22 25);
+    --danger-bg: oklch(0.55 0.21 25 / 0.14);
+    --danger-fg: oklch(0.42 0.20 25);
+
+    --info: oklch(0.50 0.14 230);
+    --info-bg: oklch(0.55 0.14 230 / 0.16);
+    --info-fg: oklch(0.36 0.13 230);
+
+    --shadow-sm: none;
+    --shadow-md: none;
+  }
+}
+
+/* Manual theme overrides — applies to ANY element with data-theme,
+   so multi-theme preview panes can show both at once. */
+[data-theme="light"] {
+  color-scheme: light;
+
+  --bg-0: #FAFAFA;
+  --bg-1: #FFFFFF;
+  --bg-2: #F4F5F7;
+  --bg-3: #EAECEF;
+  --bg-4: #FFFFFF;
+
+  --fg-0: #0C0F14;
+  --fg-1: #3D4654;
+  --fg-2: #6B7383;
+  --fg-3: #A0A6B2;
+
+  --border-subtle: #EEF0F3;
+  --border: #DCDFE4;
+  --border-strong: #B6BBC4;
+
+  --accent: oklch(0.52 0.18 250);
+  --accent-hover: oklch(0.46 0.19 250);
+  --accent-press: oklch(0.40 0.19 250);
+  --accent-bg: oklch(0.55 0.17 250 / 0.14);
+  --accent-fg: oklch(0.38 0.19 250);
+  --accent-contrast: #FFFFFF;
+
+  --success: oklch(0.50 0.15 150);
+  --success-bg: oklch(0.55 0.15 150 / 0.16);
+  --success-fg: oklch(0.36 0.14 150);
+
+  --warning: oklch(0.62 0.16 70);
+  --warning-bg: oklch(0.65 0.16 70 / 0.20);
+  --warning-fg: oklch(0.40 0.14 60);
+
+  --danger: oklch(0.52 0.22 25);
+  --danger-bg: oklch(0.55 0.21 25 / 0.14);
+  --danger-fg: oklch(0.42 0.20 25);
+
+  --info: oklch(0.50 0.14 230);
+  --info-bg: oklch(0.55 0.14 230 / 0.16);
+  --info-fg: oklch(0.36 0.13 230);
+
+  --shadow-sm: none;
+    --shadow-md: none;
+}
+
+/* Explicit dark override — re-asserts the dark ramp when the parent is light
+   (e.g. side-by-side preview panes, or when the OS prefers light but a
+   surface needs to stay dark). */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg-0: #0B0D10;
+  --bg-1: #11141A;
+  --bg-2: #171B22;
+  --bg-3: #1E232C;
+  --bg-4: #252B36;
+
+  --fg-0: #ECEEF2;
+  --fg-1: #B7BDC8;
+  --fg-2: #7C8593;
+  --fg-3: #4E5664;
+
+  --border-subtle: #1A1F27;
+  --border: #262C36;
+  --border-strong: #3A4250;
+
+  --accent: oklch(0.62 0.16 250);
+  --accent-hover: oklch(0.66 0.17 250);
+  --accent-press: oklch(0.56 0.16 250);
+  --accent-bg: oklch(0.62 0.16 250 / 0.14);
+  --accent-fg: oklch(0.82 0.13 250);
+  --accent-contrast: #FFFFFF;
+
+  --success: oklch(0.68 0.14 150);
+  --success-bg: oklch(0.68 0.14 150 / 0.14);
+  --success-fg: oklch(0.82 0.16 150);
+
+  --warning: oklch(0.78 0.14 75);
+  --warning-bg: oklch(0.78 0.14 75 / 0.14);
+  --warning-fg: oklch(0.86 0.13 80);
+
+  --danger: oklch(0.65 0.20 25);
+  --danger-bg: oklch(0.65 0.20 25 / 0.14);
+  --danger-fg: oklch(0.78 0.16 25);
+
+  --info: oklch(0.68 0.13 230);
+  --info-bg: oklch(0.68 0.13 230 / 0.14);
+  --info-fg: oklch(0.82 0.12 230);
+
+  --shadow-sm: none;
+  --shadow-md: none;
+}

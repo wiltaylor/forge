@@ -1,0 +1,27 @@
+{
+  "name": "@forge/tokens",
+  "version": "0.1.0",
+  "description": "Forge design tokens: CSS custom properties (dark/light) and a typed theme engine.",
+  "type": "module",
+  "license": "MIT",
+  "sideEffects": ["**/*.css"],
+  "files": ["dist", "css"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./tokens.css": "./css/tokens.css",
+    "./base.css": "./css/base.css",
+    "./fonts.css": "./css/fonts.css"
+  },
+  "scripts": {
+    "build": "tsup",
+    "prepare": "tsup",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "tsup": "^8.4.0",
+    "typescript": "^5.8.0"
+  }
+}
