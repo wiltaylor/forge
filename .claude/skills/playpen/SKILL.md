@@ -20,6 +20,12 @@ server persists JSON documents the UI writes back (comments, annotations, node g
 a Vite + SolidJS frontend gives HMR while iterating, and the `playpen.py` CLI lets the
 agent start/stop the app, seed data, and read back what the user produced. The UI is
 styled with the Forge design system (dark default, honors `prefers-color-scheme`).
+
+Note: the forge repo (github:wiltaylor/forge) now ships this stack as reusable pieces —
+`python/forge-server` (the doc-store contract as an installable package, plus JWT auth,
+SSE and WebSockets) and `@forge/client` (typed replacement for `www/src/api.js`). For a
+throwaway playpen the copy-in scaffold here stays the default; reach for the packages when
+a playpen graduates into a real tool or needs auth/live events.
 </overview>
 
 <variables>

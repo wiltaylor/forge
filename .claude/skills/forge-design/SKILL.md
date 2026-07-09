@@ -7,11 +7,19 @@ argument-hint: [what to build or style]
 
 <overview>
 Applies the **Forge design system** (synced from the claude.ai design project "Tech Tools
-Design System") to SolidJS work. It provides copy-in assets — the token CSS (colours, type,
-spacing, radii, motion), the component CSS (`.fbtn`, `.fcard`, `.ftable`, …), and a SolidJS
-port of the UI primitives — plus reference docs on the colour scheme and the rules for
-designing new components that fit the system. Output is production SolidJS code or styled
-components that render dark by default and honor `prefers-color-scheme`.
+Design System") to SolidJS work. The system now ships two ways:
+
+1. **npm packages** (preferred): `@forge/tokens`, `@forge/ui`, `@forge/charts`,
+   `@forge/graph`, `@forge/code` under `packages/` in the forge repo
+   (github:wiltaylor/forge) — TypeScript, typed props, plus `@forge/client`
+   (REST/SSE/WS/JWT API client) and `@forge/remote` (component federation).
+   See the repo README for git-dependency install and CSS import order.
+2. **Copy-in assets** (fallback for projects that can't take the packages):
+   the token CSS, component CSS (`.fbtn`, `.fcard`, …) and `ui.jsx` in this
+   skill's `assets/`.
+
+Reference docs cover the colour scheme and the rules for designing new components. Output
+is production SolidJS code that renders dark by default and honors `prefers-color-scheme`.
 </overview>
 
 <variables>
@@ -21,12 +29,12 @@ components that render dark by default and honor `prefers-color-scheme`.
 
 <workflow>
 <step order="1">
-**Preview mode**: if the user asks to preview the design system / see the controls, skip the
-build workflow: `cd ${CLAUDE_SKILL_DIR}/preview`, run `npm install` if `node_modules/` is
-missing, then start `npm run dev` **in the background** (never as a blocking foreground
-command) and tell the user the gallery is at `http://localhost:4890` (port is strict; if
-taken, the previous gallery is already running). The gallery imports the live skill assets,
-so it always shows the current state. Otherwise continue with step 2.
+**Preview mode**: if the user asks to preview the design system / see the controls: inside
+the forge repo, run `pnpm install` then `pnpm dev` from the repo root **in the background**
+— the gallery (apps/gallery, every component + theming demos) is at `http://localhost:5173`.
+Elsewhere, use this skill's legacy preview: `cd ${CLAUDE_SKILL_DIR}/preview`, `npm install`
+if needed, `npm run dev` in the background → `http://localhost:4890`. Otherwise continue
+with step 2.
 </step>
 
 <step order="2">
@@ -42,12 +50,16 @@ and follow its new-component checklist.
 </step>
 
 <step order="4">
-Wire the assets into the target project as described in `reference/solidjs.md`: copy
-`assets/colors_and_type.css`, `assets/console.css`, and `assets/ui.jsx` in, import the two
-CSS files at the app entry (tokens first). Optional extras: `assets/graph.jsx` (node
-editors/flowcharts), `assets/charts.jsx` (charts), `assets/code.jsx` (code editor — needs
-the CodeMirror packages listed in `reference/solidjs.md`). Copy — never symlink into this
-skill directory.
+Wire the design system into the target project. **Prefer the packages**: inside the forge
+monorepo add `"@forge/ui": "workspace:^"` etc.; outside it use git dependencies
+(`github:wiltaylor/forge#main&path:packages/ui`, pnpm). Import CSS at the app entry in
+order: `@forge/tokens/tokens.css`, `@forge/tokens/base.css` (optionally `fonts.css` first),
+then `@forge/ui/styles.css` (+ `@forge/charts|graph|code/styles.css` as used).
+**Copy-in fallback** (per `reference/solidjs.md`): copy `assets/colors_and_type.css`,
+`assets/console.css`, and `assets/ui.jsx` in, import the two CSS files at the app entry
+(tokens first). Optional extras: `assets/graph.jsx`, `assets/charts.jsx`, `assets/code.jsx`
+(needs the CodeMirror packages listed in `reference/solidjs.md`). Copy — never symlink into
+this skill directory.
 For each asset that already exists in the project, run `diff -u <project copy> <skill copy>`:
 identical → leave it and continue; different → show the diff and ask the user whether to
 update the project copy. Never overwrite an existing project copy without approval.
