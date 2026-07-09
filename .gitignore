@@ -11,4 +11,5 @@ __pycache__/
 .pytest_cache/
 examples/**/data/
 examples/**/components/
+examples/tauri-demo/src-tauri/gen/
 .playwright-cli/

@@ -1,0 +1,25 @@
+[package]
+name = "tauri-demo"
+description = "Forge Tauri example app: the contract + streaming widgets over pure IPC."
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+publish = false
+
+# Standalone workspace, same story as crates/forge-tauri.
+[workspace]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+forge-tauri = { path = "../../../crates/forge-tauri", features = ["widgets"] }
+serde_json = "1"
+tokio = { version = "1", features = ["time"] }
+
+# Excluded from the root workspace → carry the vendored ironrdp-session with
+# the xrdp bitmap-stride fix (see root Cargo.toml); without it RDP against
+# xrdp shears diagonally.
+[patch.crates-io]
+ironrdp-session = { path = "../../../vendor/ironrdp-session" }
