@@ -1,0 +1,38 @@
+/* Forge remote desktop chrome — component CSS.
+   All colours route through var(--token) from @forge/tokens. */
+
+.fdesk {
+  background: var(--bg-0);
+  border: 1px solid var(--border); border-radius: var(--r-md);
+  overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.fdesk:focus-within { border-color: var(--accent); }
+.fdesk-toolbar {
+  height: 33px; box-sizing: border-box; flex: none;
+  display: flex; align-items: center; gap: var(--sp-2);
+  padding: 0 var(--sp-2);
+  background: var(--bg-1); border-bottom: 1px solid var(--border-subtle);
+}
+.fdesk-key {
+  font-family: var(--font-mono); font-size: var(--fs-xs); font-weight: var(--fw-medium);
+  color: var(--fg-1); background: var(--bg-2);
+  border: 1px solid var(--border); border-radius: var(--r-sm);
+  padding: 3px 8px; cursor: pointer;
+}
+.fdesk-key:hover:not(:disabled) { background: var(--bg-3); color: var(--fg-0); }
+.fdesk-key:disabled { color: var(--fg-3); cursor: default; }
+.fdesk-stage {
+  flex: 1; min-height: 0; position: relative;
+  display: grid; place-items: center;
+  overflow: auto;
+}
+.fdesk-canvas { display: block; touch-action: none; outline: none; }
+.fdesk-canvas[data-scale="fit"] { max-width: 100%; max-height: 100%; width: auto; height: auto; }
+.fdesk-canvas[data-scale="native"] { image-rendering: pixelated; }
+.fdesk-status {
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  color: var(--fg-2); font-family: var(--font-mono); font-size: var(--fs-sm);
+  pointer-events: none;
+}
