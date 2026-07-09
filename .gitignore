@@ -11,3 +11,4 @@ __pycache__/
 .pytest_cache/
 examples/**/data/
 examples/**/components/
+.playwright-cli/
