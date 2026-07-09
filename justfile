@@ -66,3 +66,13 @@ python-demo: frontend-build
 [group('dev')]
 gallery-dev:
 	pnpm dev
+
+# Start the widgets docker testenv (VNC 127.0.0.1:5900 pass "forge", RDP 127.0.0.1:3389 forge/forge)
+[group('dev')]
+widgets-testenv-up:
+	docker compose -f examples/widgets-testenv/docker-compose.yml up -d --build
+
+# Stop and remove the widgets docker testenv
+[group('dev')]
+widgets-testenv-down:
+	docker compose -f examples/widgets-testenv/docker-compose.yml down

@@ -1,0 +1,40 @@
+# Throwaway desktop targets for the remote-access widgets (docs/widgets-protocol.md).
+#
+#   just widgets-testenv-up      # build + start both
+#   just widgets-testenv-down    # stop + remove
+#
+# vnc: Xvfb + fluxbox + xterm behind x11vnc     → 127.0.0.1:5900, password "forge"
+# rdp: xrdp with a plain-xterm session          → 127.0.0.1:3389, user forge / forge
+#
+# Fixed dev credentials on loopback only — never expose these containers.
+services:
+  vnc:
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM alpine:3.22
+        RUN apk add --no-cache xvfb x11vnc fluxbox xterm
+        CMD Xvfb :0 -screen 0 1024x768x24 -nolisten tcp & \
+            while [ ! -e /tmp/.X11-unix/X0 ]; do sleep 0.2; done; \
+            fluxbox -display :0 & \
+            xterm -display :0 -geometry 100x30+40+40 & \
+            exec x11vnc -display :0 -forever -shared -rfbport 5900 -passwd forge
+    ports:
+      - "127.0.0.1:5900:5900"
+
+  rdp:
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM debian:bookworm-slim
+        RUN apt-get update && \
+            apt-get install -y --no-install-recommends xrdp xorgxrdp xterm && \
+            rm -rf /var/lib/apt/lists/*
+        RUN useradd -m -s /bin/bash forge && \
+            echo forge:forge | chpasswd && \
+            echo xterm > /home/forge/.xsession
+        CMD rm -f /var/run/xrdp/*.pid && \
+            xrdp-sesman && \
+            exec xrdp --nodaemon
+    ports:
+      - "127.0.0.1:3389:3389"
