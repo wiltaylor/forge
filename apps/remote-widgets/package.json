@@ -1,0 +1,22 @@
+{
+  "name": "@forge/remote-widgets",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Example Forge remote-component bundle: web components another Forge app can mount.",
+  "scripts": {
+    "build": "vite build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@forge/charts": "workspace:^",
+    "@forge/remote": "workspace:^",
+    "@forge/ui": "workspace:^",
+    "solid-js": "^1.9.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.0",
+    "vite": "^6.0.0",
+    "vite-plugin-solid": "^2.11.0"
+  }
+}

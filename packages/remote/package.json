@@ -1,0 +1,48 @@
+{
+  "name": "@forge/remote",
+  "version": "0.1.0",
+  "description": "Forge component federation: export SolidJS components as web-component bundles and mount remote ones (JWT-authenticated).",
+  "type": "module",
+  "license": "MIT",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "solid": "./dist/index/index.jsx",
+      "import": {
+        "types": "./dist/index/index.d.ts",
+        "default": "./dist/index/index.js"
+      }
+    },
+    "./vite": {
+      "types": "./dist/vite/index.d.ts",
+      "import": "./dist/vite/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "prepare": "tsup",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@forge/ui": "workspace:^"
+  },
+  "peerDependencies": {
+    "solid-js": "^1.9.0",
+    "vite": ">=5"
+  },
+  "peerDependenciesMeta": {
+    "vite": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "solid-js": "^1.9.0",
+    "tsup": "^8.4.0",
+    "tsup-preset-solid": "^2.2.0",
+    "typescript": "^5.8.0",
+    "vite": "^6.0.0"
+  }
+}
