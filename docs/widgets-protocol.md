@@ -145,10 +145,12 @@ Every framebuffer update is one binary frame (`proto::encode_rect`):
 | 4      | 2    | y (u16 LE)                         |
 | 6      | 2    | w (u16 LE)                         |
 | 8      | 2    | h (u16 LE)                         |
-| 10     | w·h·4| pixels, row-major RGBA             |
+| 10     | w·h·4| pixels, row-major RGBA (alpha always `0xFF`) |
 
-Clients must ignore frames with an unknown version; the encoding byte
-reserves room for per-rect compression later.
+The server forces the alpha byte opaque — both protocol decoders emit
+padding there (VNC RGBX, RDP bitmaps), which would otherwise blit as
+fully transparent. Clients must ignore frames with an unknown version;
+the encoding byte reserves room for per-rect compression later.
 
 ## Known approximations (v1)
 

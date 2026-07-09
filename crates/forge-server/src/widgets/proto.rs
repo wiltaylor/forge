@@ -100,6 +100,8 @@ pub const RECT_ENCODING_RAW: u8 = 0;
 pub const RECT_HEADER_LEN: usize = 10;
 
 /// Encode one framebuffer update rect: 10-byte LE header + `w*h*4` RGBA bytes.
+/// The alpha byte is forced to 0xFF: both protocol decoders emit padding (VNC
+/// RGBX, RDP bitmaps) there, and a 0 alpha blits as fully transparent.
 pub fn encode_rect(x: u16, y: u16, w: u16, h: u16, rgba: &[u8]) -> Vec<u8> {
     debug_assert_eq!(rgba.len(), w as usize * h as usize * 4);
     let mut buf = Vec::with_capacity(RECT_HEADER_LEN + rgba.len());
@@ -110,6 +112,9 @@ pub fn encode_rect(x: u16, y: u16, w: u16, h: u16, rgba: &[u8]) -> Vec<u8> {
     buf.extend_from_slice(&w.to_le_bytes());
     buf.extend_from_slice(&h.to_le_bytes());
     buf.extend_from_slice(rgba);
+    for px in buf[RECT_HEADER_LEN..].chunks_exact_mut(4) {
+        px[3] = 0xFF;
+    }
     buf
 }
 
@@ -264,14 +269,14 @@ mod tests {
     }
 
     #[test]
-    fn encode_rect_is_byte_exact() {
-        let rgba = [1u8, 2, 3, 4, 5, 6, 7, 8]; // 2x1 pixels
+    fn encode_rect_is_byte_exact_and_forces_opaque_alpha() {
+        let rgba = [1u8, 2, 3, 4, 5, 6, 7, 8]; // 2x1 pixels, padding alpha
         let frame = encode_rect(0x0102, 0x0304, 2, 1, &rgba);
         assert_eq!(frame.len(), RECT_HEADER_LEN + rgba.len());
         assert_eq!(
             &frame[..RECT_HEADER_LEN],
             &[1, 0, 0x02, 0x01, 0x04, 0x03, 2, 0, 1, 0]
         );
-        assert_eq!(&frame[RECT_HEADER_LEN..], &rgba);
+        assert_eq!(&frame[RECT_HEADER_LEN..], &[1, 2, 3, 0xFF, 5, 6, 7, 0xFF]);
     }
 }
