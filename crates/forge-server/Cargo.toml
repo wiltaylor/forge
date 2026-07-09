@@ -1,0 +1,42 @@
+[package]
+name = "forge-server"
+description = "Batteries-included backend layer for Forge apps: auth, doc store, actions, events, static frontend."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[features]
+default = ["embed"]
+embed = ["dep:rust-embed"]
+cli = []
+
+[[bin]]
+name = "forge-hash"
+path = "src/bin/forge-hash.rs"
+required-features = ["cli"]
+
+[dependencies]
+axum = { version = "0.8", features = ["ws", "macros"] }
+tokio = { version = "1", features = ["full"] }
+tower = "0.5"
+tower-http = { version = "0.7", features = ["cors", "fs", "trace"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+jsonwebtoken = "9"
+dotenvy = "0.15"
+argon2 = { version = "0.5", features = ["std"] }
+rust-embed = { version = "8", features = ["mime-guess"], optional = true }
+tokio-stream = { version = "0.1", features = ["sync"] }
+thiserror = "2"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+mime_guess = "2"
+
+[dev-dependencies]
+tower = { version = "0.5", features = ["util"] }
+http-body-util = "0.1"
+# Matches the tokio-tungstenite version axum 0.8 uses internally.
+tokio-tungstenite = "0.29"
+futures-util = "0.3"
+tempfile = "3"
