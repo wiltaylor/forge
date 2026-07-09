@@ -110,6 +110,12 @@ export interface ForgeClient {
   actions: ActionsApi;
   events: EventsApi;
   ws: WsApi;
+  /**
+   * Absolute ws(s):// URL for a server WebSocket endpoint (e.g. '/api/term'),
+   * carrying the current token as `?token=`. For widgets that manage their
+   * own socket rather than the shared event socket.
+   */
+  wsUrl(path: string): string;
   /** Any 401 clears the stored token, then fires. Returns unsubscribe. */
   onUnauthorized(cb: () => void): () => void;
   /** GET /api/health. */

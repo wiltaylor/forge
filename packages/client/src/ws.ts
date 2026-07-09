@@ -5,11 +5,12 @@ const INITIAL_BACKOFF_MS = 500;
 const MAX_BACKOFF_MS = 8000;
 
 /**
- * Build the WebSocket endpoint URL. http(s) origins are mapped to ws(s);
+ * Build a WebSocket endpoint URL. http(s) origins are mapped to ws(s);
  * an empty baseUrl (same-origin) derives the origin from `location`.
  * The token travels as `?token=` because browser WebSocket cannot set headers.
+ * `path` defaults to the event socket, `/api/ws`.
  */
-export function buildWsUrl(baseUrl: string, token: string | null): string {
+export function buildWsUrl(baseUrl: string, token: string | null, path = '/api/ws'): string {
   let origin = baseUrl;
   if (origin === '') {
     const loc = (globalThis as { location?: Location }).location;
@@ -25,7 +26,7 @@ export function buildWsUrl(baseUrl: string, token: string | null): string {
     origin = `ws://${origin.slice('http://'.length)}`;
   }
   const query = token ? `?token=${encodeURIComponent(token)}` : '';
-  return `${origin}/api/ws${query}`;
+  return `${origin}${path}${query}`;
 }
 
 export function connectSocket(core: Core): ForgeSocket {

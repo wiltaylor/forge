@@ -3,7 +3,7 @@ import { createAuth } from './auth';
 import { createData } from './data';
 import { createCore } from './http';
 import { createEvents } from './sse';
-import { connectSocket } from './ws';
+import { buildWsUrl, connectSocket } from './ws';
 import type { ClientOptions, ForgeClient, Health } from './types';
 
 export function createClient(opts: ClientOptions = {}): ForgeClient {
@@ -16,6 +16,7 @@ export function createClient(opts: ClientOptions = {}): ForgeClient {
     ws: {
       connect: () => connectSocket(core),
     },
+    wsUrl: (path) => buildWsUrl(core.baseUrl, core.token(), path),
     onUnauthorized: (cb) => core.onUnauthorized(cb),
     health: () => core.request<Health>('GET', '/api/health'),
     request: (method, path, body) => core.request(method, path, body),
