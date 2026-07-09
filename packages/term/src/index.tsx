@@ -5,4 +5,5 @@
 
 export { Terminal } from './terminal';
 export type { TerminalApi, TerminalProps, TerminalStatus } from './terminal';
+export type { WidgetTransport } from './transport';
 export { readTermTheme, watchTheme } from './theme';

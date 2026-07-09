@@ -1,13 +1,16 @@
 /* ---------------- Terminal ---------------------------------------------------
-   xterm.js over a dedicated WebSocket (`/api/term`): binary frames both ways
-   for tty bytes, JSON text frames for control. No auto-reconnect — a dead
-   session stays dead until connect() is called again. */
+   xterm.js over a dedicated widget connection (`/api/term` WebSocket by
+   default, or a custom transport): binary frames both ways for tty bytes,
+   JSON text frames for control. No auto-reconnect — a dead session stays
+   dead until connect() is called again. */
 import { createSignal, onMount, onCleanup, Show } from 'solid-js';
 import type { JSX } from 'solid-js';
 import { Terminal as XTerm } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebglAddon } from '@xterm/addon-webgl';
 import { readTermTheme, watchTheme } from './theme';
+import { connectTransport } from './transport';
+import type { WidgetTransport } from './transport';
 
 export type TerminalStatus = 'disconnected' | 'connecting' | 'ready' | 'closed' | 'error';
 
@@ -21,8 +24,13 @@ export interface TerminalApi {
 }
 
 export interface TerminalProps {
-  /** WebSocket URL, e.g. `api.wsUrl('/api/term')` (token already embedded). */
-  url: string;
+  /** WebSocket URL, e.g. `api.wsUrl('/api/term')` (token already embedded).
+      Optional when `transport` is provided. */
+  url?: string;
+  /** Custom connection (e.g. `@forge/tauri`'s `client.widget('term')`).
+      Prefer the factory form so reconnects get a fresh session. Default:
+      a WebSocket on `url`. */
+  transport?: WidgetTransport | (() => WidgetTransport);
   /** Default 'local'. */
   mode?: 'local' | 'ssh';
   host?: string;
@@ -49,13 +57,13 @@ export function Terminal(props: TerminalProps) {
   let host!: HTMLDivElement;
   let term: XTerm | undefined;
   let fit: FitAddon | undefined;
-  let ws: WebSocket | undefined;
+  let ws: WidgetTransport | undefined;
   const [status, setStatus] = createSignal<TerminalStatus>('disconnected');
   const enc = new TextEncoder();
 
   const report = (s: TerminalStatus) => { setStatus(s); props.onStatus?.(s); };
   const send = (data: Uint8Array) => {
-    if (ws?.readyState === WebSocket.OPEN) ws.send(data);
+    ws?.send(data);
   };
 
   const disconnect = () => {
@@ -68,8 +76,13 @@ export function Terminal(props: TerminalProps) {
   const connect = () => {
     if (!term || ws) return;
     report('connecting');
-    const sock = new WebSocket(props.url);
-    sock.binaryType = 'arraybuffer';
+    let sock: WidgetTransport;
+    try {
+      sock = connectTransport(props.transport, props.url);
+    } catch {
+      report('error');
+      return;
+    }
     ws = sock;
     sock.onopen = () => {
       sock.send(JSON.stringify({
@@ -83,10 +96,10 @@ export function Terminal(props: TerminalProps) {
         rows: term!.rows,
       }));
     };
-    sock.onmessage = (ev) => {
-      if (typeof ev.data === 'string') {
+    sock.onmessage = (data) => {
+      if (typeof data === 'string') {
         let msg: { type?: string; code?: number; message?: string };
-        try { msg = JSON.parse(ev.data); } catch { return; }
+        try { msg = JSON.parse(data); } catch { return; }
         if (msg.type === 'ready') report('ready');
         else if (msg.type === 'exit') { props.onExit?.(msg.code ?? 0); report('closed'); }
         else if (msg.type === 'error') {
@@ -94,7 +107,7 @@ export function Terminal(props: TerminalProps) {
           report('error');
         }
       } else {
-        term?.write(new Uint8Array(ev.data as ArrayBuffer));
+        term?.write(new Uint8Array(data));
       }
     };
     sock.onclose = () => {
@@ -134,8 +147,7 @@ export function Terminal(props: TerminalProps) {
       send(bytes);
     });
     t.onResize(({ cols, rows }) => {
-      if (ws?.readyState === WebSocket.OPEN)
-        ws.send(JSON.stringify({ type: 'resize', cols, rows }));
+      ws?.send(JSON.stringify({ type: 'resize', cols, rows }));
     });
 
     const ro = new ResizeObserver(() => fit?.fit());

@@ -5,6 +5,8 @@
    10 bytes) + w*h*4 RGBA. JSON text frames for control. No auto-reconnect. */
 import { createSignal, onMount, onCleanup, Show } from 'solid-js';
 import type { JSX } from 'solid-js';
+import { connectTransport } from './transport';
+import type { WidgetTransport } from './transport';
 
 export type DesktopStatus = 'disconnected' | 'connecting' | 'ready' | 'closed' | 'error';
 
@@ -16,8 +18,13 @@ export interface DesktopApi {
 }
 
 export interface DesktopViewerProps {
-  /** WebSocket URL, e.g. `api.wsUrl('/api/desktop/vnc')` (token embedded). */
-  url: string;
+  /** WebSocket URL, e.g. `api.wsUrl('/api/desktop/vnc')` (token embedded).
+      Optional when `transport` is provided. */
+  url?: string;
+  /** Custom connection (e.g. `@forge/tauri`'s `client.widget('vnc')`).
+      Prefer the factory form so reconnects get a fresh session. Default:
+      a WebSocket on `url`. */
+  transport?: WidgetTransport | (() => WidgetTransport);
   host?: string;
   port?: number;
   username?: string;
@@ -41,13 +48,13 @@ export interface DesktopViewerProps {
 export function DesktopViewer(props: DesktopViewerProps) {
   let canvas!: HTMLCanvasElement;
   let ctx: CanvasRenderingContext2D | null = null;
-  let ws: WebSocket | undefined;
+  let ws: WidgetTransport | undefined;
   const [status, setStatus] = createSignal<DesktopStatus>('disconnected');
   const [errorMsg, setErrorMsg] = createSignal('');
 
   const report = (s: DesktopStatus) => { setStatus(s); props.onStatus?.(s); };
   const sendJson = (msg: unknown) => {
-    if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+    ws?.send(JSON.stringify(msg));
   };
 
   const disconnect = () => {
@@ -73,8 +80,13 @@ export function DesktopViewer(props: DesktopViewerProps) {
     if (ws) return;
     setErrorMsg('');
     report('connecting');
-    const sock = new WebSocket(props.url);
-    sock.binaryType = 'arraybuffer';
+    let sock: WidgetTransport;
+    try {
+      sock = connectTransport(props.transport, props.url);
+    } catch {
+      report('error');
+      return;
+    }
     ws = sock;
     sock.onopen = () => {
       sock.send(JSON.stringify({
@@ -85,10 +97,10 @@ export function DesktopViewer(props: DesktopViewerProps) {
         password: props.password,
       }));
     };
-    sock.onmessage = (ev) => {
-      if (typeof ev.data === 'string') {
+    sock.onmessage = (data) => {
+      if (typeof data === 'string') {
         let msg: { type?: string; width?: number; height?: number; message?: string };
-        try { msg = JSON.parse(ev.data); } catch { return; }
+        try { msg = JSON.parse(data); } catch { return; }
         if (msg.type === 'ready' || msg.type === 'resize') {
           if (msg.width && msg.height) {
             canvas.width = msg.width;
@@ -102,7 +114,7 @@ export function DesktopViewer(props: DesktopViewerProps) {
           report('closed');
         }
       } else {
-        handleRect(ev.data as ArrayBuffer);
+        handleRect(data);
       }
     };
     sock.onclose = () => {

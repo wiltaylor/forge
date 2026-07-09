@@ -11,6 +11,7 @@ import type { DesktopViewerProps } from './viewer';
 
 export { DesktopViewer } from './viewer';
 export type { DesktopApi, DesktopViewerProps, DesktopStatus } from './viewer';
+export type { WidgetTransport } from './transport';
 
 export function VncViewer(props: DesktopViewerProps) {
   return <DesktopViewer {...mergeProps({ port: 5900 }, props)} />;
