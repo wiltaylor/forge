@@ -52,6 +52,12 @@ pub struct ForgeApp {
     routes: Vec<(String, MethodRouter<ForgeState>)>,
     frontend: Frontend,
     cors_origins: Option<Vec<String>>,
+    #[cfg(feature = "term")]
+    term: Option<Arc<crate::widgets::TermConfig>>,
+    #[cfg(feature = "vnc")]
+    vnc: Option<Arc<crate::widgets::DesktopConfig>>,
+    #[cfg(feature = "rdp")]
+    rdp: Option<Arc<crate::widgets::DesktopConfig>>,
 }
 
 impl ForgeApp {
@@ -72,6 +78,12 @@ impl ForgeApp {
             routes: Vec::new(),
             frontend: Frontend::None,
             cors_origins: None,
+            #[cfg(feature = "term")]
+            term: None,
+            #[cfg(feature = "vnc")]
+            vnc: None,
+            #[cfg(feature = "rdp")]
+            rdp: None,
         }
     }
 
@@ -140,6 +152,81 @@ impl ForgeApp {
     pub fn with_components_from_env(self) -> Self {
         let dir = std::env::var("FORGE_COMPONENTS_DIR").unwrap_or_else(|_| "./components".into());
         self.with_components(dir)
+    }
+
+    /// Mount `/api/term` with defaults (local shell + ssh allowed, any host).
+    ///
+    /// SAFETY: this hands every authenticated user a real shell as the server
+    /// uid — RCE by design. Trusted dev contexts only.
+    #[cfg(feature = "term")]
+    pub fn with_term(self) -> Self {
+        self.with_term_config(crate::widgets::TermConfig::default())
+    }
+
+    /// Mount `/api/term` with an explicit [`crate::widgets::TermConfig`].
+    #[cfg(feature = "term")]
+    pub fn with_term_config(mut self, config: crate::widgets::TermConfig) -> Self {
+        self.term = Some(Arc::new(config));
+        self
+    }
+
+    /// Mount `/api/term` when `FORGE_TERM_ENABLE` is truthy (`1`/`true`/`yes`);
+    /// no-op otherwise. `FORGE_TERM_SHELL` overrides the local shell.
+    #[cfg(feature = "term")]
+    pub fn with_term_from_env(self) -> Self {
+        if !env_flag("FORGE_TERM_ENABLE") {
+            return self;
+        }
+        self.with_term_config(crate::widgets::TermConfig {
+            shell: std::env::var("FORGE_TERM_SHELL").ok().filter(|s| !s.is_empty()),
+            ..Default::default()
+        })
+    }
+
+    /// Mount `/api/desktop/vnc` with defaults (any host).
+    #[cfg(feature = "vnc")]
+    pub fn with_vnc(self) -> Self {
+        self.with_vnc_config(crate::widgets::DesktopConfig::default())
+    }
+
+    /// Mount `/api/desktop/vnc` with an explicit [`crate::widgets::DesktopConfig`].
+    #[cfg(feature = "vnc")]
+    pub fn with_vnc_config(mut self, config: crate::widgets::DesktopConfig) -> Self {
+        self.vnc = Some(Arc::new(config));
+        self
+    }
+
+    /// Mount `/api/desktop/vnc` when `FORGE_VNC_ENABLE` is truthy; no-op
+    /// otherwise. `FORGE_DESKTOP_ALLOW_HOSTS` (comma-separated) limits targets.
+    #[cfg(feature = "vnc")]
+    pub fn with_vnc_from_env(self) -> Self {
+        if !env_flag("FORGE_VNC_ENABLE") {
+            return self;
+        }
+        self.with_vnc_config(desktop_config_from_env())
+    }
+
+    /// Mount `/api/desktop/rdp` with defaults (any host).
+    #[cfg(feature = "rdp")]
+    pub fn with_rdp(self) -> Self {
+        self.with_rdp_config(crate::widgets::DesktopConfig::default())
+    }
+
+    /// Mount `/api/desktop/rdp` with an explicit [`crate::widgets::DesktopConfig`].
+    #[cfg(feature = "rdp")]
+    pub fn with_rdp_config(mut self, config: crate::widgets::DesktopConfig) -> Self {
+        self.rdp = Some(Arc::new(config));
+        self
+    }
+
+    /// Mount `/api/desktop/rdp` when `FORGE_RDP_ENABLE` is truthy; no-op
+    /// otherwise. `FORGE_DESKTOP_ALLOW_HOSTS` (comma-separated) limits targets.
+    #[cfg(feature = "rdp")]
+    pub fn with_rdp_from_env(self) -> Self {
+        if !env_flag("FORGE_RDP_ENABLE") {
+            return self;
+        }
+        self.with_rdp_config(desktop_config_from_env())
     }
 
     /// Register an action, dispatched via `POST /api/actions/{name}`.
@@ -233,6 +320,12 @@ impl ForgeApp {
                 actions: self.actions,
                 components_dir: self.components_dir,
                 frontend: self.frontend,
+                #[cfg(feature = "term")]
+                term: self.term,
+                #[cfg(feature = "vnc")]
+                vnc: self.vnc,
+                #[cfg(feature = "rdp")]
+                rdp: self.rdp,
             }),
         };
 
@@ -252,6 +345,18 @@ impl ForgeApp {
         }
         if state.inner.components_dir.is_some() {
             protected = protected.merge(components::routes());
+        }
+        #[cfg(feature = "term")]
+        if state.inner.term.is_some() {
+            protected = protected.route("/api/term", get(crate::widgets::term::ws_handler));
+        }
+        #[cfg(feature = "vnc")]
+        if state.inner.vnc.is_some() {
+            protected = protected.route("/api/desktop/vnc", get(crate::widgets::vnc::ws_handler));
+        }
+        #[cfg(feature = "rdp")]
+        if state.inner.rdp.is_some() {
+            protected = protected.route("/api/desktop/rdp", get(crate::widgets::rdp::ws_handler));
         }
         let protected = protected.route_layer(axum::middleware::from_fn_with_state(
             state.clone(),
@@ -303,6 +408,30 @@ impl ForgeApp {
             .map_err(ForgeError::Io)?;
         Ok(())
     }
+}
+
+/// Truthy env flag: `1`, `true` or `yes` (case-insensitive).
+#[cfg(any(feature = "term", feature = "vnc", feature = "rdp"))]
+fn env_flag(name: &str) -> bool {
+    std::env::var(name)
+        .map(|v| matches!(v.trim().to_ascii_lowercase().as_str(), "1" | "true" | "yes"))
+        .unwrap_or(false)
+}
+
+/// Desktop config from `FORGE_DESKTOP_ALLOW_HOSTS` (comma-separated; unset or
+/// empty = any host).
+#[cfg(any(feature = "vnc", feature = "rdp"))]
+fn desktop_config_from_env() -> crate::widgets::DesktopConfig {
+    let allow_hosts = std::env::var("FORGE_DESKTOP_ALLOW_HOSTS")
+        .ok()
+        .map(|raw| {
+            raw.split(',')
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .collect::<Vec<_>>()
+        })
+        .filter(|hosts| !hosts.is_empty());
+    crate::widgets::DesktopConfig { allow_hosts }
 }
 
 fn build_cors(origins: Option<Vec<String>>) -> Result<CorsLayer, ForgeError> {

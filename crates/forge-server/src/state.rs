@@ -22,6 +22,12 @@ pub(crate) struct StateInner {
     pub actions: BTreeMap<String, BoxedAction>,
     pub components_dir: Option<PathBuf>,
     pub frontend: Frontend,
+    #[cfg(feature = "term")]
+    pub term: Option<Arc<crate::widgets::TermConfig>>,
+    #[cfg(feature = "vnc")]
+    pub vnc: Option<Arc<crate::widgets::DesktopConfig>>,
+    #[cfg(feature = "rdp")]
+    pub rdp: Option<Arc<crate::widgets::DesktopConfig>>,
 }
 
 /// Router state for a Forge app. Handlers added via
