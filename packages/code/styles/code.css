@@ -1,0 +1,15 @@
+/* Forge code editor chrome — component CSS. CodeMirror internals themed in editor.tsx. Extracted from console.css.
+   All colours route through var(--token) from @forge/tokens. */
+
+/* ---------------- Code editor (chrome for assets/code.jsx) ------------------ */
+/* CodeMirror internals are themed in code.jsx via var(--token); this is the
+   wrapper chrome only. */
+.fcode {
+  background: var(--bg-0);
+  border: 1px solid var(--border); border-radius: var(--r-md);
+  overflow: hidden;
+}
+.fcode:focus-within { border-color: var(--accent); }
+.fcode .cm-editor, .fcode .cm-mergeView { height: 100%; }
+.fcode .cm-scroller { font-family: var(--font-mono); }
+.fcode-menu { position: fixed; z-index: 70; }
