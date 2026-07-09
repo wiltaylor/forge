@@ -10,6 +10,14 @@ repository.workspace = true
 default = ["embed"]
 embed = ["dep:rust-embed"]
 cli = []
+# Interactive remote-access widgets (see docs/widgets-protocol.md). Not part of
+# the frozen v1.0 API contract; /api/term exposes a real shell to authenticated
+# users, so these are opt-in at compile time AND at runtime (with_* builders).
+term = ["dep:portable-pty"]
+term-ssh = ["term", "dep:russh"]
+vnc = ["dep:vnc-rs"]
+rdp = ["dep:ironrdp", "dep:ironrdp-tokio", "dep:ironrdp-tls"]
+widgets = ["term", "term-ssh", "vnc", "rdp"]
 
 [[bin]]
 name = "forge-hash"
@@ -32,6 +40,15 @@ thiserror = "2"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 mime_guess = "2"
+# Widget backends — all optional, behind the cargo features above.
+portable-pty = { version = "0.9", optional = true }
+# 0.60 (not 0.62): russh 0.61+ pins curve25519-dalek =5.0.0-rc.*, which
+# conflicts with the =5.0.0-pre.6 pin in ironrdp's picky dependency.
+russh = { version = "0.60", optional = true }
+vnc-rs = { version = "0.5", optional = true }
+ironrdp = { version = "0.16", features = ["connector", "session", "graphics", "input", "pdu"], optional = true }
+ironrdp-tokio = { version = "0.9", optional = true }
+ironrdp-tls = { version = "0.2", features = ["rustls"], optional = true }
 
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }

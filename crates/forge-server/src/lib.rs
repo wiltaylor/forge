@@ -31,6 +31,8 @@ pub mod events;
 pub mod frontend;
 pub mod health;
 pub mod state;
+#[cfg(any(feature = "term", feature = "vnc", feature = "rdp"))]
+pub mod widgets;
 
 pub use actions::ActionCtx;
 pub use app::ForgeApp;
