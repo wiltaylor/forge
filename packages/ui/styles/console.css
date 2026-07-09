@@ -4,11 +4,16 @@
 .app-shell {
   display: grid;
   grid-template-columns: var(--sidebar-w) 1fr;
-  grid-template-rows: var(--topbar-h) 1fr;
+  /* minmax(0, 1fr): a bare 1fr row is minmax(auto, 1fr), whose min-size is
+     the CONTENT height — tall pages would stretch the shell past the
+     viewport and make the body scroll the topbar/sidebar away. Pinning the
+     min to 0 keeps the shell viewport-sized so .app-main owns the scroll. */
+  grid-template-rows: var(--topbar-h) minmax(0, 1fr);
   grid-template-areas:
     "topbar topbar"
     "sidebar main";
   height: 100vh;
+  height: 100dvh; /* stable under mobile URL bars */
   background: var(--bg-0);
 }
 
@@ -24,6 +29,7 @@
   flex-direction: column;
   padding: 12px 8px;
   gap: 2px;
+  overflow-y: auto; /* long nav scrolls inside the pinned sidebar */
 }
 .fsidebar-section {
   font-size: 10px;
@@ -311,6 +317,10 @@
 .fcheck, .ftoggle, .fradio {
   display: inline-flex; align-items: center; gap: 8px;
   font-size: 13px; color: var(--fg-0); cursor: pointer; user-select: none;
+  /* Contain the absolutely-positioned hidden input below. Without this its
+     containing block is the page itself, so a control deep in a scrolled
+     pane stretches the document and lets the body scroll the shell away. */
+  position: relative;
 }
 .fcheck input, .ftoggle input, .fradio input {
   position: absolute; width: 1px; height: 1px; opacity: 0;
