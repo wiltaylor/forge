@@ -1,0 +1,44 @@
+[package]
+name = "forge-tauri"
+description = "Tauri v2 plugin serving the Forge API contract and streaming widgets over pure IPC."
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/wiltaylor/forge"
+# The ACL plugin name is this minus the tauri-plugin- prefix: "forge" — must
+# match the runtime tauri::plugin::Builder::new("forge") name.
+links = "tauri-plugin-forge"
+
+# Standalone workspace: tauri pulls wry/tao/gtk, which would force webkit
+# system deps onto every root build. Built via `just tauri-*` recipes.
+[workspace]
+
+[features]
+# Widget session engines over IPC channels (see docs/widgets-protocol.md).
+# Passthroughs to forge-core, same gating story as forge-server.
+term = ["forge-core/term"]
+term-ssh = ["term", "forge-core/term-ssh"]
+vnc = ["forge-core/vnc"]
+rdp = ["forge-core/rdp"]
+widgets = ["term", "term-ssh", "vnc", "rdp"]
+
+[dependencies]
+forge-core = { path = "../forge-core" }
+tauri = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["sync"] }
+tracing = "0.1"
+
+[build-dependencies]
+tauri-plugin = { version = "2", features = ["build"] }
+
+[dev-dependencies]
+tempfile = "3"
+tokio = { version = "1", features = ["full"] }
+
+# This crate is excluded from the root workspace, so the root
+# [patch.crates-io] does not apply — carry the vendored ironrdp-session with
+# the xrdp bitmap-stride fix here too (see root Cargo.toml for the story).
+[patch.crates-io]
+ironrdp-session = { path = "../../vendor/ironrdp-session" }

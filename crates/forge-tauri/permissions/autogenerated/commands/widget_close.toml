@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-widget-close"
+description = "Enables the widget_close command without any pre-configured scope."
+commands.allow = ["widget_close"]
+
+[[permission]]
+identifier = "deny-widget-close"
+description = "Denies the widget_close command without any pre-configured scope."
+commands.deny = ["widget_close"]

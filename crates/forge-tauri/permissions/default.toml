@@ -1,0 +1,11 @@
+"$schema" = "schemas/schema.json"
+
+[default]
+description = "Full Forge IPC surface: contract requests, events, and widget sessions."
+permissions = [
+    "allow-request",
+    "allow-widget-open",
+    "allow-widget-send-text",
+    "allow-widget-send-binary",
+    "allow-widget-close",
+]
