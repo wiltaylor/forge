@@ -1,0 +1,12 @@
+[package]
+name = "rust-demo"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+forge-server = { workspace = true }
+rust-embed = "8"
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
