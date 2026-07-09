@@ -10,3 +10,12 @@ repository = "https://github.com/wiltaylor/forge"
 
 [workspace.dependencies]
 forge-server = { path = "crates/forge-server" }
+
+# Vendored ironrdp-session 0.10.0 with the xrdp bitmap-stride fix applied
+# (upstream issue Devolutions/IronRDP#1251; based on unmerged PR #1252 with
+# corrected source strides). xrdp pads bitmap width to a multiple of 4 while
+# the destination rectangle keeps the true size; unpatched, IronRDP blits with
+# the rect width as row stride, shearing every tile diagonally. Drop this once
+# upstream ships a release with the fix.
+[patch.crates-io]
+ironrdp-session = { path = "vendor/ironrdp-session" }
