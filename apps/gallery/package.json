@@ -1,0 +1,26 @@
+{
+  "name": "@forge/gallery",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Forge example frontend: every component + login, live events, doc store and remote-component demos.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@forge/charts": "workspace:^",
+    "@forge/client": "workspace:^",
+    "@forge/code": "workspace:^",
+    "@forge/graph": "workspace:^",
+    "@forge/remote": "workspace:^",
+    "@forge/tokens": "workspace:^",
+    "@forge/ui": "workspace:^",
+    "lucide-solid": "^0.469.0",
+    "solid-js": "^1.9.0"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0",
+    "vite-plugin-solid": "^2.11.0"
+  }
+}
