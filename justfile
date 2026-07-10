@@ -68,6 +68,11 @@ parity-test base_url='http://127.0.0.1:8765':
 tauri-test:
 	cargo test --manifest-path crates/forge-tauri/Cargo.toml --features widgets
 
+# Run forge-tui tests with all optional widgets compiled in
+[group('test')]
+tui-test:
+	cargo test -p forge-tui --features full -p tui-gallery
+
 # Run the forge-auth dev-login gating tests with the feature compiled in
 [group('test')]
 auth-test-devlogin:
@@ -80,7 +85,7 @@ auth-e2e-test:
 
 # Run all test suites
 [group('test')]
-test: frontend-test rust-test python-test auth-test-devlogin auth-e2e-test
+test: frontend-test rust-test python-test tui-test auth-test-devlogin auth-e2e-test
 
 # Run the Rust demo app (debug build reads gallery dist from disk)
 [group('demo')]
@@ -96,6 +101,11 @@ python-demo: frontend-build
 [group('demo')]
 tauri-demo: frontend-install
 	cd examples/tauri-demo && pnpm tauri dev
+
+# Run the forge-tui gallery (living catalogue of every terminal widget)
+[group('demo')]
+tui-gallery:
+	cargo run -p tui-gallery
 
 # Start the gallery frontend dev server (Vite, proxies /api to FORGE_PORT)
 [group('dev')]

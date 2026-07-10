@@ -1,0 +1,5 @@
+---
+source: crates/forge-tui/tests/snapshots.rs
+expression: buffer_text(&buf)
+---
+  Save      Cancel      Ghost

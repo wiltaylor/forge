@@ -1,0 +1,36 @@
+[package]
+name = "forge-tui"
+description = "Forge design system for terminal UIs — ratatui widgets, theme, and app runtime"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+ratatui = "0.29"
+unicode-width = "0.2"
+unicode-segmentation = "1"
+thiserror = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Optional widget backends — see [features]
+pulldown-cmark = { version = "0.12", optional = true, default-features = false }
+syntect = { version = "5", optional = true, default-features = false, features = [
+    "default-fancy",
+] }
+time = { version = "0.3", optional = true, features = ["local-offset"] }
+portable-pty = { version = "0.9", optional = true }
+vt100 = { version = "0.15", optional = true }
+
+[features]
+default = []
+markdown = ["dep:pulldown-cmark"]
+chat = ["markdown"]
+code = ["dep:syntect"]
+calendar = ["dep:time"]
+term = ["dep:portable-pty", "dep:vt100"]
+full = ["markdown", "chat", "code", "calendar", "term"]
+
+[dev-dependencies]
+insta = "1"

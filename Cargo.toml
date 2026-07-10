@@ -4,8 +4,10 @@ members = [
     "crates/forge-core",
     "crates/forge-server",
     "crates/forge-auth",
+    "crates/forge-tui",
     "examples/rust-demo",
     "examples/auth-demo",
+    "examples/tui-gallery",
 ]
 # Tauri crates are standalone workspaces: tauri pulls wry/tao/gtk, which would
 # force webkit system deps onto every root build and rust-analyzer session.
@@ -21,6 +23,7 @@ repository = "https://github.com/wiltaylor/forge"
 [workspace.dependencies]
 forge-core = { path = "crates/forge-core" }
 forge-server = { path = "crates/forge-server" }
+forge-tui = { path = "crates/forge-tui" }
 
 # RSA keygen and argon2 are unusably slow without optimization; keep the
 # crypto stack optimized even in debug builds.

@@ -1,0 +1,7 @@
+---
+source: crates/forge-tui/tests/snapshots.rs
+expression: buffer_text(&buf)
+---
+┌──────────┐
+│  Deploy  │
+└──────────┘
