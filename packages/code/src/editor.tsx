@@ -11,7 +11,7 @@ import { bracketMatching } from '@codemirror/language';
 import { setDiagnostics, lintGutter } from '@codemirror/lint';
 import { searchKeymap, highlightSelectionMatches } from '@codemirror/search';
 import { forgeTheme } from './theme';
-import type { LanguageName } from './languages';
+import type { LanguageInput } from './languages';
 import { resolveLanguage, toDiagnostics, CodeMenu } from './internal';
 import type { CodeAnnotation, CodeMenuItem, MenuPos } from './internal';
 
@@ -19,7 +19,7 @@ export interface CodeEditorProps {
   value?: string;
   /** Omitted (with readOnly unset) = read-only editor. */
   onChange?: (value: string) => void;
-  language?: LanguageName | (string & {});
+  language?: LanguageInput;
   readOnly?: boolean;
   /** Default true. */
   lineNumbers?: boolean;

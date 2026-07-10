@@ -6,7 +6,7 @@ import { EditorView, lineNumbers as lineNumbersExt } from '@codemirror/view';
 import { setDiagnostics } from '@codemirror/lint';
 import { MergeView, unifiedMergeView } from '@codemirror/merge';
 import { forgeTheme } from './theme';
-import type { LanguageName } from './languages';
+import type { LanguageInput } from './languages';
 import { resolveLanguage, toDiagnostics } from './internal';
 import type { CodeAnnotation } from './internal';
 
@@ -15,7 +15,7 @@ export interface DiffEditorProps {
   modified?: string;
   /** Omitted = read-only modified side. */
   onChange?: (value: string) => void;
-  language?: LanguageName | (string & {});
+  language?: LanguageInput;
   /** Default true. */
   lineNumbers?: boolean;
   /** Soft-wrap long lines. */

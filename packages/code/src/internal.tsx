@@ -8,9 +8,14 @@ import type { EditorState, Extension } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import type { Diagnostic } from '@codemirror/lint';
 import { LANGUAGES } from './languages';
+import type { LanguageInput } from './languages';
 
-export const resolveLanguage = (lang: string | undefined): Extension => {
-  const factory = lang ? (LANGUAGES as Record<string, (() => Extension) | undefined>)[lang] : undefined;
+export const resolveLanguage = (lang: LanguageInput | undefined): Extension => {
+  if (lang == null) return [];
+  /* A custom Extension passes straight through (extensions are objects or
+     arrays, never strings). */
+  if (typeof lang !== 'string') return lang;
+  const factory = (LANGUAGES as Record<string, (() => Extension) | undefined>)[lang];
   return factory ? factory() : [];
 };
 

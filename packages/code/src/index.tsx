@@ -6,7 +6,7 @@
 
 export { forgeTheme } from './theme';
 export { LANGUAGES } from './languages';
-export type { LanguageName } from './languages';
+export type { LanguageName, LanguageInput } from './languages';
 export type { AnnotationPos, CodeAnnotation, CodeMenuItem } from './internal';
 export { CodeEditor } from './editor';
 export type { CodeEditorProps } from './editor';
