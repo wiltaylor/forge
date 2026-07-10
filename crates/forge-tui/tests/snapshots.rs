@@ -6,7 +6,6 @@ use forge_tui::theme::Theme;
 use forge_tui::widgets::*;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
-use ratatui::style::Color;
 use ratatui::widgets::{StatefulWidget, Widget};
 
 fn buffer_text(buf: &Buffer) -> String {

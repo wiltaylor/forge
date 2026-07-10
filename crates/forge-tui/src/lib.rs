@@ -32,8 +32,9 @@ pub use error::{Error, Result};
 pub mod prelude {
     pub use crate::event::{is_press, KeyCombo, Keymap, Outcome};
     pub use crate::runtime::{
-        run, App, Ctx, FocusId, FocusRing, Overlay, OverlayOutcome, OverlayStack, RunOptions,
-        ToastHandle,
+        run, App, AppShell, ConfirmDialog, Ctx, DialogResult, FocusId, FocusRing, HelpOverlay,
+        MenuOverlay, NavSection, Overlay, OverlayOutcome, OverlayStack, OwnedCommand,
+        OwnedMenuEntry, PaletteOverlay, RunOptions, ShellState, ToastHandle,
     };
     pub use crate::theme::{
         blend, chart_series, default_theme, series_color, set_default_theme, ColorMode, Scheme,

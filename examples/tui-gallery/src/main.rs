@@ -4,55 +4,75 @@
 mod sections;
 
 use forge_tui::prelude::*;
-use ratatui::crossterm::event::{Event, KeyCode};
-use ratatui::layout::{Constraint, Layout, Rect};
-use ratatui::style::{Modifier, Style};
+use ratatui::crossterm::event::{Event, KeyCode, KeyModifiers};
 use ratatui::Frame;
 
 const NAV: FocusId = FocusId::new("nav");
 
-pub struct Gallery {
-    pub section: usize,
-    pub mode: ColorMode,
-    pub forms: sections::forms::FormsState,
-    pub feedback: sections::feedback::FeedbackState,
-}
+pub const SECTIONS: &[&str] = &[
+    "Primitives",
+    "Feedback",
+    "Forms",
+    "Pickers",
+    "Structure",
+    "Overlays",
+];
 
-pub const SECTIONS: &[&str] = &["Primitives", "Forms", "Feedback"];
+pub struct Gallery {
+    pub mode: ColorMode,
+    pub shell: ShellState,
+    pub forms: sections::forms::FormsState,
+    pub pickers: sections::pickers::PickersState,
+    pub structure: sections::structure::StructureState,
+    pub feedback: sections::feedback::FeedbackState,
+    pub overlays: sections::overlays::OverlaysState,
+}
 
 impl Gallery {
     fn new() -> Gallery {
         Gallery {
-            section: 0,
             mode: ColorMode::detect(),
+            shell: ShellState::new(),
             forms: Default::default(),
+            pickers: Default::default(),
+            structure: Default::default(),
             feedback: Default::default(),
+            overlays: Default::default(),
         }
+    }
+
+    fn section(&self) -> usize {
+        self.shell.selected
     }
 }
 
 impl App for Gallery {
     fn draw(&mut self, frame: &mut Frame, ctx: &mut Ctx) {
         let t = ctx.theme.clone();
-        let area = frame.area();
-        frame.buffer_mut().set_style(area, Style::new().bg(t.bg[0]).fg(t.fg[0]));
+        let nav_focused = ctx.focus.register(NAV);
+        let nav_sections = [
+            NavSection::new(Some("Basics"), &SECTIONS[0..2]),
+            NavSection::new(Some("Forms"), &SECTIONS[2..4]),
+            NavSection::new(Some("Structure"), &SECTIONS[4..6]),
+        ];
+        let shell = AppShell::new("◆ FORGE", &nav_sections)
+            .subtitle("tui gallery")
+            .topbar(SECTIONS[self.section()])
+            .topbar_right("alt-ai@wiltaylor.dev")
+            .status("Tab focus · ↑/↓ section · t theme · q quit")
+            .status_right("forge-tui 0.1")
+            .nav_focused(nav_focused)
+            .theme(&t);
+        frame.render_stateful_widget(shell, frame.area(), &mut self.shell);
+        let content = self.shell.content();
 
-        let [nav_area, content, status] = {
-            let [main, status] =
-                Layout::vertical([Constraint::Fill(1), Constraint::Length(1)]).areas(area);
-            let [nav, content] =
-                Layout::horizontal([Constraint::Length(22), Constraint::Fill(1)]).areas(main);
-            [nav, content, status]
-        };
-
-        self.draw_nav(frame, nav_area, ctx, &t);
-        self.draw_status(frame, status, &t);
-
-        let content = content.inner(ratatui::layout::Margin::new(2, 1));
-        match self.section {
+        match self.section() {
             0 => sections::primitives::draw(frame, content, ctx, &t),
-            1 => sections::forms::draw(frame, content, ctx, &t, &mut self.forms),
-            _ => sections::feedback::draw(frame, content, ctx, &t, &mut self.feedback),
+            1 => sections::feedback::draw(frame, content, ctx, &t, &mut self.feedback),
+            2 => sections::forms::draw(frame, content, ctx, &t, &mut self.forms),
+            3 => sections::pickers::draw(frame, content, ctx, &t, &mut self.pickers),
+            4 => sections::structure::draw(frame, content, ctx, &t, &mut self.structure),
+            _ => sections::overlays::draw(frame, content, ctx, &t, &mut self.overlays),
         }
     }
 
@@ -61,19 +81,33 @@ impl App for Gallery {
             Event::Key(key) => {
                 let focused = ctx.focus.current();
                 let outcome = if focused == Some(NAV) {
-                    self.handle_nav_key(key)
-                } else if self.section == 1 {
-                    self.forms.handle_key(focused, key, ctx)
-                } else if self.section == 2 {
-                    self.feedback.handle_key(focused, key, ctx)
+                    self.shell.handle_key(key)
                 } else {
-                    Outcome::Ignored
+                    match self.section() {
+                        1 => self.feedback.handle_key(focused, key, ctx),
+                        2 => self.forms.handle_key(focused, key, ctx),
+                        3 => self.pickers.handle_key(focused, key, ctx),
+                        4 => self.structure.handle_key(focused, key),
+                        5 => self.overlays.handle_key(focused, key, ctx),
+                        _ => Outcome::Ignored,
+                    }
                 };
                 if outcome.is_handled() {
                     return;
                 }
+                if is_press(&key) && key.modifiers.contains(KeyModifiers::CONTROL) {
+                    if key.code == KeyCode::Char('b') {
+                        let _ = self.shell.handle_key(key);
+                        return;
+                    }
+                    if key.code == KeyCode::Char('k') {
+                        self.overlays.open_palette(ctx);
+                        return;
+                    }
+                }
                 match key.code {
                     KeyCode::Char('q') => ctx.quit(),
+                    KeyCode::Char('?') => self.overlays.open_help(ctx),
                     KeyCode::Char('t') => {
                         let next = match ctx.theme.scheme {
                             Scheme::Dark => Theme::light(),
@@ -85,82 +119,18 @@ impl App for Gallery {
                 }
             }
             Event::Paste(text) => {
-                self.forms.paste(ctx.focus.current(), &text);
+                match self.section() {
+                    2 => self.forms.paste(ctx.focus.current(), &text),
+                    3 => self.pickers.paste(ctx.focus.current(), &text),
+                    _ => {}
+                }
             }
             _ => {}
         }
     }
-}
 
-impl Gallery {
-    fn handle_nav_key(&mut self, key: ratatui::crossterm::event::KeyEvent) -> Outcome {
-        if !is_press(&key) {
-            return Outcome::Ignored;
-        }
-        match key.code {
-            KeyCode::Up | KeyCode::Char('k') => {
-                self.section = self.section.saturating_sub(1);
-                Outcome::Changed
-            }
-            KeyCode::Down | KeyCode::Char('j') => {
-                self.section = (self.section + 1).min(SECTIONS.len() - 1);
-                Outcome::Changed
-            }
-            _ => Outcome::Ignored,
-        }
-    }
-
-    fn draw_nav(&mut self, frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme) {
-        let buf = frame.buffer_mut();
-        buf.set_style(area, Style::new().bg(t.bg[1]));
-        let nav_focused = ctx.focus.register(NAV);
-        if area.is_empty() {
-            return;
-        }
-        let bottom = area.y + area.height;
-        if area.y + 1 < bottom {
-            buf.set_string(
-                area.x + 2,
-                area.y + 1,
-                "◆ FORGE",
-                Style::new().fg(t.accent.base).add_modifier(Modifier::BOLD),
-            );
-        }
-        if area.y + 2 < bottom {
-            buf.set_string(area.x + 2, area.y + 2, "tui gallery", Style::new().fg(t.fg[2]));
-        }
-        for (i, name) in SECTIONS.iter().enumerate() {
-            let y = area.y + 4 + i as u16;
-            if y >= bottom {
-                break;
-            }
-            let active = i == self.section;
-            if active {
-                buf.set_string(area.x, y, "▎", Style::new().fg(t.accent.base).bg(t.bg[1]));
-                buf.set_style(Rect::new(area.x, y, area.width, 1), Style::new().bg(t.bg[3]));
-            }
-            let mut style = Style::new()
-                .fg(if active { t.fg[0] } else { t.fg[1] })
-                .bg(if active { t.bg[3] } else { t.bg[1] });
-            if active && nav_focused {
-                style = style.add_modifier(Modifier::BOLD | Modifier::UNDERLINED);
-            }
-            buf.set_string(area.x + 2, y, *name, style);
-        }
-    }
-
-    fn draw_status(&self, frame: &mut Frame, area: Rect, t: &Theme) {
-        let buf = frame.buffer_mut();
-        buf.set_style(area, Style::new().bg(t.bg[1]));
-        if area.is_empty() {
-            return;
-        }
-        buf.set_string(
-            area.x + 1,
-            area.y,
-            "Tab focus · ↑/↓ section · t theme · q quit",
-            Style::new().fg(t.fg[2]).bg(t.bg[1]),
-        );
+    fn tick(&mut self, ctx: &mut Ctx) {
+        self.overlays.poll_results(ctx);
     }
 }
 
@@ -178,7 +148,7 @@ mod smoke {
     fn render_all(width: u16, height: u16) {
         for section in 0..SECTIONS.len() {
             let mut app = Gallery::new();
-            app.section = section;
+            app.shell.selected = section;
             let mut ctx = forge_tui::runtime::test_ctx(Theme::dark());
             let mut terminal = Terminal::new(TestBackend::new(width, height)).unwrap();
             terminal
@@ -193,6 +163,7 @@ mod smoke {
     #[test]
     fn sections_render_at_standard_size() {
         render_all(80, 24);
+        render_all(100, 30);
     }
 
     #[test]
@@ -207,9 +178,9 @@ mod smoke {
     fn dump_sections() {
         for section in 0..SECTIONS.len() {
             let mut app = Gallery::new();
-            app.section = section;
+            app.shell.selected = section;
             let mut ctx = forge_tui::runtime::test_ctx(Theme::dark());
-            let mut terminal = Terminal::new(TestBackend::new(100, 30)).unwrap();
+            let mut terminal = Terminal::new(TestBackend::new(100, 32)).unwrap();
             terminal
                 .draw(|frame| {
                     ctx.focus.begin_frame();
@@ -218,7 +189,7 @@ mod smoke {
                 .unwrap();
             println!("═══ {} ═══", SECTIONS[section]);
             let buf = terminal.backend().buffer();
-            for y in 0..30u16 {
+            for y in 0..32u16 {
                 let line: String = (0..100u16).map(|x| buf[(x, y)].symbol()).collect();
                 println!("{}", line.trim_end());
             }

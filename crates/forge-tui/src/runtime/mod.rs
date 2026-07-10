@@ -3,12 +3,19 @@
 //! and the toaster. Widgets never depend on this module — they work in any
 //! ratatui app; the runtime is for apps that want the full Forge experience.
 
+pub mod dialogs;
 mod focus;
 mod overlay;
+mod shell;
 mod toaster;
 
+pub use dialogs::{
+    ConfirmDialog, DialogResult, HelpOverlay, MenuOverlay, OwnedCommand, OwnedMenuEntry,
+    PaletteOverlay,
+};
 pub use focus::{FocusId, FocusRing};
 pub use overlay::{dim, Overlay, OverlayOutcome, OverlayStack};
+pub use shell::{AppShell, NavSection, ShellState};
 pub use toaster::{Toast, ToastHandle, Toaster};
 
 use crate::error::Result;

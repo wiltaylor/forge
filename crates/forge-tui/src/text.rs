@@ -80,6 +80,42 @@ pub fn wrap(s: &str, max: usize) -> Vec<String> {
     lines
 }
 
+/// Zero-dep subsequence fuzzy matcher (Combobox, CommandPalette). Returns a
+/// score — higher is better — or `None` when `needle` is not a case-
+/// insensitive subsequence of `hay`. Consecutive matches and word-start
+/// matches score higher; gaps cost a little.
+pub fn fuzzy_score(needle: &str, hay: &str) -> Option<i64> {
+    if needle.is_empty() {
+        return Some(0);
+    }
+    let needle: Vec<char> = needle.chars().flat_map(|c| c.to_lowercase()).collect();
+    let mut score: i64 = 0;
+    let mut ni = 0;
+    let mut prev_matched = false;
+    let mut prev_char = ' ';
+    for h in hay.chars() {
+        let hl = h.to_lowercase().next().unwrap_or(h);
+        if ni < needle.len() && hl == needle[ni] {
+            score += 1;
+            if prev_matched {
+                score += 2; // consecutive run
+            }
+            if prev_char == ' ' || prev_char == '-' || prev_char == '_' || prev_char == '/' {
+                score += 3; // word start
+            }
+            ni += 1;
+            prev_matched = true;
+        } else {
+            if ni > 0 && ni < needle.len() {
+                score -= 1; // gap inside the match
+            }
+            prev_matched = false;
+        }
+        prev_char = h;
+    }
+    (ni == needle.len()).then_some(score)
+}
+
 /// Pad or truncate to exactly `w` display cells (left-aligned).
 pub fn fit(s: &str, w: usize) -> String {
     let t = truncate(s, w);
