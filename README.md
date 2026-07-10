@@ -75,6 +75,25 @@ In app CSS entry: import `@forge/tokens/fonts.css` (optional), then
 preserved-JSX source under the `solid` export condition) and
 `resolve.dedupe: ['solid-js']`.
 
+Git-dep gotchas (pnpm; vmlab is the reference consumer):
+
+- pnpm ≥ 10.26 blocks git-dep `prepare` unless the **resolved** URL is
+  allowlisted in `onlyBuiltDependencies`
+  (`"@forge/ui@https://codeload.github.com/wiltaylor/forge/tar.gz/<rev>#path:packages/ui"`
+  — bare package names don't match git deps).
+- Add an `overrides` entry pinning `@forge/tokens` to the git dep: `@forge/ui`
+  declares it as `workspace:^`, which packs to `^0.1.0` and would otherwise
+  resolve against the foreign npmjs `@forge` scope.
+- Don't commit the consuming app's `pnpm-lock.yaml`: pnpm 10.34 installs
+  `path:` git deps FROM a lockfile as the raw monorepo tarball on a cold
+  store (no subdir extraction, no prepare).
+- **Never let the pnpm store live under a `node_modules` path.** On GitHub
+  Actions, `pnpm/action-setup`'s default store does — pass
+  `--store-dir "$RUNNER_TEMP/pnpm-store"` to `pnpm install`. The git-dep
+  checkout otherwise builds inside a node_modules path, where TypeScript's
+  wildcard matching silently skips source files and the packages ship stub
+  `.d.ts` files.
+
 Rust:
 
 ```toml
