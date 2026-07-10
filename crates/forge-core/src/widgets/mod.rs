@@ -4,8 +4,9 @@
 //! `vnc`, `rdp`, or all via `widgets`) — NOT part of the frozen v1.0 API
 //! contract. The session engines here are transport-agnostic: they pump a
 //! [`WidgetStream`] (JSON text frames for control, binary frames for
-//! payload) and are driven by forge-server over per-connection WebSockets
-//! and by forge-tauri over Tauri IPC channels. `/api/term` hands
+//! payload) and are driven by forge-server over per-connection WebSockets,
+//! by forge-tauri over Tauri IPC channels, and by external embedders (e.g.
+//! vmlab-web) over their own WebSocket stacks. `/api/term` hands
 //! authenticated users a real shell (RCE by design); VNC/RDP open outbound
 //! connections. Trusted dev contexts only — see docs/widgets-protocol.md.
 

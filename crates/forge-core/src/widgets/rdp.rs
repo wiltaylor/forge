@@ -40,31 +40,29 @@ type RdpFramed = TokioFramed<ironrdp_tls::TlsStream<TcpStream>>;
 /// Run one RDP session over `stream`. The first frame must be a valid
 /// `connect` message with full credentials.
 pub async fn session<S: WidgetStream>(mut stream: S, config: Arc<DesktopConfig>) {
-    let (host, port, username, password) = loop {
-        let Some(msg) = stream.recv().await else {
-            return;
-        };
-        match msg {
-            WidgetMsg::Text(text) => match serde_json::from_str::<DesktopClientMsg>(&text) {
-                Ok(DesktopClientMsg::Connect {
-                    host,
-                    port,
-                    username,
-                    password,
-                }) => {
-                    let (Some(host), Some(username), Some(password)) = (host, username, password)
-                    else {
-                        return fail(stream, "rdp requires host, username and password").await;
-                    };
-                    break (host, port.unwrap_or(3389), username, password);
-                }
-                _ => return fail(stream, "first frame must be a connect message").await,
-            },
-            WidgetMsg::Binary(_) => {
-                return fail(stream, "first frame must be a connect message").await
+    let Some(msg) = stream.recv().await else {
+        return;
+    };
+    let (host, port, username, password) = match msg {
+        WidgetMsg::Text(text) => match serde_json::from_str::<DesktopClientMsg>(&text) {
+            Ok(DesktopClientMsg::Connect {
+                host,
+                port,
+                username,
+                password,
+            }) => {
+                let (Some(host), Some(username), Some(password)) = (host, username, password)
+                else {
+                    return fail(stream, "rdp requires host, username and password").await;
+                };
+                (host, port.unwrap_or(3389), username, password)
             }
-            WidgetMsg::Close => return,
+            _ => return fail(stream, "first frame must be a connect message").await,
+        },
+        WidgetMsg::Binary(_) => {
+            return fail(stream, "first frame must be a connect message").await
         }
+        WidgetMsg::Close => return,
     };
 
     if !config

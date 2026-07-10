@@ -111,6 +111,11 @@ streams dumb RGBA rects; the widget only blits them and forwards input.
   `password` optional (VncAuth when the server demands it), `username`
   ignored. RDP: default port 3389, `username` **and** `password` required;
   `"DOMAIN\\user"` selects an explicit domain.
+
+  **Embedding with a fixed target:** servers built on
+  `forge_core::widgets::vnc::session_over` (e.g. vmlab-web, whose URL path
+  names the target VM) pin the target themselves. The client still opens
+  with a `connect` frame, but may omit `host`/`port` — they are ignored.
 - `key` — `code` is the layout-independent `KeyboardEvent.code`; `key`
   carries the produced character for the VNC Unicode-keysym path.
 - `mouse` — framebuffer coordinates; `buttons` is the

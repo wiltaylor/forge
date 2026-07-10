@@ -35,3 +35,5 @@ ironrdp-tls = { version = "0.2", features = ["rustls"], optional = true }
 
 [dev-dependencies]
 tempfile = "3"
+# `tokio::io::duplex` for the widget session tests.
+tokio = { version = "1", features = ["io-util"] }

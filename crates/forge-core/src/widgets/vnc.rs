@@ -9,6 +9,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::TcpStream;
 use vnc::{
     ClientKeyEvent, ClientMouseEvent, PixelFormat, VncClient, VncConnector, VncEvent, X11Event,
@@ -25,47 +26,30 @@ const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 const POLL_INTERVAL: Duration = Duration::from_millis(16);
 
 /// Run one VNC session over `stream`. The first frame must be a valid
-/// `connect` message.
+/// `connect` message naming the target host.
 pub async fn session<S: WidgetStream>(mut stream: S, config: Arc<DesktopConfig>) {
-    let (host, port, password) = loop {
-        let Some(msg) = stream.recv().await else {
-            return;
-        };
-        match msg {
-            WidgetMsg::Text(text) => match serde_json::from_str::<DesktopClientMsg>(&text) {
-                Ok(DesktopClientMsg::Connect {
-                    host,
-                    port,
-                    password,
-                    // RFB VncAuth has no username.
-                    username: _,
-                }) => {
-                    let Some(host) = host else {
-                        return fail(stream, "vnc requires a host").await;
-                    };
-                    break (host, port.unwrap_or(5900), password.unwrap_or_default());
-                }
-                _ => return fail(stream, "first frame must be a connect message").await,
-            },
-            WidgetMsg::Binary(_) => {
-                return fail(stream, "first frame must be a connect message").await
-            }
-            WidgetMsg::Close => return,
-        }
+    let Some((host, port, password)) = recv_connect(&mut stream).await else {
+        return;
     };
+    let Some(host) = host else {
+        return fail(&mut stream, "vnc requires a host").await;
+    };
+    let (port, password) = (port.unwrap_or(5900), password.unwrap_or_default());
 
     if !config
         .allow_hosts
         .as_ref()
         .is_none_or(|allowed| allowed.iter().any(|a| a == &host))
     {
-        return fail(stream, "host is not in the allowed hosts list").await;
+        return fail(&mut stream, "host is not in the allowed hosts list").await;
     }
 
     let client = match tokio::time::timeout(CONNECT_TIMEOUT, connect(&host, port, password)).await {
         Ok(Ok(client)) => client,
-        Ok(Err(message)) => return fail(stream, message).await,
-        Err(_) => return fail(stream, format!("vnc connect to {host}:{port} timed out")).await,
+        Ok(Err(message)) => return fail(&mut stream, message).await,
+        Err(_) => {
+            return fail(&mut stream, format!("vnc connect to {host}:{port} timed out")).await
+        }
     };
 
     run(&mut stream, &client).await;
@@ -73,11 +57,73 @@ pub async fn session<S: WidgetStream>(mut stream: S, config: Arc<DesktopConfig>)
     let _ = stream.send(WidgetMsg::Close).await;
 }
 
+/// Run one VNC session over a pre-established `transport` (e.g. a QEMU
+/// `vnc.sock` UnixStream). The first client frame must still be a `connect`
+/// message, but its host/port are ignored — the embedder fixed the target.
+/// `password` overrides the frame's password when `Some`.
+pub async fn session_over<S, T>(mut stream: S, transport: T, password: Option<String>)
+where
+    S: WidgetStream,
+    T: AsyncRead + AsyncWrite + Unpin + Send + Sync + 'static,
+{
+    let Some((_host, _port, frame_password)) = recv_connect(&mut stream).await else {
+        return;
+    };
+    let password = password.or(frame_password).unwrap_or_default();
+
+    let client = match tokio::time::timeout(CONNECT_TIMEOUT, handshake(transport, password)).await
+    {
+        Ok(Ok(client)) => client,
+        Ok(Err(message)) => return fail(&mut stream, message).await,
+        Err(_) => return fail(&mut stream, "vnc handshake timed out").await,
+    };
+
+    run(&mut stream, &client).await;
+    let _ = client.close().await;
+    let _ = stream.send(WidgetMsg::Close).await;
+}
+
+/// Wait for the opening `connect` frame and return its
+/// `(host, port, password)`. `None` = the peer closed, or the first frame was
+/// invalid (the error frame + close have already been sent).
+async fn recv_connect<S: WidgetStream>(
+    stream: &mut S,
+) -> Option<(Option<String>, Option<u16>, Option<String>)> {
+    let msg = stream.recv().await?;
+    match msg {
+        WidgetMsg::Text(text) => match serde_json::from_str::<DesktopClientMsg>(&text) {
+            Ok(DesktopClientMsg::Connect {
+                host,
+                port,
+                password,
+                // RFB VncAuth has no username.
+                username: _,
+            }) => Some((host, port, password)),
+            _ => {
+                fail(stream, "first frame must be a connect message").await;
+                None
+            }
+        },
+        WidgetMsg::Binary(_) => {
+            fail(stream, "first frame must be a connect message").await;
+            None
+        }
+        WidgetMsg::Close => None,
+    }
+}
+
 async fn connect(host: &str, port: u16, password: String) -> Result<VncClient, String> {
     let tcp = TcpStream::connect((host, port))
         .await
         .map_err(|e| format!("vnc connect to {host}:{port} failed: {e}"))?;
-    VncConnector::new(tcp)
+    handshake(tcp, password).await
+}
+
+async fn handshake<T>(transport: T, password: String) -> Result<VncClient, String>
+where
+    T: AsyncRead + AsyncWrite + Unpin + Send + Sync + 'static,
+{
+    VncConnector::new(transport)
         .set_auth_method(async move { Ok(password) })
         .add_encoding(vnc::VncEncoding::DesktopSizePseudo)
         .add_encoding(vnc::VncEncoding::Raw)
@@ -272,17 +318,19 @@ async fn send_ctrl<S: WidgetStream>(
 }
 
 /// Send an error control frame, then close.
-async fn fail<S: WidgetStream>(mut stream: S, message: impl Into<String>) {
+async fn fail<S: WidgetStream>(stream: &mut S, message: impl Into<String>) {
     let msg = DesktopServerMsg::Error {
         message: message.into(),
     };
-    let _ = send_ctrl(&mut stream, &msg).await;
+    let _ = send_ctrl(stream, &msg).await;
     let _ = stream.send(WidgetMsg::Close).await;
 }
 
 #[cfg(test)]
 mod tests {
-    use super::vnc_buttons;
+    use std::collections::VecDeque;
+
+    use super::*;
 
     #[test]
     fn js_buttons_map_to_rfb_mask() {
@@ -291,5 +339,74 @@ mod tests {
         assert_eq!(vnc_buttons(2), 4); // right: JS bit1 → RFB bit2
         assert_eq!(vnc_buttons(4), 2); // middle: JS bit2 → RFB bit1
         assert_eq!(vnc_buttons(7), 7); // all three
+    }
+
+    /// Scripted inbox, captured outbox.
+    struct MockStream {
+        inbox: VecDeque<WidgetMsg>,
+        sent: Vec<WidgetMsg>,
+    }
+
+    impl MockStream {
+        fn new(frames: impl IntoIterator<Item = WidgetMsg>) -> Self {
+            Self {
+                inbox: frames.into_iter().collect(),
+                sent: Vec::new(),
+            }
+        }
+
+        fn error_message(&self) -> Option<String> {
+            self.sent.iter().find_map(|msg| match msg {
+                WidgetMsg::Text(text) => match serde_json::from_str(text) {
+                    Ok(DesktopServerMsg::Error { message }) => Some(message),
+                    _ => None,
+                },
+                _ => None,
+            })
+        }
+    }
+
+    /// On `&mut` so the sessions (which take the stream by value) leave the
+    /// mock inspectable afterwards.
+    impl WidgetStream for &mut MockStream {
+        async fn recv(&mut self) -> Option<WidgetMsg> {
+            self.inbox.pop_front()
+        }
+
+        async fn send(&mut self, msg: WidgetMsg) -> Result<(), StreamClosed> {
+            self.sent.push(msg);
+            Ok(())
+        }
+    }
+
+    /// A transport that EOFs immediately, so the RFB handshake fails fast.
+    fn dead_transport() -> tokio::io::DuplexStream {
+        let (ours, theirs) = tokio::io::duplex(64);
+        drop(theirs);
+        ours
+    }
+
+    #[tokio::test]
+    async fn session_over_rejects_a_non_connect_first_frame() {
+        let mut stream = MockStream::new([WidgetMsg::Text(
+            r#"{"type":"key","code":"KeyA","down":true}"#.into(),
+        )]);
+        session_over(&mut stream, dead_transport(), None).await;
+        assert_eq!(
+            stream.error_message().as_deref(),
+            Some("first frame must be a connect message")
+        );
+        assert_eq!(stream.sent.last(), Some(&WidgetMsg::Close));
+    }
+
+    #[tokio::test]
+    async fn session_over_does_not_require_a_host() {
+        let mut stream = MockStream::new([WidgetMsg::Text(r#"{"type":"connect"}"#.into())]);
+        session_over(&mut stream, dead_transport(), None).await;
+        // The host-less connect frame is accepted; the failure comes from the
+        // dead transport's handshake, not connect-frame validation.
+        let message = stream.error_message().expect("handshake error frame");
+        assert!(message.starts_with("vnc handshake failed"), "{message}");
+        assert_eq!(stream.sent.last(), Some(&WidgetMsg::Close));
     }
 }

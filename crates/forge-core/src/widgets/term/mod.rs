@@ -21,28 +21,26 @@ const EXIT_WAIT: Duration = Duration::from_secs(5);
 /// Run one terminal session over `stream`. The first frame must be a valid
 /// `start` message.
 pub async fn session<S: WidgetStream>(mut stream: S, config: Arc<TermConfig>) {
-    let (mode, host, port, username, password, cols, rows) = loop {
-        let Some(msg) = stream.recv().await else {
-            return;
-        };
-        match msg {
-            WidgetMsg::Text(text) => match serde_json::from_str::<TermClientMsg>(&text) {
-                Ok(TermClientMsg::Start {
-                    mode,
-                    host,
-                    port,
-                    username,
-                    password,
-                    cols,
-                    rows,
-                }) => break (mode, host, port, username, password, cols, rows),
-                _ => return fail(stream, "first frame must be a start message").await,
-            },
-            WidgetMsg::Binary(_) => {
-                return fail(stream, "first frame must be a start message").await
-            }
-            WidgetMsg::Close => return,
+    let Some(msg) = stream.recv().await else {
+        return;
+    };
+    let (mode, host, port, username, password, cols, rows) = match msg {
+        WidgetMsg::Text(text) => match serde_json::from_str::<TermClientMsg>(&text) {
+            Ok(TermClientMsg::Start {
+                mode,
+                host,
+                port,
+                username,
+                password,
+                cols,
+                rows,
+            }) => (mode, host, port, username, password, cols, rows),
+            _ => return fail(stream, "first frame must be a start message").await,
+        },
+        WidgetMsg::Binary(_) => {
+            return fail(stream, "first frame must be a start message").await
         }
+        WidgetMsg::Close => return,
     };
 
     match mode {
