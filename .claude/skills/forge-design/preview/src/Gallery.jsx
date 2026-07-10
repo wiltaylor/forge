@@ -16,6 +16,7 @@ import ModalDemo from './sections/ModalDemo';
 import GraphDemo from './sections/GraphDemo';
 import CodeDemo from './sections/CodeDemo';
 import ChartsDemo from './sections/ChartsDemo';
+import ChatDemo from './sections/ChatDemo';
 
 const SECTIONS = [
   ['primitives', 'Primitives', Primitives],
@@ -31,6 +32,7 @@ const SECTIONS = [
   ['graph', 'Node graph', GraphDemo],
   ['code', 'Code', CodeDemo],
   ['charts', 'Charts', ChartsDemo],
+  ['chat', 'Chat', ChatDemo],
 ];
 
 function useViewport() {

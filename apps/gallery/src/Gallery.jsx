@@ -17,6 +17,7 @@ import ModalDemo from './sections/ModalDemo';
 import GraphDemo from './sections/GraphDemo';
 import GridDemo from './sections/GridDemo';
 import KanbanDemo from './sections/KanbanDemo';
+import ChatDemo from './sections/ChatDemo';
 import CodeDemo from './sections/CodeDemo';
 import ChartsDemo from './sections/ChartsDemo';
 import LiveDemo from './sections/LiveDemo';
@@ -39,6 +40,7 @@ const SECTIONS = [
   ['graph', 'Node graph', GraphDemo],
   ['grid', 'Dashboard grid', GridDemo],
   ['kanban', 'Kanban board', KanbanDemo],
+  ['chat', 'Chat', ChatDemo],
   ['code', 'Code', CodeDemo],
   ['charts', 'Charts', ChartsDemo],
 ];

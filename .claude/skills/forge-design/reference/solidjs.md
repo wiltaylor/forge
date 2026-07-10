@@ -10,11 +10,14 @@ How to wire the Forge design system into a SolidJS project and build screens wit
    cp ${CLAUDE_SKILL_DIR}/assets/console.css        <project>/src/forge/
    cp ${CLAUDE_SKILL_DIR}/assets/ui.jsx             <project>/src/forge/
    ```
-   Three further assets are **optional** — copy only what the project needs; each imports
-   nothing from `ui.jsx` but requires this version's `console.css`:
+   Further assets are **optional** — copy only what the project needs; graph/charts/code import
+   nothing from `ui.jsx` but require this version's `console.css`:
    - `assets/graph.jsx` — `NodeGraph` editor + `Flowchart` (auto-layout DAG). No deps.
    - `assets/charts.jsx` — Pie/Line/Bar/Gantt/Sparkline SVG charts. No deps.
    - `assets/code.jsx` — CodeMirror 6 editor/diff. Needs npm packages (see "Code editor").
+   - `assets/chat.jsx` + `assets/chat.css` — chat kit + `Markdown` control. **The exception:
+     chat.jsx imports `./ui.jsx`** (Avatar, Button, form controls), so copy it next to ui.jsx,
+     and import `chat.css` after `console.css` (chat CSS is skill-owned, not in the mirror).
 2. The three files version together — `ui.jsx` components emit classes defined in `console.css`
    (e.g. `Modal` needs the `.fmodal` block), so always copy/update them as a set, never one file.
 3. Import the CSS once, in the app entry, tokens first. Find the entry by reading the
@@ -219,6 +222,63 @@ and re-render at true pixel width.
 | `Sparkline` | `points [n]`, `width` 96, `height` 28, `tone?` — for Stat cards |
 
 Also exported: `CHART_SERIES`, `CHART_SERIES_BG`, `seriesColor(i, tone?)`, `niceTicks`.
+
+## Chat (`assets/chat.jsx` + `assets/chat.css`, optional)
+
+Chat kit: 1:1 and room transcripts, AI tool-call boxes, interactive question prompts,
+media/file blocks, link cards, typing indicator, composer, plus a standalone `Markdown`
+control. In the monorepo this is `@forge/chat` (`import '@forge/chat/styles.css'` after
+the ui styles). As a copy-in it needs `ui.jsx` beside it and `chat.css` imported after
+`console.css`.
+
+| Component | Props | Notes |
+|---|---|---|
+| `ChatView` | `items`, `participants [{id,name,avatar?,status?}]`, `self` (id), `variant` (`direct`\|`room`), `typing?` (ids), `unreadAfter?` (item id), `groupWindow?` 5, `dayDividers?` true, `showTimes?` true, `resolveLink?`, `onReachTop?`, `markdown?` true, `style`, children = composer slot | Data-driven transcript. Owns grouping, day dividers ("Today"/"Yesterday"), unread marker, stick-to-bottom scrolling, the "N new messages" jump pill, and scroll compensation when `onReachTop` prepends history. Consumer sizes it (`style={{height}}`). |
+| `ChatMessage` | `message`, `participant?`, `self?`, `showTime?`, `markdown?`, `resolveLink?` | Standalone message renderer (ChatView calls it per message). |
+| `ChatToolCall` | `tool {name, status: running\|success\|error, summary?, args?, result?, defaultOpen?, children?}` | Collapsible tool-call box; string args/result render as code blocks; `children` nest recursively. |
+| `ChatPrompt` | `prompt {id, question, control, answer?, onAnswer, submitLabel?}` — control: `{type: buttons\|radio\|checkbox\|select, options, placeholder?}` | Interactive question. `answer` present ⇒ disabled + chosen highlighted + "Answered" footer. Checkbox answers with `string[]`. |
+| `LinkCard` | `url`, `meta? {url,title?,description?,image?,icon?,domain?}`, `resolve?` | **No client-side metadata fetching (CORS)** — pass `meta` or a server-backed async `resolve(url)`. Loading shows skeletons; failure degrades to a plain anchor. Results cached per URL. |
+| `ChatComposer` | `onSend(text)`, `value?`/`onChange?`, `placeholder?`, `disabled?`, `actions?` (left slot), `accessories?` (row above), `maxRows?` 8, `autofocus?` | Auto-growing textarea; Enter sends (IME-safe), Shift+Enter breaks; send never fires empty. |
+| `Markdown` | `text`, `linkTarget?` (`_blank`) | Standalone rendered-markdown control (`.fmd`). |
+| `ChatTyping` / `ChatDivider` | `names []` / `label` | Exported for standalone use. |
+
+Message shape: `{id, author, at?, text?}` or `{id, author, at?, blocks: [...]}` — blocks:
+`{kind:'text', text, markdown?}`, `{kind:'image', src, alt?, width?, height?, href?}`
+(pass width/height so space is reserved before load), `{kind:'video', src, poster?, …}`,
+`{kind:'file', name, size?, href?, icon?}`, `{kind:'link', url, meta?}`, `{kind:'tool', tool}`,
+`{kind:'prompt', prompt}`, `{kind:'custom', render: () => JSX}`. Plus `pending?` (dimmed)
+and `error?` (danger border + caption) on the message. Non-message items:
+`{type:'event', id, text, at?}` and `{type:'divider', id, label}`.
+
+Markdown subset (exact): headings `#`–`####`, paragraphs (blank-line separated, `\n` = break),
+fenced code with lang label, ul/ol + task lists (`- [x]`), `>` blockquote, `---` hr, pipe
+tables, images `![alt](url)`, `**bold**`, `*em*`, `~~strike~~`, `` `code` ``, `[label](url)`,
+bare-URL autolinks. Raw HTML always renders as literal text; only http/https/mailto URLs
+become links (`javascript:` degrades to plain text). No syntax highlighting — that's code.jsx.
+Also exported: `parseMarkdown`, `safeUrl`, `formatTime`, `formatDay`, `formatBytes`.
+
+Caveats: a `select` prompt near the bottom of the transcript opens its popover in-flow —
+the scroll container scrolls to reveal it (same family as the Select-in-modal caveat).
+No virtualization: comfortable to ~1–2k items.
+
+```jsx
+import { ChatView, ChatComposer } from './forge/chat';
+
+const [items, setItems] = createSignal([
+  { id: 'm1', author: 'ana', at: new Date(), text: 'Ready to **deploy**?' },
+  { id: 'm2', author: 'bot', at: new Date(), blocks: [
+    { kind: 'tool', tool: { name: 'run_tests', status: 'success', result: '128 passed' } },
+    { kind: 'prompt', prompt: { id: 'q1', question: 'Proceed?', answer: answers().q1,
+        control: { type: 'buttons', options: [{ value: 'yes', label: 'Deploy' }] },
+        onAnswer: (v) => setAnswers({ ...answers(), q1: v }) } },
+  ] },
+]);
+
+<ChatView style={{ height: '480px' }} variant="room" self="me"
+          participants={people} items={items()}>
+  <ChatComposer onSend={(t) => setItems([...items(), { id: uid(), author: 'me', at: new Date(), text: t }])} />
+</ChatView>
+```
 
 ## Code editor (`assets/code.jsx`, optional, CodeMirror 6)
 

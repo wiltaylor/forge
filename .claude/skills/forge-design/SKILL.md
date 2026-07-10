@@ -1,6 +1,6 @@
 ---
 name: forge-design
-description: Builds SolidJS UIs with the Forge design system — a dark-default, dense, technical-tools aesthetic for dashboards, consoles, observability and admin panels. Ships the full colour scheme/design tokens (CSS variables), component CSS, and SolidJS components for everything — shell (AppShell with built-in mobile drawer, nav, Crumbs, PageHead, Tabs, Pagination, SplitPane, Sheet), forms (Input, Textarea, Checkbox, Toggle, Radio, Select, Combobox, ListBox, Slider, ToggleGroup, Calendar, DatePicker), feedback (Badge, Toast + Toaster, Alert, Progress, Spinner, Skeleton, Tooltip, Modal, Command palette, menus — Dropdown and ContextMenu), data (Table, Logs, Stat, Avatar, Accordion), plus optional assets: a NodeGraph editor + auto-layout Flowchart (typed ports, elbow connections, animated/broken edges), zero-dep SVG charts (pie, line, bar, gantt, sparkline) on a CVD-validated ramp, and a CodeMirror-6 code editor/diff viewer with LSP-style annotations and Forge context menus. Responsive out of the box; includes a runnable preview gallery of every control. Use when building or styling SolidJS components or pages, choosing colours for a new component, wiring design tokens into a project, or when the user says "use the design system", "Forge style", "match the console look", "make it work on mobile", "preview the design system", "show me the controls", "build a node editor", "show a diff", "add a chart", "build a dashboard with charts".
+description: Builds SolidJS UIs with the Forge design system — a dark-default, dense, technical-tools aesthetic for dashboards, consoles, observability and admin panels. Ships the full colour scheme/design tokens (CSS variables), component CSS, and SolidJS components for everything — shell (AppShell with built-in mobile drawer, nav, Crumbs, PageHead, Tabs, Pagination, SplitPane, Sheet), forms (Input, Textarea, Checkbox, Toggle, Radio, Select, Combobox, ListBox, Slider, ToggleGroup, Calendar, DatePicker), feedback (Badge, Toast + Toaster, Alert, Progress, Spinner, Skeleton, Tooltip, Modal, Command palette, menus — Dropdown and ContextMenu), data (Table, Logs, Stat, Avatar, Accordion), plus optional assets: a NodeGraph editor + auto-layout Flowchart (typed ports, elbow connections, animated/broken edges), zero-dep SVG charts (pie, line, bar, gantt, sparkline) on a CVD-validated ramp, a CodeMirror-6 code editor/diff viewer with LSP-style annotations and Forge context menus, and a chat kit — 1:1 and room transcripts, AI tool-call boxes, interactive question prompts (buttons/radio/checkbox/select), link cards, inline media, typing indicator, composer, and a zero-dep XSS-safe Markdown control. Responsive out of the box; includes a runnable preview gallery of every control. Use when building or styling SolidJS components or pages, choosing colours for a new component, wiring design tokens into a project, or when the user says "use the design system", "Forge style", "match the console look", "make it work on mobile", "preview the design system", "show me the controls", "build a node editor", "show a diff", "add a chart", "build a dashboard with charts", "build a chat", "chat UI", "conversation view", "assistant transcript", "render markdown".
 user-invocable: true
 argument-hint: [what to build or style]
 ---
@@ -10,7 +10,7 @@ Applies the **Forge design system** (synced from the claude.ai design project "T
 Design System") to SolidJS work. The system now ships two ways:
 
 1. **npm packages** (preferred): `@forge/tokens`, `@forge/ui`, `@forge/charts`,
-   `@forge/graph`, `@forge/code` under `packages/` in the forge repo
+   `@forge/graph`, `@forge/code`, `@forge/chat` under `packages/` in the forge repo
    (github:wiltaylor/forge) — TypeScript, typed props, plus `@forge/client`
    (REST/SSE/WS/JWT API client) and `@forge/remote` (component federation).
    See the repo README for git-dependency install and CSS import order.
@@ -54,12 +54,13 @@ Wire the design system into the target project. **Prefer the packages**: inside 
 monorepo add `"@forge/ui": "workspace:^"` etc.; outside it use git dependencies
 (`github:wiltaylor/forge#main&path:packages/ui`, pnpm). Import CSS at the app entry in
 order: `@forge/tokens/tokens.css`, `@forge/tokens/base.css` (optionally `fonts.css` first),
-then `@forge/ui/styles.css` (+ `@forge/charts|graph|code/styles.css` as used).
+then `@forge/ui/styles.css` (+ `@forge/charts|graph|code|chat/styles.css` as used).
 **Copy-in fallback** (per `reference/solidjs.md`): copy `assets/colors_and_type.css`,
 `assets/console.css`, and `assets/ui.jsx` in, import the two CSS files at the app entry
 (tokens first). Optional extras: `assets/graph.jsx`, `assets/charts.jsx`, `assets/code.jsx`
-(needs the CodeMirror packages listed in `reference/solidjs.md`). Copy — never symlink into
-this skill directory.
+(needs the CodeMirror packages listed in `reference/solidjs.md`), and `assets/chat.jsx` +
+`assets/chat.css` (chat.jsx imports `./ui.jsx`; import chat.css after console.css). Copy —
+never symlink into this skill directory.
 For each asset that already exists in the project, run `diff -u <project copy> <skill copy>`:
 identical → leave it and continue; different → show the diff and ask the user whether to
 update the project copy. Never overwrite an existing project copy without approval.
@@ -101,9 +102,12 @@ page-level horizontal scroll. Run any new component through the checklist at the
 - Use drop shadows, gradients, frosted-glass cards, emoji, or unicode-as-icon (`→`, `✓`)
 - Put the accent colour on large background fills or pill-shaped buttons
 - Hide content on narrow screens beyond the documented reflows (breadcrumbs ≤768px) — reflow, don't remove
-- Edit the files in `${CLAUDE_SKILL_DIR}/assets/` — the CSS files mirror the design project (id
-  `019dc74c-a1ff-74d0-8504-0ad85b5589fe`; re-sync via the DesignSync tool), and `ui.jsx` is the
-  skill-owned SolidJS port (the remote `ui.jsx` is the React original — never push it from here).
-  `${CLAUDE_SKILL_DIR}/preview/` is skill-owned tooling, not part of the mirror — editing it is fine.
+- Edit the files in `${CLAUDE_SKILL_DIR}/assets/` — `colors_and_type.css` and `console.css` mirror
+  the design project (id `019dc74c-a1ff-74d0-8504-0ad85b5589fe`; re-sync via the DesignSync tool),
+  and `ui.jsx` is the skill-owned SolidJS port (the remote `ui.jsx` is the React original — never
+  push it from here). `chat.jsx`/`chat.css` (like `charts.jsx`/`graph.jsx`/`code.jsx`) are
+  skill-owned ports whose source of truth is the forge repo's packages — sync from there, not by
+  hand-invention. `${CLAUDE_SKILL_DIR}/preview/` is skill-owned tooling, not part of the mirror —
+  editing it is fine.
 </never>
 </boundaries>

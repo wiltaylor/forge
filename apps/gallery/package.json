@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@forge/charts": "workspace:^",
+    "@forge/chat": "workspace:^",
     "@forge/client": "workspace:^",
     "@forge/code": "workspace:^",
     "@forge/desktop": "workspace:^",

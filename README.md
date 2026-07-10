@@ -14,6 +14,7 @@ throughout, global **theming**, and **component federation** between apps.
 | `@forge/charts` | Zero-dep SVG charts (pie, line, bar, gantt, sparkline) | solid-js (peer) |
 | `@forge/graph` | NodeGraph editor + auto-layout Flowchart | solid-js (peer) |
 | `@forge/code` | CodeMirror 6 editor/diff with Forge theme | solid-js (peer), CodeMirror (bundled deps) |
+| `@forge/chat` | Chat UI: 1:1/room transcripts, tool-call boxes, interactive prompts, link cards, media, zero-dep markdown, composer | solid-js (peer), ui |
 | `@forge/client` | Typed API client: REST + SSE + WebSocket + JWT | nothing |
 | `@forge/tauri` | The same `ForgeClient` interface over Tauri IPC + widget transports | client, `@tauri-apps/api` |
 | `@forge/remote` | Component federation: export web-component bundles, mount remote ones | solid-js (peer), ui; `/vite` helper |
