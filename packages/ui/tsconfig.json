@@ -1,4 +1,9 @@
 {
   "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // Resolve workspace-dep types from source so the dts build doesn't race
+    // the dependency's own prepare (see packages/tauri/tsconfig.json).
+    "paths": { "@forge/tokens": ["../tokens/src/index.ts"] }
+  },
   "include": ["src"]
 }

@@ -1,4 +1,10 @@
 {
   "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // Resolve workspace-dep types from source so the dts build doesn't race
+    // the dependency's own prepare (git-dep installs build packages
+    // concurrently — a cold install may reach this package first).
+    "paths": { "@forge/client": ["../client/src/index.ts"] }
+  },
   "include": ["src", "tests"]
 }
