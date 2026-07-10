@@ -22,7 +22,7 @@
   },
   "scripts": {
     "build": "tsup",
-    "prepare": "tsup",
+    "prepare": "node ../../scripts/prepare-package.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
