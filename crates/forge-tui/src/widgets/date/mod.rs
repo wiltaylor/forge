@@ -1,9 +1,9 @@
 //! Calendar + DatePicker (cargo feature `calendar`, uses the `time` crate).
 
-use crate::event::{is_press, Outcome};
+use crate::event::{clicked, in_area, left_down, is_press, scroll_delta, Outcome};
 use crate::theme::{default_theme, Theme};
 use ratatui::buffer::Buffer;
-use ratatui::crossterm::event::{KeyCode, KeyEvent};
+use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
 use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
 use ratatui::widgets::{Block, Clear, StatefulWidget, Widget};
@@ -38,6 +38,7 @@ fn month_name(m: Month) -> &'static str {
 pub struct CalendarState {
     pub selected: Date,
     view: (i32, Month),
+    area: Rect,
 }
 
 impl Default for CalendarState {
@@ -48,7 +49,49 @@ impl Default for CalendarState {
 
 impl CalendarState {
     pub fn new(selected: Date) -> CalendarState {
-        CalendarState { selected, view: (selected.year(), selected.month()) }
+        CalendarState {
+            selected,
+            view: (selected.year(), selected.month()),
+            area: Rect::default(),
+        }
+    }
+
+    /// Click a day to select it (clicking the selection submits); the wheel
+    /// pages months.
+    pub fn handle_mouse(&mut self, ev: &MouseEvent) -> Outcome {
+        let delta = scroll_delta(ev);
+        if delta != 0 && in_area(ev, self.area) {
+            return self.shift_month(delta > 0);
+        }
+        if !left_down(ev) || !in_area(ev, self.area) || ev.row < self.area.y + 2 {
+            return Outcome::Ignored;
+        }
+        let (year, month) = self.view;
+        let Ok(first) = Date::from_calendar_date(year, month, 1) else {
+            return Outcome::Consumed;
+        };
+        let lead = first.weekday().number_days_from_monday() as u16;
+        let col = (ev.column - self.area.x) / 3;
+        if col > 6 {
+            return Outcome::Consumed;
+        }
+        let row = ev.row - self.area.y - 2;
+        let idx = row * 7 + col;
+        if idx < lead {
+            return Outcome::Consumed;
+        }
+        let day = (idx - lead + 1) as u8;
+        if day > month.length(year) {
+            return Outcome::Consumed;
+        }
+        let Ok(date) = Date::from_calendar_date(year, month, day) else {
+            return Outcome::Consumed;
+        };
+        if date == self.selected {
+            Outcome::Submitted
+        } else {
+            self.select(date)
+        }
     }
 
     pub fn view(&self) -> (i32, Month) {
@@ -135,6 +178,7 @@ impl<'a> StatefulWidget for Calendar<'a> {
     type State = CalendarState;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut CalendarState) {
+        state.area = Rect::new(area.x, area.y, area.width.min(21), area.height.min(Calendar::HEIGHT));
         if area.width < 21 || area.height < 3 {
             return;
         }
@@ -196,15 +240,40 @@ impl<'a> StatefulWidget for Calendar<'a> {
 pub struct DatePickerState {
     pub open: bool,
     pub cal: CalendarState,
+    field: Rect,
 }
 
 impl DatePickerState {
     pub fn new(selected: Date) -> DatePickerState {
-        DatePickerState { open: false, cal: CalendarState::new(selected) }
+        DatePickerState { open: false, cal: CalendarState::new(selected), field: Rect::default() }
     }
 
     pub fn selected(&self) -> Date {
         self.cal.selected
+    }
+
+    /// Click the field to open/close; click a day to pick it; click away to
+    /// dismiss.
+    pub fn handle_mouse(&mut self, ev: &MouseEvent) -> Outcome {
+        if !self.open {
+            if clicked(ev, self.field) {
+                self.open = true;
+                return Outcome::Consumed;
+            }
+            return Outcome::Ignored;
+        }
+        match self.cal.handle_mouse(ev) {
+            Outcome::Submitted => {
+                self.open = false;
+                Outcome::Changed
+            }
+            Outcome::Ignored if left_down(ev) => {
+                self.open = false;
+                Outcome::Consumed
+            }
+            Outcome::Ignored => Outcome::Ignored,
+            o => o,
+        }
     }
 
     pub fn handle_key(&mut self, key: KeyEvent) -> Outcome {
@@ -276,6 +345,7 @@ impl<'a> StatefulWidget for DatePicker<'a> {
         } else {
             t.border.default
         };
+        state.field = Rect::new(area.x, area.y, area.width, 1);
         buf.set_style(Rect::new(area.x, area.y, area.width, 1), Style::new().bg(t.bg[2]));
         buf.set_string(area.x, area.y, "▎", Style::new().fg(edge).bg(t.bg[2]));
         let d = state.cal.selected;

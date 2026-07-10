@@ -1,21 +1,34 @@
-use crate::event::{is_press, Outcome};
+use crate::event::{clicked, is_press, Outcome};
 use crate::text;
 use crate::theme::{default_theme, Theme};
 use ratatui::buffer::Buffer;
-use ratatui::crossterm::event::{KeyCode, KeyEvent};
+use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
 use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
 use ratatui::widgets::StatefulWidget;
 
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct ToggleGroupState {
     pub selected: usize,
     len: usize,
+    item_rects: Vec<Rect>,
 }
 
 impl ToggleGroupState {
     pub fn new(selected: usize) -> ToggleGroupState {
-        ToggleGroupState { selected, len: 0 }
+        ToggleGroupState { selected, ..Default::default() }
+    }
+
+    /// Click a segment to select it.
+    pub fn handle_mouse(&mut self, ev: &MouseEvent) -> Outcome {
+        for (i, rect) in self.item_rects.iter().enumerate() {
+            if clicked(ev, *rect) {
+                let changed = self.selected != i;
+                self.selected = i;
+                return if changed { Outcome::Changed } else { Outcome::Consumed };
+            }
+        }
+        Outcome::Ignored
     }
 
     pub fn handle_key(&mut self, key: KeyEvent) -> Outcome {
@@ -80,6 +93,7 @@ impl<'a> StatefulWidget for ToggleGroup<'a> {
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut ToggleGroupState) {
         state.len = self.items.len();
+        state.item_rects.clear();
         if area.is_empty() {
             return;
         }
@@ -102,6 +116,7 @@ impl<'a> StatefulWidget for ToggleGroup<'a> {
             if active && self.focused {
                 style = style.add_modifier(Modifier::BOLD | Modifier::UNDERLINED);
             }
+            state.item_rects.push(Rect::new(x, area.y, w, 1));
             buf.set_style(Rect::new(x, area.y, w, 1), style);
             buf.set_string(x + 1, area.y, *item, style);
             x += w + 1;

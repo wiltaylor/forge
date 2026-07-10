@@ -2,7 +2,10 @@
 //! `handle_key` returns, key-combo matching, and the declarative [`Keymap`]
 //! that powers both dispatch and the HelpBar/CommandPalette listings.
 
-use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+use ratatui::crossterm::event::{
+    KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseButton, MouseEvent, MouseEventKind,
+};
+use ratatui::layout::{Position, Rect};
 use std::fmt;
 
 /// What a widget state did with a key event. `Ignored` means "not for me" —
@@ -32,6 +35,35 @@ impl Outcome {
 /// both Press and Release; reacting to Release double-triggers everything.
 pub fn is_press(key: &KeyEvent) -> bool {
     matches!(key.kind, KeyEventKind::Press | KeyEventKind::Repeat)
+}
+
+/// The pointer position of a mouse event.
+pub fn mouse_pos(ev: &MouseEvent) -> Position {
+    Position::new(ev.column, ev.row)
+}
+
+/// Is the pointer inside `area`?
+pub fn in_area(ev: &MouseEvent, area: Rect) -> bool {
+    area.contains(mouse_pos(ev))
+}
+
+/// Left-button press (the "click" widgets react to).
+pub fn left_down(ev: &MouseEvent) -> bool {
+    matches!(ev.kind, MouseEventKind::Down(MouseButton::Left))
+}
+
+/// Left-button press inside `area` — the standard widget hit test.
+pub fn clicked(ev: &MouseEvent, area: Rect) -> bool {
+    left_down(ev) && in_area(ev, area)
+}
+
+/// Wheel direction: -1 up, +1 down, 0 otherwise.
+pub fn scroll_delta(ev: &MouseEvent) -> i32 {
+    match ev.kind {
+        MouseEventKind::ScrollUp => -1,
+        MouseEventKind::ScrollDown => 1,
+        _ => 0,
+    }
 }
 
 /// A key chord: code + modifiers. For character keys SHIFT is ignored during

@@ -1,5 +1,5 @@
 use forge_tui::prelude::*;
-use ratatui::crossterm::event::KeyEvent;
+use ratatui::crossterm::event::{KeyEvent, MouseEvent};
 use ratatui::layout::Rect;
 use ratatui::Frame;
 
@@ -18,6 +18,7 @@ pub struct FormsState {
     pub agree: CheckboxState,
     pub notify: ToggleState,
     pub level: RadioState,
+    submit_rect: Rect,
 }
 
 impl Default for FormsState {
@@ -29,6 +30,7 @@ impl Default for FormsState {
             agree: CheckboxState::new(true),
             notify: ToggleState::new(false),
             level: RadioState::new(1),
+            submit_rect: Rect::default(),
         }
     }
 }
@@ -72,6 +74,34 @@ impl FormsState {
             }
             other => other,
         }
+    }
+
+    pub fn handle_mouse(&mut self, ev: &MouseEvent, ctx: &mut Ctx) -> Outcome {
+        macro_rules! try_widget {
+            ($state:expr, $id:expr) => {
+                let out = $state.handle_mouse(ev);
+                if out.is_handled() {
+                    ctx.focus.focus($id);
+                    return out;
+                }
+            };
+        }
+        try_widget!(self.name, NAME);
+        try_widget!(self.password, PASSWORD);
+        try_widget!(self.handle, HANDLE);
+        try_widget!(self.agree, AGREE);
+        try_widget!(self.notify, NOTIFY);
+        try_widget!(self.level, LEVEL);
+        if forge_tui::event::clicked(ev, self.submit_rect) {
+            ctx.focus.focus(SUBMIT);
+            if self.handle_invalid() {
+                ctx.toast().error("Handle must not contain spaces");
+            } else {
+                ctx.toast().success(format!("Saved profile for {}", self.name.value()));
+            }
+            return Outcome::Consumed;
+        }
+        Outcome::Ignored
     }
 
     pub fn paste(&mut self, focused: Option<FocusId>, textv: &str) {
@@ -171,6 +201,7 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
         let focused = ctx.focus.register(SUBMIT);
         let b = Button::new("Save profile").variant(Variant::Primary).focused(focused).theme(t);
         let bw = b.width().min(r.width);
-        frame.render_widget(b, Rect::new(r.x, r.y, bw, 1));
+        state.submit_rect = Rect::new(r.x, r.y, bw, 1);
+        frame.render_widget(b, state.submit_rect);
     }
 }

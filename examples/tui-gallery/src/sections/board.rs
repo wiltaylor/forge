@@ -1,5 +1,5 @@
 use forge_tui::prelude::*;
-use ratatui::crossterm::event::KeyEvent;
+use ratatui::crossterm::event::{KeyEvent, MouseEvent};
 use ratatui::layout::Rect;
 use ratatui::Frame;
 
@@ -53,6 +53,26 @@ impl BoardState {
             return Outcome::Consumed;
         }
         outcome
+    }
+}
+
+impl BoardState {
+    pub fn handle_mouse(&mut self, ev: &MouseEvent, ctx: &mut Ctx) -> Outcome {
+        let out = self.kanban.handle_mouse(ev);
+        if out.is_handled() {
+            ctx.focus.focus(BOARD);
+            if out == Outcome::Submitted {
+                let card = self
+                    .columns
+                    .get(self.kanban.col)
+                    .and_then(|c| c.1.get(self.kanban.card));
+                if let Some(card) = card {
+                    ctx.toast().info(format!("Open card: {card}"));
+                }
+                return Outcome::Consumed;
+            }
+        }
+        out
     }
 }
 

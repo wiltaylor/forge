@@ -1,5 +1,5 @@
 use forge_tui::prelude::*;
-use ratatui::crossterm::event::KeyEvent;
+use ratatui::crossterm::event::{KeyEvent, MouseEvent};
 use ratatui::layout::Rect;
 use ratatui::Frame;
 
@@ -30,6 +30,22 @@ impl FilesState {
             return Outcome::Consumed;
         }
         outcome
+    }
+}
+
+impl FilesState {
+    pub fn handle_mouse(&mut self, ev: &MouseEvent, ctx: &mut Ctx) -> Outcome {
+        let out = self.picker.handle_mouse(ev);
+        if out.is_handled() {
+            ctx.focus.focus(PICKER);
+            if out == Outcome::Submitted {
+                if let Some(path) = self.picker.take_selected() {
+                    ctx.toast().success(format!("Picked {}", path.display()));
+                }
+                return Outcome::Consumed;
+            }
+        }
+        out
     }
 }
 

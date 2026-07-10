@@ -1,5 +1,5 @@
 use forge_tui::prelude::*;
-use ratatui::crossterm::event::KeyEvent;
+use ratatui::crossterm::event::{KeyEvent, MouseEvent};
 use ratatui::layout::Rect;
 use ratatui::Frame;
 
@@ -42,6 +42,20 @@ impl Default for CodeState {
 }
 
 impl CodeState {
+    pub fn handle_mouse(&mut self, ev: &MouseEvent, ctx: &mut Ctx) -> Outcome {
+        let out = self.code.handle_mouse(ev);
+        if out.is_handled() {
+            ctx.focus.focus(CODE);
+            return out;
+        }
+        let out = self.diff.handle_mouse(ev);
+        if out.is_handled() {
+            ctx.focus.focus(DIFF);
+            return out;
+        }
+        Outcome::Ignored
+    }
+
     pub fn handle_key(&mut self, focused: Option<FocusId>, key: KeyEvent) -> Outcome {
         match focused {
             Some(id) if id == CODE => self.code.handle_key(key),

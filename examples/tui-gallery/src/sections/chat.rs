@@ -1,5 +1,5 @@
 use forge_tui::prelude::*;
-use ratatui::crossterm::event::KeyEvent;
+use ratatui::crossterm::event::{KeyEvent, MouseEvent};
 use ratatui::layout::Rect;
 use ratatui::Frame;
 
@@ -67,6 +67,34 @@ impl ChatState {
             }
             o => o,
         }
+    }
+}
+
+impl ChatState {
+    pub fn handle_mouse(&mut self, ev: &MouseEvent, ctx: &mut Ctx) -> Outcome {
+        if !self.prompt_answered {
+            let out = self.prompt.handle_mouse(ev);
+            if out.is_handled() {
+                ctx.focus.focus(PROMPT);
+                if out == Outcome::Submitted {
+                    self.prompt_answered = true;
+                    ctx.toast().success(format!("Chose: {}", PROMPT_OPTIONS[self.prompt.selected]));
+                    return Outcome::Consumed;
+                }
+                return out;
+            }
+        }
+        let out = self.view.handle_mouse(ev);
+        if out.is_handled() {
+            ctx.focus.focus(VIEW);
+            return out;
+        }
+        let out = self.composer.input.handle_mouse(ev);
+        if out.is_handled() {
+            ctx.focus.focus(COMPOSER);
+            return out;
+        }
+        Outcome::Ignored
     }
 }
 

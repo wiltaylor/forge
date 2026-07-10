@@ -3,11 +3,11 @@
 //! collapses to a slim rail on narrow terminals (or on Ctrl+B, the toggle
 //! the shell's `handle_key` implements).
 
-use crate::event::{is_press, Outcome};
+use crate::event::{clicked, is_press, Outcome};
 use crate::text;
 use crate::theme::{default_theme, Theme};
 use ratatui::buffer::Buffer;
-use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent};
 use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
 use ratatui::widgets::StatefulWidget;
@@ -27,13 +27,14 @@ impl<'a> NavSection<'a> {
 
 /// Persistent shell state: the active nav item (flattened index across all
 /// sections), collapse override, and the measured content region.
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct ShellState {
     pub selected: usize,
     /// `None` = auto (collapse under 72 columns).
     pub collapsed: Option<bool>,
     nav_len: usize,
     content: Rect,
+    item_rects: Vec<Rect>,
 }
 
 impl ShellState {
@@ -44,6 +45,18 @@ impl ShellState {
     /// The content region measured at the last render.
     pub fn content(&self) -> Rect {
         self.content
+    }
+
+    /// Click a nav item to activate it.
+    pub fn handle_mouse(&mut self, ev: &MouseEvent) -> Outcome {
+        for (i, rect) in self.item_rects.iter().enumerate() {
+            if clicked(ev, *rect) {
+                let changed = self.selected != i;
+                self.selected = i;
+                return if changed { Outcome::Changed } else { Outcome::Consumed };
+            }
+        }
+        Outcome::Ignored
     }
 
     /// ↑/↓ move the active nav item; Enter submits it; Ctrl+B toggles the
@@ -153,7 +166,8 @@ impl<'a> AppShell<'a> {
         self
     }
 
-    fn draw_sidebar(&self, area: Rect, buf: &mut Buffer, t: &Theme, state: &ShellState, slim: bool) {
+    fn draw_sidebar(&self, area: Rect, buf: &mut Buffer, t: &Theme, state: &mut ShellState, slim: bool) {
+        state.item_rects.clear();
         buf.set_style(area, Style::new().bg(t.bg[1]));
         if area.is_empty() {
             return;
@@ -200,6 +214,7 @@ impl<'a> AppShell<'a> {
             }
             for item in section.items {
                 if y < bottom {
+                    state.item_rects.push(Rect::new(area.x, y, area.width, 1));
                     let active = flat == state.selected;
                     if active {
                         buf.set_style(

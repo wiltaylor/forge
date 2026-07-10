@@ -162,6 +162,25 @@ impl App for Gallery {
                     _ => {}
                 }
             }
+            Event::Mouse(ev) => {
+                if self.shell.handle_mouse(&ev).is_handled() {
+                    return;
+                }
+                let _ = match self.section() {
+                    1 => self.feedback.handle_mouse(&ev, ctx),
+                    2 => self.forms.handle_mouse(&ev, ctx),
+                    3 => self.pickers.handle_mouse(&ev, ctx),
+                    4 => self.structure.handle_mouse(&ev, ctx),
+                    5 => self.overlays.handle_mouse(&ev, ctx),
+                    6 => self.data.handle_mouse(&ev, ctx),
+                    7 => self.files.handle_mouse(&ev, ctx),
+                    8 => self.board.handle_mouse(&ev, ctx),
+                    10 => self.date.handle_mouse(&ev, ctx),
+                    12 => self.chat.handle_mouse(&ev, ctx),
+                    13 => self.code.handle_mouse(&ev, ctx),
+                    _ => Outcome::Ignored,
+                };
+            }
             Event::Paste(text) => {
                 match self.section() {
                     2 => self.forms.paste(ctx.focus.current(), &text),

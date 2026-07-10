@@ -1,8 +1,8 @@
-use crate::event::{is_press, Outcome};
+use crate::event::{in_area, is_press, left_down, scroll_delta, Outcome};
 use crate::text;
 use crate::theme::{default_theme, Theme};
 use ratatui::buffer::Buffer;
-use ratatui::crossterm::event::{KeyCode, KeyEvent};
+use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
 use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
 use ratatui::widgets::StatefulWidget;
@@ -18,6 +18,7 @@ pub struct ListBoxState {
     offset: usize,
     len: usize,
     view_h: usize,
+    area: Rect,
 }
 
 impl ListBoxState {
@@ -102,6 +103,42 @@ impl ListBoxState {
         }
     }
 
+    /// The item row under the pointer, if any (uses the rect cached at the
+    /// last render).
+    pub fn row_at(&self, ev: &MouseEvent) -> Option<usize> {
+        if !in_area(ev, self.area) {
+            return None;
+        }
+        let row = self.offset + (ev.row - self.area.y) as usize;
+        (row < self.len).then_some(row)
+    }
+
+    /// Click selects (toggles in multi mode); the wheel moves the cursor.
+    pub fn handle_mouse(&mut self, ev: &MouseEvent) -> Outcome {
+        let delta = scroll_delta(ev);
+        if delta != 0 && in_area(ev, self.area) {
+            let target = if delta < 0 {
+                self.highlight.saturating_sub(1)
+            } else {
+                self.highlight + 1
+            };
+            return self.move_to(target);
+        }
+        if !left_down(ev) {
+            return Outcome::Ignored;
+        }
+        let Some(row) = self.row_at(ev) else {
+            return Outcome::Ignored;
+        };
+        self.highlight = row;
+        if self.multi {
+            self.toggle(row);
+        } else {
+            self.select_only(row);
+        }
+        Outcome::Changed
+    }
+
     /// Move the cursor to the next item starting with `c` (type-ahead).
     pub fn jump_to(&mut self, items: &[&str], c: char) -> Outcome {
         let lc = c.to_ascii_lowercase();
@@ -148,6 +185,7 @@ impl<'a> StatefulWidget for ListBox<'a> {
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut ListBoxState) {
         state.len = self.items.len();
         state.view_h = area.height as usize;
+        state.area = area;
         if area.is_empty() {
             return;
         }

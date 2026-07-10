@@ -204,6 +204,12 @@ contract and of the web stack: any TUI app can depend on it alone.
 - **Interaction pattern**: every stateful widget pairs a per-frame view with
   a persistent `FooState` whose `handle_key` returns a `#[must_use] Outcome`
   (`Ignored` bubbles like DOM events). No callbacks, no framework.
+- **Mouse**: interactive states also expose `handle_mouse` with built-in
+  hit-testing (each widget caches its rendered rect) — click to focus/toggle/
+  select, wheel to scroll, drag sliders and split dividers, hover to
+  highlight menus, click-away to dismiss popups. Capture is on by default
+  (`RunOptions { mouse: false, .. }` restores native text selection;
+  Shift+drag usually selects even while captured).
 - **Runtime (optional)**: `runtime::run(app, theme, opts)` gives you a
   panic-safe terminal guard, tick-driven animation, an immediate-mode
   `FocusRing` (Tab order = render order), a modal overlay stack (Esc closes),

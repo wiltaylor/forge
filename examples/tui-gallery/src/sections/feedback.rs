@@ -1,12 +1,14 @@
 use forge_tui::prelude::*;
-use ratatui::crossterm::event::{KeyCode, KeyEvent};
+use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
 use ratatui::layout::Rect;
 use ratatui::Frame;
 
 const TOAST_BTN: &str = "fb-toast";
 
 #[derive(Default)]
-pub struct FeedbackState {}
+pub struct FeedbackState {
+    btn_rects: Vec<Rect>,
+}
 
 const TOASTS: [(Severity, &str, &str); 4] = [
     (Severity::Info, "Info", "Deploy queued behind 2 jobs"),
@@ -28,10 +30,22 @@ impl FeedbackState {
         }
         Outcome::Ignored
     }
+
+    pub fn handle_mouse(&mut self, ev: &MouseEvent, ctx: &mut Ctx) -> Outcome {
+        for (i, rect) in self.btn_rects.clone().into_iter().enumerate() {
+            if forge_tui::event::clicked(ev, rect) {
+                ctx.focus.focus(FocusId::indexed(TOAST_BTN, i as u32));
+                let (sev, _, msg) = TOASTS[i];
+                ctx.toast().push(sev, msg);
+                return Outcome::Consumed;
+            }
+        }
+        Outcome::Ignored
+    }
 }
 
 pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut FeedbackState) {
-    let _ = state;
+    state.btn_rects.clear();
     let mut y = area.y;
     let x = area.x;
     let w = area.width.min(56);
@@ -89,6 +103,7 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
             if bx + bw > r.x + r.width {
                 break;
             }
+            state.btn_rects.push(Rect::new(bx, r.y, bw, 1));
             frame.render_widget(b, Rect::new(bx, r.y, bw, 1));
             bx += bw + 2;
         }

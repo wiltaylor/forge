@@ -7,11 +7,11 @@
 //! tokens — pass the truecolor theme (quantized themes fall back to plain
 //! text colors).
 
-use crate::event::{is_press, Outcome};
+use crate::event::{in_area, is_press, scroll_delta, Outcome};
 use crate::text;
 use crate::theme::{default_theme, Theme};
 use ratatui::buffer::Buffer;
-use ratatui::crossterm::event::{KeyCode, KeyEvent};
+use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
 use ratatui::layout::Rect;
 use ratatui::style::{Color, Style};
 use ratatui::widgets::StatefulWidget;
@@ -79,11 +79,27 @@ pub struct CodeViewState {
     pub col: usize,
     total: usize,
     view_h: usize,
+    area: Rect,
 }
 
 impl CodeViewState {
     pub fn new() -> CodeViewState {
         CodeViewState::default()
+    }
+
+    /// Wheel scrolls three lines.
+    pub fn handle_mouse(&mut self, ev: &MouseEvent) -> Outcome {
+        let delta = scroll_delta(ev);
+        if delta == 0 || !in_area(ev, self.area) {
+            return Outcome::Ignored;
+        }
+        let max = self.total.saturating_sub(self.view_h);
+        self.row = if delta < 0 {
+            self.row.saturating_sub(3)
+        } else {
+            (self.row + 3).min(max)
+        };
+        Outcome::Consumed
     }
 
     pub fn handle_key(&mut self, key: KeyEvent) -> Outcome {
@@ -166,6 +182,7 @@ impl<'a> StatefulWidget for CodeView<'a> {
         let lines: Vec<&str> = self.source.lines().collect();
         state.total = lines.len();
         state.view_h = area.height as usize;
+        state.area = area;
         let max = state.total.saturating_sub(state.view_h);
         state.row = state.row.min(max);
 
@@ -335,6 +352,7 @@ impl<'a> StatefulWidget for DiffView<'a> {
         let rows = diff_lines(self.old, self.new);
         state.total = rows.len();
         state.view_h = area.height as usize;
+        state.area = area;
         state.row = state.row.min(state.total.saturating_sub(state.view_h));
         for vis in 0..state.view_h {
             let ri = state.row + vis;

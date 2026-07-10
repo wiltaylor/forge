@@ -1,5 +1,5 @@
 use forge_tui::prelude::*;
-use ratatui::crossterm::event::KeyEvent;
+use ratatui::crossterm::event::{KeyEvent, MouseEvent};
 use ratatui::layout::Rect;
 use ratatui::Frame;
 use serde_json::json;
@@ -107,6 +107,39 @@ impl DataState {
             return Outcome::Consumed;
         }
         outcome
+    }
+
+    pub fn handle_mouse(&mut self, ev: &MouseEvent, ctx: &mut Ctx) -> Outcome {
+        let out = self.table.handle_mouse(ev);
+        if out.is_handled() {
+            ctx.focus.focus(TABLE);
+            if out == Outcome::Changed {
+                self.apply_sort();
+            }
+            return out;
+        }
+        let out = self.logs.handle_mouse(ev);
+        if out.is_handled() {
+            ctx.focus.focus(LOGS);
+            return out;
+        }
+        let out = self.tree.handle_mouse(ev, &TREE_ROOTS());
+        if out.is_handled() {
+            ctx.focus.focus(TREE);
+            return out;
+        }
+        let value = self.json_value.clone();
+        let out = self.json.handle_mouse(ev, &value);
+        if out.is_handled() {
+            ctx.focus.focus(JSON);
+            return out;
+        }
+        let out = self.acc.handle_mouse(ev);
+        if out.is_handled() {
+            ctx.focus.focus(ACC);
+            return out;
+        }
+        Outcome::Ignored
     }
 
     fn apply_sort(&mut self) {

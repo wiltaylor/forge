@@ -1,5 +1,5 @@
 use forge_tui::prelude::*;
-use ratatui::crossterm::event::KeyEvent;
+use ratatui::crossterm::event::{KeyEvent, MouseEvent};
 use ratatui::layout::Rect;
 use ratatui::Frame;
 
@@ -69,6 +69,42 @@ impl PickersState {
             return Outcome::Consumed;
         }
         outcome
+    }
+
+    pub fn handle_mouse(&mut self, ev: &MouseEvent, ctx: &mut Ctx) -> Outcome {
+        // Dropdown-carrying widgets first (their popups overlay the others).
+        let out = self.region.handle_mouse(ev);
+        if out.is_handled() {
+            ctx.focus.focus(REGION);
+            if out == Outcome::Changed {
+                if let Some(i) = self.region.value {
+                    ctx.toast().info(format!("Region: {}", REGIONS[i]));
+                }
+            }
+            return out;
+        }
+        let out = self.image.handle_mouse(ev, IMAGES);
+        if out.is_handled() {
+            ctx.focus.focus(IMAGE);
+            if out == Outcome::Submitted {
+                ctx.toast().success(format!("Image: {}", self.image.input.value()));
+            }
+            return out;
+        }
+        macro_rules! try_widget {
+            ($state:expr, $id:expr) => {
+                let out = $state.handle_mouse(ev);
+                if out.is_handled() {
+                    ctx.focus.focus($id);
+                    return out;
+                }
+            };
+        }
+        try_widget!(self.cpu, CPU);
+        try_widget!(self.view, VIEW);
+        try_widget!(self.packages, PKGS);
+        try_widget!(self.notes, NOTES);
+        Outcome::Ignored
     }
 
     pub fn paste(&mut self, focused: Option<FocusId>, text: &str) {

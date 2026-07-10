@@ -1,22 +1,39 @@
-use crate::event::{is_press, Outcome};
+use crate::event::{clicked, is_press, Outcome};
 use crate::theme::{default_theme, Theme};
 use ratatui::buffer::Buffer;
-use ratatui::crossterm::event::{KeyCode, KeyEvent};
+use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
 use ratatui::layout::Rect;
 use ratatui::style::Style;
 use ratatui::widgets::StatefulWidget;
 
 /// Current page (0-based) and total page count. `pages` is data, so the app
 /// sets it directly.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub struct PaginationState {
     pub page: usize,
     pub pages: usize,
+    /// (rect, target page) hot zones; arrows encode prev/next.
+    targets: Vec<(Rect, usize)>,
 }
 
 impl PaginationState {
     pub fn new(page: usize, pages: usize) -> PaginationState {
-        PaginationState { page, pages }
+        PaginationState { page, pages, targets: Vec::new() }
+    }
+
+    /// Click a page number or an arrow.
+    pub fn handle_mouse(&mut self, ev: &MouseEvent) -> Outcome {
+        for (rect, target) in &self.targets {
+            if clicked(ev, *rect) {
+                let target = (*target).min(self.pages.saturating_sub(1));
+                if target != self.page {
+                    self.page = target;
+                    return Outcome::Changed;
+                }
+                return Outcome::Consumed;
+            }
+        }
+        Outcome::Ignored
     }
 
     pub fn handle_key(&mut self, key: KeyEvent) -> Outcome {
@@ -89,6 +106,7 @@ impl<'a> StatefulWidget for Pagination<'a> {
     type State = PaginationState;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut PaginationState) {
+        state.targets.clear();
         if area.is_empty() || state.pages == 0 {
             return;
         }
@@ -102,6 +120,7 @@ impl<'a> StatefulWidget for Pagination<'a> {
                 t.fg[3]
             })
         };
+        state.targets.push((Rect::new(x, area.y, 1, 1), state.page.saturating_sub(1)));
         buf.set_string(x, area.y, "‹", arrow(state.page > 0));
         x += 2;
         for entry in page_model(state.page, state.pages) {
@@ -124,6 +143,7 @@ impl<'a> StatefulWidget for Pagination<'a> {
                     } else {
                         Style::new().fg(t.fg[1])
                     };
+                    state.targets.push((Rect::new(x, area.y, w, 1), p));
                     buf.set_style(Rect::new(x, area.y, w, 1), style);
                     buf.set_string(x + 1, area.y, label, style);
                     x += w + 1;
@@ -131,6 +151,7 @@ impl<'a> StatefulWidget for Pagination<'a> {
             }
         }
         if x < right {
+            state.targets.push((Rect::new(x, area.y, 1, 1), state.page + 1));
             buf.set_string(x, area.y, "›", arrow(state.page + 1 < state.pages));
         }
     }

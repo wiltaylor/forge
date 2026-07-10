@@ -1,5 +1,5 @@
 use forge_tui::prelude::*;
-use ratatui::crossterm::event::KeyEvent;
+use ratatui::crossterm::event::{KeyEvent, MouseEvent};
 use ratatui::layout::Rect;
 use ratatui::Frame;
 
@@ -32,6 +32,26 @@ impl DateState {
             return Outcome::Consumed;
         }
         outcome
+    }
+}
+
+impl DateState {
+    pub fn handle_mouse(&mut self, ev: &MouseEvent, ctx: &mut Ctx) -> Outcome {
+        // Picker first: its popup overlays the calendar column.
+        let out = self.picker.handle_mouse(ev);
+        if out.is_handled() {
+            ctx.focus.focus(PICKER);
+            return out;
+        }
+        let out = self.cal.handle_mouse(ev);
+        if out.is_handled() {
+            ctx.focus.focus(CAL);
+            if out == Outcome::Submitted {
+                ctx.toast().success(format!("Selected {}", self.cal.selected));
+                return Outcome::Consumed;
+            }
+        }
+        out
     }
 }
 

@@ -8,13 +8,13 @@
 //! // later (tick/draw): if let Some(true) = result.take() { delete(); }
 //! ```
 
-use crate::event::{is_press, Keymap, Outcome};
+use crate::event::{clicked, is_press, left_down, Keymap, Outcome};
 use crate::runtime::{Overlay, OverlayOutcome};
 use crate::text;
 use crate::theme::Theme;
 use crate::widgets::overlays::{Command, DropdownMenu, MenuEntry, MenuState, Modal, Palette, PaletteState};
 use crate::widgets::primitives::{Button, Variant};
-use ratatui::crossterm::event::{Event, KeyCode};
+use ratatui::crossterm::event::{Event, KeyCode, MouseEventKind};
 use ratatui::layout::Rect;
 use ratatui::style::Style;
 use ratatui::Frame;
@@ -54,6 +54,8 @@ pub struct ConfirmDialog {
     confirm_label: String,
     danger: bool,
     focus_confirm: bool,
+    cancel_rect: Rect,
+    confirm_rect: Rect,
     result: DialogResult<bool>,
 }
 
@@ -67,6 +69,8 @@ impl ConfirmDialog {
                 confirm_label: "Confirm".into(),
                 danger: false,
                 focus_confirm: false,
+                cancel_rect: Rect::default(),
+                confirm_rect: Rect::default(),
                 result: a,
             },
             b,
@@ -114,11 +118,32 @@ impl Overlay for ConfirmDialog {
         let caw = cancel.width();
         let total = cw + caw + 2;
         let bx = inner.x + inner.width.saturating_sub(total);
-        frame.render_widget(cancel, Rect::new(bx, by, caw, 1));
-        frame.render_widget(confirm, Rect::new(bx + caw + 2, by, cw, 1));
+        self.cancel_rect = Rect::new(bx, by, caw, 1);
+        self.confirm_rect = Rect::new(bx + caw + 2, by, cw, 1);
+        frame.render_widget(cancel, self.cancel_rect);
+        frame.render_widget(confirm, self.confirm_rect);
     }
 
     fn handle(&mut self, event: &Event) -> OverlayOutcome {
+        if let Event::Mouse(ev) = event {
+            if matches!(ev.kind, MouseEventKind::Moved) {
+                if crate::event::in_area(ev, self.confirm_rect) {
+                    self.focus_confirm = true;
+                } else if crate::event::in_area(ev, self.cancel_rect) {
+                    self.focus_confirm = false;
+                }
+                return OverlayOutcome::Consumed;
+            }
+            if clicked(ev, self.confirm_rect) {
+                self.result.set(true);
+                return OverlayOutcome::Close;
+            }
+            if clicked(ev, self.cancel_rect) {
+                self.result.set(false);
+                return OverlayOutcome::Close;
+            }
+            return OverlayOutcome::Consumed;
+        }
         let Event::Key(key) = event else {
             return OverlayOutcome::Consumed;
         };
@@ -213,6 +238,11 @@ impl Overlay for HelpOverlay {
                 return OverlayOutcome::Close;
             }
         }
+        if let Event::Mouse(ev) = event {
+            if left_down(ev) {
+                return OverlayOutcome::Close;
+            }
+        }
         OverlayOutcome::Ignored // Esc-close via stack default
     }
 }
@@ -301,15 +331,16 @@ impl Overlay for MenuOverlay {
     }
 
     fn handle(&mut self, event: &Event) -> OverlayOutcome {
-        let Event::Key(key) = event else {
-            return OverlayOutcome::Consumed;
-        };
-        let outcome = match key.code {
-            KeyCode::Char(c) if is_press(key) => {
-                let entries = borrow_entries(&self.entries);
-                self.state.mnemonic(&entries, c)
-            }
-            _ => self.state.handle_key(*key),
+        let outcome = match event {
+            Event::Mouse(ev) => self.state.handle_mouse(ev),
+            Event::Key(key) => match key.code {
+                KeyCode::Char(c) if is_press(key) => {
+                    let entries = borrow_entries(&self.entries);
+                    self.state.mnemonic(&entries, c)
+                }
+                _ => self.state.handle_key(*key),
+            },
+            _ => return OverlayOutcome::Consumed,
         };
         match outcome {
             Outcome::Submitted => {
@@ -383,6 +414,21 @@ impl Overlay for PaletteOverlay {
 
     fn handle(&mut self, event: &Event) -> OverlayOutcome {
         match event {
+            Event::Mouse(ev) => match self.state.handle_mouse(ev) {
+                Outcome::Submitted => {
+                    let id = self
+                        .state
+                        .highlighted()
+                        .map(|i| self.commands[i].id.clone());
+                    self.result.set(id);
+                    OverlayOutcome::Close
+                }
+                Outcome::Cancelled => {
+                    self.result.set(None);
+                    OverlayOutcome::Close
+                }
+                _ => OverlayOutcome::Consumed,
+            },
             Event::Key(key) => {
                 let commands = borrow_commands(&self.commands);
                 match self.state.handle_key(*key, &commands) {

@@ -42,8 +42,9 @@ pub struct RunOptions {
     pub tick_rate: Duration,
     /// Force a color mode instead of detecting from the environment.
     pub color_mode: Option<ColorMode>,
-    /// Capture mouse events. Off by default — capture disables the
-    /// terminal's native text selection.
+    /// Capture mouse events (clicks, wheel, hover). On by default — most
+    /// terminals still offer native text selection via Shift+drag while
+    /// capture is active; set to `false` to restore plain selection.
     pub mouse: bool,
     /// Bracketed paste (`Event::Paste`). On by default.
     pub paste: bool,
@@ -54,7 +55,7 @@ impl Default for RunOptions {
         RunOptions {
             tick_rate: Duration::from_millis(80),
             color_mode: None,
-            mouse: false,
+            mouse: true,
             paste: true,
         }
     }

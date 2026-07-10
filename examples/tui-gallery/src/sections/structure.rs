@@ -1,6 +1,6 @@
 use forge_tui::event::{KeyCombo, Keymap};
 use forge_tui::prelude::*;
-use ratatui::crossterm::event::{KeyCode, KeyEvent};
+use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
 use ratatui::layout::Rect;
 use ratatui::Frame;
 
@@ -31,6 +31,22 @@ impl Default for StructureState {
 }
 
 impl StructureState {
+    pub fn handle_mouse(&mut self, ev: &MouseEvent, ctx: &mut Ctx) -> Outcome {
+        macro_rules! try_widget {
+            ($state:expr, $id:expr) => {
+                let out = $state.handle_mouse(ev);
+                if out.is_handled() {
+                    ctx.focus.focus($id);
+                    return out;
+                }
+            };
+        }
+        try_widget!(self.tabs, TABS);
+        try_widget!(self.pages, PAGES);
+        try_widget!(self.split, SPLIT);
+        Outcome::Ignored
+    }
+
     pub fn handle_key(&mut self, focused: Option<FocusId>, key: KeyEvent) -> Outcome {
         match focused {
             Some(id) if id == TABS => self.tabs.handle_key(key),

@@ -1,9 +1,9 @@
-use crate::event::{is_press, Outcome};
+use crate::event::{in_area, is_press, left_down, scroll_delta, Outcome};
 use crate::text;
 use crate::theme::{default_theme, Theme};
 use crate::widgets::forms::{Input, InputState};
 use ratatui::buffer::Buffer;
-use ratatui::crossterm::event::{KeyCode, KeyEvent};
+use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent, MouseEventKind};
 use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
 use ratatui::widgets::{Block, Clear, StatefulWidget, Widget};
@@ -36,6 +36,8 @@ pub struct PaletteState {
     filtered: Vec<usize>,
     offset: usize,
     view_h: usize,
+    panel: Rect,
+    list_area: Rect,
 }
 
 impl PaletteState {
@@ -62,6 +64,41 @@ impl PaletteState {
         scored.sort_by(|a, b| b.0.cmp(&a.0).then(a.1.cmp(&b.1)));
         self.filtered = scored.into_iter().map(|(_, i)| i).collect();
         self.highlight = self.highlight.min(self.filtered.len().saturating_sub(1));
+    }
+
+    /// Hover highlights, click runs the command under the pointer, wheel
+    /// scrolls, click-away cancels.
+    pub fn handle_mouse(&mut self, ev: &MouseEvent) -> Outcome {
+        let delta = scroll_delta(ev);
+        if delta != 0 && in_area(ev, self.panel) {
+            self.highlight = if delta < 0 {
+                self.highlight.saturating_sub(1)
+            } else {
+                (self.highlight + 1).min(self.filtered.len().saturating_sub(1))
+            };
+            return Outcome::Consumed;
+        }
+        if matches!(ev.kind, MouseEventKind::Moved) && in_area(ev, self.list_area) {
+            let fi = self.offset + (ev.row - self.list_area.y) as usize;
+            if fi < self.filtered.len() {
+                self.highlight = fi;
+            }
+            return Outcome::Consumed;
+        }
+        if !left_down(ev) {
+            return Outcome::Ignored;
+        }
+        if !in_area(ev, self.panel) {
+            return Outcome::Cancelled; // click-away
+        }
+        if in_area(ev, self.list_area) {
+            let fi = self.offset + (ev.row - self.list_area.y) as usize;
+            if fi < self.filtered.len() {
+                self.highlight = fi;
+                return Outcome::Submitted;
+            }
+        }
+        Outcome::Consumed
     }
 
     pub fn handle_key(&mut self, key: KeyEvent, commands: &[Command]) -> Outcome {
@@ -143,6 +180,7 @@ impl<'a> StatefulWidget for Palette<'a> {
         let w = area.width.saturating_sub(4).min(64).max(20);
         let h = (rows + 4).min(area.height);
         let panel = Rect::new(area.x + (area.width - w) / 2, area.y + 1, w, h);
+        state.panel = panel;
         Clear.render(panel, buf);
         let block = Block::bordered()
             .border_style(Style::new().fg(t.border.strong).bg(t.bg[4]))
@@ -165,6 +203,7 @@ impl<'a> StatefulWidget for Palette<'a> {
             inner.height - 1,
         );
         state.view_h = list.height as usize;
+        state.list_area = list;
         if state.highlight < state.offset {
             state.offset = state.highlight;
         } else if state.highlight >= state.offset + state.view_h {

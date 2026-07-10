@@ -1,8 +1,8 @@
-use crate::event::{is_press, Outcome};
+use crate::event::{in_area, is_press, left_down, Outcome};
 use crate::text;
 use crate::theme::{default_theme, Severity, Theme};
 use ratatui::buffer::Buffer;
-use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent, MouseEventKind};
 use ratatui::layout::Rect;
 use ratatui::style::Style;
 use ratatui::widgets::StatefulWidget;
@@ -13,11 +13,34 @@ pub struct SliderState {
     pub min: f64,
     pub max: f64,
     pub step: f64,
+    track: Rect,
 }
 
 impl SliderState {
     pub fn new(value: f64, min: f64, max: f64, step: f64) -> SliderState {
-        SliderState { value: value.clamp(min, max), min, max, step }
+        SliderState { value: value.clamp(min, max), min, max, step, track: Rect::default() }
+    }
+
+    /// Click or drag along the track to set the value (snapped to `step`).
+    pub fn handle_mouse(&mut self, ev: &MouseEvent) -> Outcome {
+        let dragging = matches!(ev.kind, MouseEventKind::Drag(_));
+        if !(left_down(ev) || dragging) || !in_area(ev, self.track) || self.track.width < 2 {
+            return Outcome::Ignored;
+        }
+        let ratio = (ev.column - self.track.x) as f64 / (self.track.width - 1) as f64;
+        let raw = self.min + ratio * (self.max - self.min);
+        let snapped = if self.step > 0.0 {
+            (((raw - self.min) / self.step).round() * self.step + self.min)
+                .clamp(self.min, self.max)
+        } else {
+            raw.clamp(self.min, self.max)
+        };
+        if (snapped - self.value).abs() > f64::EPSILON {
+            self.value = snapped;
+            Outcome::Changed
+        } else {
+            Outcome::Consumed
+        }
     }
 
     pub fn ratio(&self) -> f64 {
@@ -134,6 +157,7 @@ impl<'a> StatefulWidget for Slider<'a> {
             val_w = val.len() as u16 + 2;
             w = w.saturating_sub(val_w);
         }
+        state.track = Rect::new(x, area.y, w, 1);
         if w >= 3 {
             let knob = ((w - 1) as f64 * state.ratio()).round() as u16;
             for dx in 0..w {

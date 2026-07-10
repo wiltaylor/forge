@@ -1,8 +1,8 @@
-use crate::event::{is_press, Outcome};
+use crate::event::{is_press, left_down, mouse_pos, Outcome};
 use crate::text;
 use crate::theme::{default_theme, Theme};
 use ratatui::buffer::Buffer;
-use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent};
 use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
 use ratatui::widgets::{Block, StatefulWidget, Widget};
@@ -17,6 +17,9 @@ pub struct InputState {
     cursor: usize,
     anchor: Option<usize>,
     scroll: usize,
+    /// Text region + mask flag cached at render for mouse hit-testing.
+    area: Rect,
+    masked: bool,
 }
 
 impl InputState {
@@ -27,7 +30,7 @@ impl InputState {
     pub fn with_value(value: impl Into<String>) -> InputState {
         let value = value.into();
         let cursor = value.len();
-        InputState { value, cursor, anchor: None, scroll: 0 }
+        InputState { value, cursor, ..Default::default() }
     }
 
     pub fn value(&self) -> &str {
@@ -133,6 +136,29 @@ impl InputState {
     pub fn select_all(&mut self) {
         self.anchor = Some(0);
         self.cursor = self.value.len();
+    }
+
+    fn byte_at_cell(&self, cell: usize) -> usize {
+        let mut w = 0;
+        for (i, g) in self.value.grapheme_indices(true) {
+            let gw = if self.masked { 1 } else { text::width(g) };
+            if w + gw > cell {
+                return i;
+            }
+            w += gw;
+        }
+        self.value.len()
+    }
+
+    /// Click to place the cursor. Uses the rect cached at the last render.
+    pub fn handle_mouse(&mut self, ev: &MouseEvent) -> Outcome {
+        if !left_down(ev) || !self.area.contains(mouse_pos(ev)) {
+            return Outcome::Ignored;
+        }
+        let cell = (ev.column - self.area.x) as usize + self.scroll;
+        self.cursor = self.byte_at_cell(cell);
+        self.anchor = None;
+        Outcome::Consumed
     }
 
     pub fn handle_key(&mut self, key: KeyEvent) -> Outcome {
@@ -300,6 +326,8 @@ impl<'a> Input<'a> {
     }
 
     fn render_line(&self, area: Rect, buf: &mut Buffer, t: &Theme, state: &mut InputState) {
+        state.area = area;
+        state.masked = self.masked;
         if area.width == 0 {
             return;
         }

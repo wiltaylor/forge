@@ -1,20 +1,31 @@
-use crate::event::{is_press, Outcome};
+use crate::event::{clicked, is_press, Outcome};
 use crate::text;
 use crate::theme::{default_theme, Theme};
 use ratatui::buffer::Buffer;
-use ratatui::crossterm::event::{KeyCode, KeyEvent};
+use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
 use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
 use ratatui::widgets::StatefulWidget;
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct ToggleState {
+    area: Rect,
     pub on: bool,
 }
 
 impl ToggleState {
     pub fn new(on: bool) -> ToggleState {
-        ToggleState { on }
+        ToggleState { on, area: Rect::default() }
+    }
+
+    /// Click anywhere on the control toggles it.
+    pub fn handle_mouse(&mut self, ev: &MouseEvent) -> Outcome {
+        if clicked(ev, self.area) {
+            self.on = !self.on;
+            Outcome::Changed
+        } else {
+            Outcome::Ignored
+        }
     }
 
     pub fn handle_key(&mut self, key: KeyEvent) -> Outcome {
@@ -65,6 +76,7 @@ impl<'a> StatefulWidget for Toggle<'a> {
     type State = ToggleState;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut ToggleState) {
+        state.area = Rect::new(area.x, area.y, area.width, 1);
         if area.is_empty() {
             return;
         }

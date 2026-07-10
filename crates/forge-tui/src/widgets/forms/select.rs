@@ -1,9 +1,9 @@
-use crate::event::{is_press, Outcome};
+use crate::event::{clicked, is_press, left_down, Outcome};
 use crate::text;
 use crate::theme::{default_theme, Theme};
 use crate::widgets::forms::{ListBox, ListBoxState};
 use ratatui::buffer::Buffer;
-use ratatui::crossterm::event::{KeyCode, KeyEvent};
+use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
 use ratatui::layout::Rect;
 use ratatui::style::Style;
 use ratatui::widgets::{Block, Clear, StatefulWidget, Widget};
@@ -15,6 +15,7 @@ pub struct SelectState {
     pub open: bool,
     pub value: Option<usize>,
     pub list: ListBoxState,
+    field: Rect,
 }
 
 impl SelectState {
@@ -60,6 +61,36 @@ impl SelectState {
     /// Type-ahead within the dropdown.
     pub fn jump_to(&mut self, items: &[&str], c: char) -> Outcome {
         self.list.jump_to(items, c)
+    }
+
+    /// Click the field to open/close; click an option to commit it; click
+    /// away to dismiss; wheel moves the dropdown cursor.
+    pub fn handle_mouse(&mut self, ev: &MouseEvent) -> Outcome {
+        if !self.open {
+            if clicked(ev, self.field) {
+                self.open = true;
+                self.list.highlight = self.value.unwrap_or(0);
+                return Outcome::Consumed;
+            }
+            return Outcome::Ignored;
+        }
+        if let Some(row) = self.list.row_at(ev).filter(|_| left_down(ev)) {
+            self.value = Some(row);
+            self.open = false;
+            return Outcome::Changed;
+        }
+        match self.list.handle_mouse(ev) {
+            Outcome::Ignored if left_down(ev) => {
+                // Click-away closes without committing.
+                self.open = false;
+                if clicked(ev, self.field) {
+                    return Outcome::Consumed;
+                }
+                Outcome::Consumed
+            }
+            Outcome::Ignored => Outcome::Ignored,
+            _ => Outcome::Consumed,
+        }
     }
 }
 
@@ -128,6 +159,7 @@ impl<'a> StatefulWidget for Select<'a> {
             t.border.default
         };
         let field = Rect::new(area.x, area.y, area.width, 1);
+        state.field = field;
         buf.set_style(field, Style::new().bg(t.bg[2]));
         buf.set_string(area.x, area.y, "▎", Style::new().fg(edge).bg(t.bg[2]));
         let (label, style) = match state.value.and_then(|i| self.items.get(i)) {

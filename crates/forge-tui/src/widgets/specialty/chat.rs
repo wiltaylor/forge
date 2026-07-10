@@ -2,13 +2,13 @@
 //! role gutters and tool-call boxes, a composer, and interactive prompts —
 //! the terminal mirror of `@forge/chat`.
 
-use crate::event::{is_press, Outcome};
+use crate::event::{clicked, in_area, is_press, scroll_delta, Outcome};
 use crate::text;
 use crate::theme::{default_theme, Theme};
 use crate::widgets::forms::{Textarea, TextareaState};
 use crate::widgets::specialty::markdown::markdown_lines;
 use ratatui::buffer::Buffer;
-use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent};
 use ratatui::layout::Rect;
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
@@ -72,17 +72,33 @@ pub struct ChatViewState {
     offset: usize,
     total: usize,
     view_h: usize,
+    area: Rect,
 }
 
 impl Default for ChatViewState {
     fn default() -> ChatViewState {
-        ChatViewState { follow: true, offset: 0, total: 0, view_h: 0 }
+        ChatViewState { follow: true, offset: 0, total: 0, view_h: 0, area: Rect::default() }
     }
 }
 
 impl ChatViewState {
     pub fn new() -> ChatViewState {
         ChatViewState::default()
+    }
+
+    /// Wheel scrolls the transcript (scrolling up unpins follow mode).
+    pub fn handle_mouse(&mut self, ev: &MouseEvent) -> Outcome {
+        let delta = scroll_delta(ev);
+        if delta == 0 || !in_area(ev, self.area) {
+            return Outcome::Ignored;
+        }
+        if delta < 0 {
+            self.follow = false;
+            self.offset = self.offset.saturating_sub(3);
+        } else {
+            self.offset = (self.offset + 3).min(self.total.saturating_sub(self.view_h));
+        }
+        Outcome::Consumed
     }
 
     pub fn handle_key(&mut self, key: KeyEvent) -> Outcome {
@@ -233,6 +249,7 @@ impl<'a> StatefulWidget for ChatView<'a> {
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut ChatViewState) {
         state.view_h = area.height as usize;
+        state.area = area;
         if area.is_empty() {
             return;
         }
@@ -341,15 +358,27 @@ impl<'a> StatefulWidget for Composer<'a> {
 
 /// Interactive question with option chips (the chat kit's `ChatPrompt`):
 /// ←/→ move, Enter submits the selected option.
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct ChatPromptState {
     pub selected: usize,
     len: usize,
+    chip_rects: Vec<Rect>,
 }
 
 impl ChatPromptState {
     pub fn new() -> ChatPromptState {
         ChatPromptState::default()
+    }
+
+    /// Click an option chip to choose it (submits).
+    pub fn handle_mouse(&mut self, ev: &MouseEvent) -> Outcome {
+        for (i, rect) in self.chip_rects.clone().into_iter().enumerate() {
+            if clicked(ev, rect) {
+                self.selected = i;
+                return Outcome::Submitted;
+            }
+        }
+        Outcome::Ignored
     }
 
     pub fn handle_key(&mut self, key: KeyEvent) -> Outcome {
@@ -403,6 +432,7 @@ impl<'a> StatefulWidget for ChatPrompt<'a> {
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut ChatPromptState) {
         state.len = self.options.len();
+        state.chip_rects.clear();
         if area.is_empty() {
             return;
         }
@@ -431,6 +461,7 @@ impl<'a> StatefulWidget for ChatPrompt<'a> {
             if active && self.focused {
                 style = style.add_modifier(Modifier::BOLD | Modifier::UNDERLINED);
             }
+            state.chip_rects.push(Rect::new(x, area.y + 1, w, 1));
             buf.set_style(Rect::new(x, area.y + 1, w, 1), style);
             buf.set_string(x + 1, area.y + 1, *option, style);
             x += w + 1;

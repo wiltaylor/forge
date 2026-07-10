@@ -1,9 +1,9 @@
-use crate::event::{is_press, Outcome};
+use crate::event::{in_area, is_press, left_down, scroll_delta, Outcome};
 use crate::text;
 use crate::theme::{default_theme, Theme};
 use crate::widgets::forms::{Input, InputState};
 use ratatui::buffer::Buffer;
-use ratatui::crossterm::event::{KeyCode, KeyEvent};
+use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
 use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
 use ratatui::widgets::{Block, Clear, StatefulWidget, Widget};
@@ -19,6 +19,7 @@ pub struct ComboboxState {
     filtered: Vec<usize>,
     view_h: usize,
     offset: usize,
+    list_area: Rect,
 }
 
 impl ComboboxState {
@@ -95,6 +96,37 @@ impl ComboboxState {
                 out
             }
         }
+    }
+
+    /// Click a suggestion to choose it; wheel moves the cursor; clicking the
+    /// field just places the input cursor (delegated).
+    pub fn handle_mouse(&mut self, ev: &MouseEvent, items: &[&str]) -> Outcome {
+        if self.open {
+            let delta = scroll_delta(ev);
+            if delta != 0 && in_area(ev, self.list_area) {
+                self.highlight = if delta < 0 {
+                    self.highlight.saturating_sub(1)
+                } else {
+                    (self.highlight + 1).min(self.filtered.len().saturating_sub(1))
+                };
+                return Outcome::Consumed;
+            }
+            if left_down(ev) && in_area(ev, self.list_area) {
+                let fi = self.offset + (ev.row - self.list_area.y) as usize;
+                if let Some(&item_idx) = self.filtered.get(fi) {
+                    self.highlight = fi;
+                    self.input.set_value(items[item_idx]);
+                    self.open = false;
+                    return Outcome::Submitted;
+                }
+                return Outcome::Consumed;
+            }
+            if left_down(ev) && !in_area(ev, self.list_area) {
+                self.open = false;
+                // fall through so a field click still places the cursor
+            }
+        }
+        self.input.handle_mouse(ev)
     }
 
     /// Paste entry point.
@@ -190,6 +222,7 @@ impl<'a> StatefulWidget for Combobox<'a> {
         let inner = block.inner(popup);
         block.render(popup, buf);
         state.view_h = inner.height as usize;
+        state.list_area = inner;
         if state.highlight < state.offset {
             state.offset = state.highlight;
         } else if state.highlight >= state.offset + state.view_h {

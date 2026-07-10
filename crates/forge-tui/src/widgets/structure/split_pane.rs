@@ -49,7 +49,7 @@ impl SplitState {
     }
 
     /// Mouse drag on the divider (requires `RunOptions.mouse`).
-    pub fn handle_mouse(&mut self, ev: MouseEvent) -> Outcome {
+    pub fn handle_mouse(&mut self, ev: &MouseEvent) -> Outcome {
         let area = self.last_area;
         if area.is_empty() {
             return Outcome::Ignored;

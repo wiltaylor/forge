@@ -1,8 +1,8 @@
-use crate::event::{is_press, Outcome};
+use crate::event::{is_press, left_down, mouse_pos, scroll_delta, Outcome};
 use crate::text;
 use crate::theme::{default_theme, Theme};
 use ratatui::buffer::Buffer;
-use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent};
 use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
 use ratatui::widgets::{Block, StatefulWidget, Widget};
@@ -21,6 +21,8 @@ pub struct TextareaState {
     scroll_row: usize,
     scroll_col: usize,
     view: (u16, u16),
+    /// Inner text region cached at render for mouse hit-testing.
+    area: Rect,
 }
 
 impl Default for TextareaState {
@@ -33,6 +35,7 @@ impl Default for TextareaState {
             scroll_row: 0,
             scroll_col: 0,
             view: (0, 0),
+            area: Rect::default(),
         }
     }
 }
@@ -128,6 +131,30 @@ impl TextareaState {
             .next()
             .map(|g| self.col + g.len())
             .unwrap_or(self.line().len())
+    }
+
+    /// Click places the cursor; the wheel moves it by three lines.
+    pub fn handle_mouse(&mut self, ev: &MouseEvent) -> Outcome {
+        let delta = scroll_delta(ev);
+        if delta != 0 && self.area.contains(mouse_pos(ev)) {
+            let step = 3usize;
+            self.row = if delta < 0 {
+                self.row.saturating_sub(step)
+            } else {
+                (self.row + step).min(self.lines.len() - 1)
+            };
+            self.col = byte_at_cells(self.line(), self.desired);
+            return Outcome::Consumed;
+        }
+        if !left_down(ev) || !self.area.contains(mouse_pos(ev)) {
+            return Outcome::Ignored;
+        }
+        let row = self.scroll_row + (ev.row - self.area.y) as usize;
+        self.row = row.min(self.lines.len() - 1);
+        let cells = self.scroll_col + (ev.column - self.area.x) as usize;
+        self.col = byte_at_cells(self.line(), cells);
+        self.sync_desired();
+        Outcome::Consumed
     }
 
     pub fn handle_key(&mut self, key: KeyEvent) -> Outcome {
@@ -312,6 +339,7 @@ impl<'a> StatefulWidget for Textarea<'a> {
             return;
         }
         state.view = (inner.width, inner.height);
+        state.area = inner;
 
         // Follow the cursor.
         let cursor_cells = cells_at(&state.lines[state.row], state.col);

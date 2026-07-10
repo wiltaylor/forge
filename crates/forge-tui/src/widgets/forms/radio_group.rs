@@ -1,23 +1,36 @@
-use crate::event::{is_press, Outcome};
+use crate::event::{clicked, is_press, Outcome};
 use crate::text;
 use crate::theme::{default_theme, Theme};
 use ratatui::buffer::Buffer;
-use ratatui::crossterm::event::{KeyCode, KeyEvent};
+use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
 use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
 use ratatui::widgets::StatefulWidget;
 
 /// Selection state for a [`RadioGroup`]. `len` is captured at render time so
 /// navigation can clamp — handle-before-first-render simply doesn't move.
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct RadioState {
     pub selected: usize,
     len: usize,
+    item_rects: Vec<Rect>,
 }
 
 impl RadioState {
     pub fn new(selected: usize) -> RadioState {
-        RadioState { selected, len: 0 }
+        RadioState { selected, ..Default::default() }
+    }
+
+    /// Click an option to select it.
+    pub fn handle_mouse(&mut self, ev: &MouseEvent) -> Outcome {
+        for (i, rect) in self.item_rects.iter().enumerate() {
+            if clicked(ev, *rect) {
+                let changed = self.selected != i;
+                self.selected = i;
+                return if changed { Outcome::Changed } else { Outcome::Consumed };
+            }
+        }
+        Outcome::Ignored
     }
 
     pub fn handle_key(&mut self, key: KeyEvent) -> Outcome {
@@ -116,6 +129,7 @@ impl<'a> StatefulWidget for RadioGroup<'a> {
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut RadioState) {
         state.len = self.items.len();
+        state.item_rects.clear();
         if area.is_empty() {
             return;
         }
@@ -130,6 +144,7 @@ impl<'a> StatefulWidget for RadioGroup<'a> {
                 if x + need > area.x + area.width {
                     break;
                 }
+                state.item_rects.push(Rect::new(x, area.y, need, 1));
                 buf.set_string(x, area.y, cell, mark);
                 buf.set_string(x + 4, area.y, *item, label);
                 x += need;
@@ -142,6 +157,7 @@ impl<'a> StatefulWidget for RadioGroup<'a> {
                 let selected = i == state.selected;
                 let (mark, label) = self.item_style(t, selected);
                 let y = area.y + i as u16;
+                state.item_rects.push(Rect::new(area.x, y, area.width, 1));
                 buf.set_string(area.x, y, format!("({})", if selected { "•" } else { " " }), mark);
                 if area.width > 4 {
                     buf.set_string(

@@ -1,7 +1,7 @@
 use forge_tui::event::{KeyCombo, Keymap};
 use forge_tui::prelude::*;
 use forge_tui::runtime::dialogs::OwnedMenuEntry;
-use ratatui::crossterm::event::{KeyCode, KeyEvent};
+use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
 use ratatui::layout::Rect;
 use ratatui::Frame;
 
@@ -15,6 +15,7 @@ pub struct OverlaysState {
     menu: Option<DialogResult<Option<usize>>>,
     palette: Option<DialogResult<Option<String>>>,
     menu_anchor: Rect,
+    btn_rects: Vec<Rect>,
 }
 
 const MENU_LABELS: [&str; 4] = ["Restart", "Drain", "Cordon", "Delete node"];
@@ -44,6 +45,17 @@ impl OverlaysState {
         ctx.open(Box::new(HelpOverlay::new(&keymap)));
     }
 
+    pub fn handle_mouse(&mut self, ev: &MouseEvent, ctx: &mut Ctx) -> Outcome {
+        for (i, rect) in self.btn_rects.clone().into_iter().enumerate() {
+            if forge_tui::event::clicked(ev, rect) {
+                ctx.focus.focus(FocusId::indexed(BTN, i as u32));
+                self.activate(i, ctx);
+                return Outcome::Consumed;
+            }
+        }
+        Outcome::Ignored
+    }
+
     pub fn handle_key(&mut self, focused: Option<FocusId>, key: KeyEvent, ctx: &mut Ctx) -> Outcome {
         if !is_press(&key) {
             return Outcome::Ignored;
@@ -59,41 +71,45 @@ impl OverlaysState {
             if focused != Some(FocusId::indexed(BTN, i as u32)) {
                 continue;
             }
-            match i {
-                0 => {
-                    let (dialog, result) =
-                        ConfirmDialog::new("Deploy build?", "Rolls out gallery v0.1 to all nodes.");
-                    self.confirm = Some(result);
-                    ctx.open(Box::new(dialog));
-                }
-                1 => {
-                    let (dialog, result) = ConfirmDialog::new(
-                        "Delete node-3?",
-                        "The node drains first; this cannot be undone.",
-                    );
-                    let dialog = dialog.confirm_label("Delete").danger();
-                    self.delete = Some(result);
-                    ctx.open(Box::new(dialog));
-                }
-                2 => {
-                    let entries = vec![
-                        OwnedMenuEntry::section("Node"),
-                        OwnedMenuEntry::item_kbd(MENU_LABELS[0], "R"),
-                        OwnedMenuEntry::item(MENU_LABELS[1]),
-                        OwnedMenuEntry::item(MENU_LABELS[2]),
-                        OwnedMenuEntry::separator(),
-                        OwnedMenuEntry::danger(MENU_LABELS[3]),
-                    ];
-                    let (overlay, result) = MenuOverlay::new(entries, self.menu_anchor);
-                    self.menu = Some(result);
-                    ctx.open(Box::new(overlay));
-                }
-                3 => self.open_palette(ctx),
-                _ => self.open_help(ctx),
-            }
+            self.activate(i, ctx);
             return Outcome::Consumed;
         }
         Outcome::Ignored
+    }
+
+    fn activate(&mut self, i: usize, ctx: &mut Ctx) {
+        match i {
+            0 => {
+                let (dialog, result) =
+                    ConfirmDialog::new("Deploy build?", "Rolls out gallery v0.1 to all nodes.");
+                self.confirm = Some(result);
+                ctx.open(Box::new(dialog));
+            }
+            1 => {
+                let (dialog, result) = ConfirmDialog::new(
+                    "Delete node-3?",
+                    "The node drains first; this cannot be undone.",
+                );
+                let dialog = dialog.confirm_label("Delete").danger();
+                self.delete = Some(result);
+                ctx.open(Box::new(dialog));
+            }
+            2 => {
+                let entries = vec![
+                    OwnedMenuEntry::section("Node"),
+                    OwnedMenuEntry::item_kbd(MENU_LABELS[0], "R"),
+                    OwnedMenuEntry::item(MENU_LABELS[1]),
+                    OwnedMenuEntry::item(MENU_LABELS[2]),
+                    OwnedMenuEntry::separator(),
+                    OwnedMenuEntry::danger(MENU_LABELS[3]),
+                ];
+                let (overlay, result) = MenuOverlay::new(entries, self.menu_anchor);
+                self.menu = Some(result);
+                ctx.open(Box::new(overlay));
+            }
+            3 => self.open_palette(ctx),
+            _ => self.open_help(ctx),
+        }
     }
 
     /// Poll dialog results (runs on the runtime tick).
@@ -164,6 +180,7 @@ impl Overlay for SheetDemo {
 }
 
 pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut OverlaysState) {
+    state.btn_rects.clear();
     let mut y = area.y;
     let bottom = area.y + area.height;
     let row = |h: u16, gap: u16, y: &mut u16| -> Option<Rect> {
@@ -195,6 +212,7 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
             if i == 2 {
                 state.menu_anchor = Rect::new(bx, r.y, bw, 1);
             }
+            state.btn_rects.push(Rect::new(bx, r.y, bw, 1));
             frame.render_widget(b, Rect::new(bx, r.y, bw, 1));
             bx += bw + 2;
         }

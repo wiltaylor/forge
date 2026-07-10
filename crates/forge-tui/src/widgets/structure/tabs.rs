@@ -1,21 +1,34 @@
-use crate::event::{is_press, Outcome};
+use crate::event::{clicked, is_press, Outcome};
 use crate::text;
 use crate::theme::{default_theme, Theme};
 use ratatui::buffer::Buffer;
-use ratatui::crossterm::event::{KeyCode, KeyEvent};
+use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
 use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
 use ratatui::widgets::StatefulWidget;
 
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct TabsState {
     pub selected: usize,
     len: usize,
+    label_rects: Vec<Rect>,
 }
 
 impl TabsState {
     pub fn new(selected: usize) -> TabsState {
-        TabsState { selected, len: 0 }
+        TabsState { selected, ..Default::default() }
+    }
+
+    /// Click a tab label to select it.
+    pub fn handle_mouse(&mut self, ev: &MouseEvent) -> Outcome {
+        for (i, rect) in self.label_rects.iter().enumerate() {
+            if clicked(ev, *rect) {
+                let changed = self.selected != i;
+                self.selected = i;
+                return if changed { Outcome::Changed } else { Outcome::Consumed };
+            }
+        }
+        Outcome::Ignored
     }
 
     /// ←/→ (or [ / ]) switch tabs; 1–9 jump directly.
@@ -85,6 +98,7 @@ impl<'a> StatefulWidget for Tabs<'a> {
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut TabsState) {
         state.len = self.labels.len();
+        state.label_rects.clear();
         if area.is_empty() {
             return;
         }
@@ -105,6 +119,7 @@ impl<'a> StatefulWidget for Tabs<'a> {
             if x + lw > right {
                 break;
             }
+            state.label_rects.push(Rect::new(x, area.y, lw, 1));
             let active = i == state.selected;
             let mut style = Style::new().fg(if active { t.fg[0] } else { t.fg[1] });
             if active {

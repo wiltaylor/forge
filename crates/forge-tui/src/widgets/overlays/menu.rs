@@ -1,9 +1,9 @@
-use crate::event::{is_press, Outcome};
+use crate::event::{in_area, is_press, left_down, Outcome};
 use crate::text;
 use crate::theme::{default_theme, Theme};
 use crate::widgets::overlays::place;
 use ratatui::buffer::Buffer;
-use ratatui::crossterm::event::{KeyCode, KeyEvent};
+use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent, MouseEventKind};
 use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
 use ratatui::widgets::{Clear, StatefulWidget, Widget};
@@ -41,15 +41,44 @@ impl<'a> MenuEntry<'a> {
 
 /// Cursor over the *selectable* items of a menu (sections/separators are
 /// skipped). `highlight` indexes selectable items in order.
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct MenuState {
     pub highlight: usize,
     len: usize,
+    panel: Rect,
+    item_rects: Vec<(Rect, usize)>,
 }
 
 impl MenuState {
     pub fn new() -> MenuState {
         MenuState::default()
+    }
+
+    /// Hover moves the cursor; click submits the item under the pointer;
+    /// clicking outside the panel cancels.
+    pub fn handle_mouse(&mut self, ev: &MouseEvent) -> Outcome {
+        if matches!(ev.kind, MouseEventKind::Moved) && in_area(ev, self.panel) {
+            for (rect, idx) in &self.item_rects {
+                if in_area(ev, *rect) {
+                    self.highlight = *idx;
+                    return Outcome::Consumed;
+                }
+            }
+            return Outcome::Consumed;
+        }
+        if !left_down(ev) {
+            return Outcome::Ignored;
+        }
+        if !in_area(ev, self.panel) {
+            return Outcome::Cancelled; // click-away
+        }
+        for (rect, idx) in &self.item_rects {
+            if in_area(ev, *rect) {
+                self.highlight = *idx;
+                return Outcome::Submitted;
+            }
+        }
+        Outcome::Consumed
     }
 
     /// ↑/↓ move; Enter submits (read `highlight`); Esc cancels.
@@ -153,11 +182,13 @@ impl<'a> StatefulWidget for DropdownMenu<'a> {
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut MenuState) {
         state.len = self.entries.iter().filter(|e| e.selectable()).count();
+        state.item_rects.clear();
         if area.is_empty() {
             return;
         }
         let t = self.theme.unwrap_or_else(|| default_theme());
         let panel = place(self.anchor, self.size(), area);
+        state.panel = panel;
         Clear.render(panel, buf);
         let block = ratatui::widgets::Block::bordered()
             .border_style(Style::new().fg(t.border.strong).bg(t.bg[4]))
@@ -190,6 +221,9 @@ impl<'a> StatefulWidget for DropdownMenu<'a> {
                     );
                 }
                 MenuEntry::Item { label, kbd, danger, disabled } => {
+                    if entry.selectable() {
+                        state.item_rects.push((Rect::new(inner.x, y, inner.width, 1), selectable_idx));
+                    }
                     let is_cursor = entry.selectable() && selectable_idx == state.highlight;
                     let mut style = Style::new()
                         .fg(if *disabled {
