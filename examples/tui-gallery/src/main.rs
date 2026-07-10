@@ -16,6 +16,11 @@ pub const SECTIONS: &[&str] = &[
     "Pickers",
     "Structure",
     "Overlays",
+    "Data",
+    "Files",
+    "Board",
+    "Charts",
+    "Date",
 ];
 
 pub struct Gallery {
@@ -26,6 +31,10 @@ pub struct Gallery {
     pub structure: sections::structure::StructureState,
     pub feedback: sections::feedback::FeedbackState,
     pub overlays: sections::overlays::OverlaysState,
+    pub data: sections::data::DataState,
+    pub files: sections::files::FilesState,
+    pub board: sections::board::BoardState,
+    pub date: sections::date::DateState,
 }
 
 impl Gallery {
@@ -38,6 +47,10 @@ impl Gallery {
             structure: Default::default(),
             feedback: Default::default(),
             overlays: Default::default(),
+            data: Default::default(),
+            files: Default::default(),
+            board: Default::default(),
+            date: Default::default(),
         }
     }
 
@@ -54,6 +67,8 @@ impl App for Gallery {
             NavSection::new(Some("Basics"), &SECTIONS[0..2]),
             NavSection::new(Some("Forms"), &SECTIONS[2..4]),
             NavSection::new(Some("Structure"), &SECTIONS[4..6]),
+            NavSection::new(Some("Data"), &SECTIONS[6..9]),
+            NavSection::new(Some("Viz"), &SECTIONS[9..11]),
         ];
         let shell = AppShell::new("◆ FORGE", &nav_sections)
             .subtitle("tui gallery")
@@ -72,7 +87,12 @@ impl App for Gallery {
             2 => sections::forms::draw(frame, content, ctx, &t, &mut self.forms),
             3 => sections::pickers::draw(frame, content, ctx, &t, &mut self.pickers),
             4 => sections::structure::draw(frame, content, ctx, &t, &mut self.structure),
-            _ => sections::overlays::draw(frame, content, ctx, &t, &mut self.overlays),
+            5 => sections::overlays::draw(frame, content, ctx, &t, &mut self.overlays),
+            6 => sections::data::draw(frame, content, ctx, &t, &mut self.data),
+            7 => sections::files::draw(frame, content, ctx, &t, &mut self.files),
+            8 => sections::board::draw(frame, content, ctx, &t, &mut self.board),
+            9 => sections::charts::draw(frame, content, ctx, &t),
+            _ => sections::date::draw(frame, content, ctx, &t, &mut self.date),
         }
     }
 
@@ -89,6 +109,10 @@ impl App for Gallery {
                         3 => self.pickers.handle_key(focused, key, ctx),
                         4 => self.structure.handle_key(focused, key),
                         5 => self.overlays.handle_key(focused, key, ctx),
+                        6 => self.data.handle_key(focused, key, ctx),
+                        7 => self.files.handle_key(focused, key, ctx),
+                        8 => self.board.handle_key(focused, key, ctx),
+                        10 => self.date.handle_key(focused, key, ctx),
                         _ => Outcome::Ignored,
                     }
                 };

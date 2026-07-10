@@ -1,4 +1,9 @@
+pub mod board;
+pub mod charts;
+pub mod data;
+pub mod date;
 pub mod feedback;
+pub mod files;
 pub mod forms;
 pub mod overlays;
 pub mod pickers;

@@ -1,9 +1,17 @@
+pub mod charts;
+pub mod data;
+#[cfg(feature = "calendar")]
+pub mod date;
 pub mod feedback;
 pub mod forms;
 pub mod overlays;
 pub mod primitives;
 pub mod structure;
 
+pub use charts::*;
+pub use data::*;
+#[cfg(feature = "calendar")]
+pub use date::*;
 pub use feedback::*;
 pub use forms::*;
 pub use overlays::*;
