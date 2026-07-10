@@ -21,6 +21,11 @@ pub const SECTIONS: &[&str] = &[
     "Board",
     "Charts",
     "Date",
+    "Markdown",
+    "Chat",
+    "Code",
+    "Terminal",
+    "Flow",
 ];
 
 pub struct Gallery {
@@ -35,6 +40,9 @@ pub struct Gallery {
     pub files: sections::files::FilesState,
     pub board: sections::board::BoardState,
     pub date: sections::date::DateState,
+    pub chat: sections::chat::ChatState,
+    pub code: sections::code::CodeState,
+    pub term: sections::term::TermState,
 }
 
 impl Gallery {
@@ -51,6 +59,9 @@ impl Gallery {
             files: Default::default(),
             board: Default::default(),
             date: Default::default(),
+            chat: Default::default(),
+            code: Default::default(),
+            term: Default::default(),
         }
     }
 
@@ -69,6 +80,7 @@ impl App for Gallery {
             NavSection::new(Some("Structure"), &SECTIONS[4..6]),
             NavSection::new(Some("Data"), &SECTIONS[6..9]),
             NavSection::new(Some("Viz"), &SECTIONS[9..11]),
+            NavSection::new(Some("Specialty"), &SECTIONS[11..16]),
         ];
         let shell = AppShell::new("◆ FORGE", &nav_sections)
             .subtitle("tui gallery")
@@ -92,7 +104,12 @@ impl App for Gallery {
             7 => sections::files::draw(frame, content, ctx, &t, &mut self.files),
             8 => sections::board::draw(frame, content, ctx, &t, &mut self.board),
             9 => sections::charts::draw(frame, content, ctx, &t),
-            _ => sections::date::draw(frame, content, ctx, &t, &mut self.date),
+            10 => sections::date::draw(frame, content, ctx, &t, &mut self.date),
+            11 => sections::text::draw(frame, content, ctx, &t),
+            12 => sections::chat::draw(frame, content, ctx, &t, &mut self.chat),
+            13 => sections::code::draw(frame, content, ctx, &t, &mut self.code),
+            14 => sections::term::draw(frame, content, ctx, &t, &mut self.term),
+            _ => sections::flow::draw(frame, content, ctx, &t),
         }
     }
 
@@ -113,6 +130,9 @@ impl App for Gallery {
                         7 => self.files.handle_key(focused, key, ctx),
                         8 => self.board.handle_key(focused, key, ctx),
                         10 => self.date.handle_key(focused, key, ctx),
+                        12 => self.chat.handle_key(focused, key, ctx),
+                        13 => self.code.handle_key(focused, key),
+                        14 => self.term.handle_key(focused, key, ctx),
                         _ => Outcome::Ignored,
                     }
                 };
@@ -155,6 +175,7 @@ impl App for Gallery {
 
     fn tick(&mut self, ctx: &mut Ctx) {
         self.overlays.poll_results(ctx);
+        self.term.tick();
     }
 }
 

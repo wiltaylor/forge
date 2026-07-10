@@ -31,6 +31,7 @@ pub use error::{Error, Result};
 /// One-stop imports for building a forge-tui app.
 pub mod prelude {
     pub use crate::event::{is_press, KeyCombo, Keymap, Outcome};
+    pub use ratatui::crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
     pub use crate::runtime::{
         run, App, AppShell, ConfirmDialog, Ctx, DialogResult, FocusId, FocusRing, HelpOverlay,
         MenuOverlay, NavSection, Overlay, OverlayOutcome, OverlayStack, OwnedCommand,

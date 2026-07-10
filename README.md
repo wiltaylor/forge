@@ -32,6 +32,9 @@ Backends:
 
 The contract all of them implement: [`docs/api-contract.md`](docs/api-contract.md).
 
+Terminal UIs (no contract, standalone): `crates/forge-tui` — the design
+system as a ratatui widget kit, see [Terminal UIs](#terminal-uis-forge-tui).
+
 ## Example apps
 
 - `apps/gallery` — every component + login + live SSE/WS + doc store +
@@ -43,6 +46,8 @@ The contract all of them implement: [`docs/api-contract.md`](docs/api-contract.m
 - `examples/tauri-demo` — native Tauri app: doc store, actions, live events,
   local-PTY terminal and VNC/RDP viewers, all over IPC (`just tauri-demo`).
 - `examples/parity` — black-box contract tests run against either backend.
+- `examples/tui-gallery` — the forge-tui widget catalogue in the terminal
+  (`just tui-gallery`).
 
 ## Quick start
 
@@ -170,6 +175,64 @@ recipe sets it). Inside webkitgtk, xterm.js's WebGL addon composites a black
 canvas — pass `webgl={false}` to `<Terminal>` in Tauri apps (the demo does;
 web browsers are unaffected). Widgets must also mount in a visible container
 (xterm can't initialize at zero size), so lazy-mount tab panels.
+
+## Terminal UIs (forge-tui)
+
+`crates/forge-tui` is the Forge design system for the terminal — a ratatui
+0.29 widget kit with the same dark-default, dense, technical aesthetic as the
+web components, plus an opt-in app runtime. It is independent of the API
+contract and of the web stack: any TUI app can depend on it alone.
+
+- **Theme**: an exact Rust mirror of the web tokens (bg/fg ramps, borders,
+  accent, semantic triples; OKLCH converted to sRGB). Degrades cleanly to
+  256-color (collision-avoiding quantizer keeps the five near-black
+  backgrounds distinct) and 16-color (semantic ANSI mapping). Override via
+  struct-update syntax or `Theme::dark().with_accent(color)`; force a mode
+  with `FORGE_TUI_COLOR=truecolor|256|16`.
+- **Widgets** (~60, all plain ratatui `Widget`/`StatefulWidget`): primitives
+  (Button, Badge, Card, Stat, Avatar, Skeleton, …), shell/structure
+  (AppShell, Tabs, Pagination, SplitPane, Settings, HelpBar), full forms
+  (Input with readline editing, Textarea, Select, ListBox, Slider,
+  ToggleGroup, fuzzy Combobox, Calendar/DatePicker), overlays (Modal, Sheet,
+  Popover, Tooltip, menus, Ctrl+K command palette), feedback (Toast, Alert,
+  Progress, Spinner), data (Table, Logs, Tree, FilePicker, JsonViewer,
+  Accordion, KeyValue, Kanban), charts on the locked CVD palette (line, bar,
+  donut pie, gantt, sparkline), and specialty widgets behind cargo features:
+  `markdown`, `chat` (transcripts, tool-call boxes, composer, prompts),
+  `code` (syntect CodeView/DiffView), `term` (embedded PTY terminal) — or
+  `full` for everything.
+- **Interaction pattern**: every stateful widget pairs a per-frame view with
+  a persistent `FooState` whose `handle_key` returns a `#[must_use] Outcome`
+  (`Ignored` bubbles like DOM events). No callbacks, no framework.
+- **Runtime (optional)**: `runtime::run(app, theme, opts)` gives you a
+  panic-safe terminal guard, tick-driven animation, an immediate-mode
+  `FocusRing` (Tab order = render order), a modal overlay stack (Esc closes),
+  ready-made dialogs (Confirm/Help/Menu/Palette with result cells), and an
+  `mpsc`-backed Toaster any thread can push to.
+
+```rust
+use forge_tui::prelude::*;
+
+struct Hello { name: InputState }
+
+impl App for Hello {
+    fn draw(&mut self, frame: &mut ratatui::Frame, ctx: &mut Ctx) {
+        let focused = ctx.focus.register(FocusId::new("name"));
+        let input = Input::new().placeholder("Who?").focused(focused).theme(&ctx.theme);
+        frame.render_stateful_widget(input, frame.area(), &mut self.name);
+    }
+    fn on_event(&mut self, event: Event, ctx: &mut Ctx) {
+        if let Event::Key(key) = event {
+            if self.name.handle_key(key) == Outcome::Submitted {
+                ctx.toast().success(format!("Hello {}", self.name.value()));
+            }
+        }
+    }
+}
+```
+
+`just tui-gallery` runs the living catalogue (one section per widget family,
+mirroring `apps/gallery`); `just tui-test` runs the suite with all features.
 
 ## Theming
 
