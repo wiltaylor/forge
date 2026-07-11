@@ -10,6 +10,8 @@
     "tauri": "tauri"
   },
   "dependencies": {
+    "@forge/blocks": "workspace:^",
+    "@forge/code": "workspace:^",
     "@forge/desktop": "workspace:^",
     "@forge/tauri": "workspace:^",
     "@forge/term": "workspace:^",

@@ -26,6 +26,7 @@ import RemoteDemo from './sections/RemoteDemo';
 import TermDemo from './sections/TermDemo';
 import DesktopDemo from './sections/DesktopDemo';
 import FxDemo from './sections/FxDemo';
+import BlocksDemo from './sections/BlocksDemo';
 
 const SECTIONS = [
   ['primitives', 'Primitives', Primitives],
@@ -41,6 +42,7 @@ const SECTIONS = [
   ['graph', 'Node graph', GraphDemo],
   ['grid', 'Dashboard grid', GridDemo],
   ['kanban', 'Kanban board', KanbanDemo],
+  ['blocks', 'Block editor', BlocksDemo],
   ['chat', 'Chat', ChatDemo],
   ['code', 'Code', CodeDemo],
   ['charts', 'Charts', ChartsDemo],

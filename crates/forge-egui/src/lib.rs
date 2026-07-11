@@ -50,6 +50,10 @@ pub use runtime::run;
 // Top-level re-exports (also in the prelude) so consumers never pin their
 // own, possibly diverging, egui/eframe versions.
 pub use {eframe, egui};
+// The block-editor document model, re-exported so consumers share one
+// forge-blocks version with the widget.
+#[cfg(feature = "blocks")]
+pub use forge_blocks;
 
 pub mod prelude {
     pub use crate::response::{ForgeResponse, Outcome};

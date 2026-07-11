@@ -15,6 +15,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
 # Optional widget backends — see [features]
+forge-blocks = { workspace = true, optional = true }
 pulldown-cmark = { version = "0.12", optional = true, default-features = false }
 syntect = { version = "5", optional = true, default-features = false, features = [
     "default-fancy",
@@ -30,7 +31,9 @@ chat = ["markdown"]
 code = ["dep:syntect"]
 calendar = ["dep:time"]
 term = ["dep:portable-pty", "dep:vt100"]
-full = ["markdown", "chat", "code", "calendar", "term"]
+blocks = ["markdown", "code", "dep:forge-blocks"]
+full = ["markdown", "chat", "code", "calendar", "term", "blocks"]
 
 [dev-dependencies]
 insta = "1"
+forge-blocks = { workspace = true }

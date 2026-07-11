@@ -1,5 +1,6 @@
-//! Forge fonts: IBM Plex Sans (UI) and JetBrains Mono (code), embedded under
-//! the `fonts` feature (SIL OFL 1.1 — license texts in `LICENSES/`).
+//! Forge fonts: IBM Plex Sans (UI), JetBrains Mono (code), and Noto Emoji
+//! (monochrome emoji fallback), embedded under the `fonts` feature
+//! (SIL OFL 1.1 — license texts in `LICENSES/`).
 //!
 //! egui allows one weight per family, so Medium and SemiBold are registered
 //! as *named* families; [`Theme::font`](super::Theme::font) picks the right
@@ -50,7 +51,7 @@ pub(crate) fn install(ctx: &egui::Context) {
 
     let mut fonts = egui::FontDefinitions::default();
 
-    let data: [(&str, &[u8]); 5] = [
+    let data: [(&str, &[u8]); 6] = [
         (
             "plex-sans",
             include_bytes!("../../assets/fonts/IBMPlexSans-Regular.ttf"),
@@ -70,6 +71,10 @@ pub(crate) fn install(ctx: &egui::Context) {
         (
             MONO_BOLD,
             include_bytes!("../../assets/fonts/JetBrainsMono-Bold.ttf"),
+        ),
+        (
+            "noto-emoji",
+            include_bytes!("../../assets/fonts/NotoEmoji-Regular.ttf"),
         ),
     ];
     for (name, bytes) in data {
@@ -92,7 +97,14 @@ pub(crate) fn install(ctx: &egui::Context) {
 
     // Plex's symbol coverage is thin (no geometric shapes/chevrons); JetBrains
     // Mono and egui's bundled Hack fill the Glyph set for proportional text.
-    let symbol_tail = ["jetbrains-mono".to_owned(), "Hack".to_owned()];
+    // Noto Emoji (full, monochrome) closes the emoji gap egui's built-in
+    // subset leaves — the block editor's `:shortcode:` table needs it.
+    let symbol_tail = [
+        "jetbrains-mono".to_owned(),
+        "Hack".to_owned(),
+        "noto-emoji".to_owned(),
+    ];
+    let emoji_tail = ["noto-emoji".to_owned()];
 
     let mut chain = |family: FontFamily, head: &str, fallback: &[String], tail: &[String]| {
         let mut list = vec![head.to_owned()];
@@ -119,12 +131,17 @@ pub(crate) fn install(ctx: &egui::Context) {
         &prop_fallback,
         &symbol_tail,
     );
-    chain(FontFamily::Monospace, "jetbrains-mono", &mono_fallback, &[]);
+    chain(
+        FontFamily::Monospace,
+        "jetbrains-mono",
+        &mono_fallback,
+        &emoji_tail,
+    );
     chain(
         FontFamily::Name(MONO_BOLD.into()),
         MONO_BOLD,
         &mono_fallback,
-        &[],
+        &emoji_tail,
     );
 
     ctx.set_fonts(fonts);

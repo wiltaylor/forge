@@ -25,6 +25,7 @@ pub const SECTIONS: &[&str] = &[
     "Flow",
     "Effects",
     "Graph",
+    "Blocks",
 ];
 
 struct Gallery {
@@ -46,6 +47,7 @@ struct Gallery {
     code: sections::code::CodeSectionState,
     effects: sections::effects::EffectsState,
     graph: sections::graph::GraphState,
+    blocks: sections::blocks::BlocksState,
 }
 
 impl Gallery {
@@ -69,6 +71,7 @@ impl Gallery {
             code: sections::code::CodeSectionState::default(),
             effects: sections::effects::EffectsState::default(),
             graph: sections::graph::GraphState::default(),
+            blocks: sections::blocks::BlocksState::default(),
         }
     }
 
@@ -92,6 +95,7 @@ impl Gallery {
             15 => sections::flow::draw(ui),
             16 => sections::effects::draw(ui, ctx, &mut self.effects),
             17 => sections::graph::draw(ui, &mut self.graph),
+            18 => sections::blocks::draw(ui, &mut self.blocks),
             _ => {
                 let _ = forge_egui::widgets::Empty::new(SECTIONS[selected])
                     .message("Lands in a later milestone")
@@ -133,7 +137,7 @@ impl App for Gallery {
             NavSection::new(Some("Structure"), &SECTIONS[4..6]),
             NavSection::new(Some("Data"), &SECTIONS[6..9]),
             NavSection::new(Some("Viz"), &SECTIONS[9..11]),
-            NavSection::new(Some("Specialty"), &SECTIONS[11..18]),
+            NavSection::new(Some("Specialty"), &SECTIONS[11..19]),
         ];
         let mut toggle_theme = false;
         let shell = Shell::new("◆ FORGE", &sections)

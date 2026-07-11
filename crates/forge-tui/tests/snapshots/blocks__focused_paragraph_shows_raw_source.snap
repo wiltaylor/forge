@@ -1,0 +1,5 @@
+---
+source: crates/forge-tui/tests/blocks.rs
+expression: buffer_text(&buf)
+---
+▎ **bold** and *italic* with :rocket:

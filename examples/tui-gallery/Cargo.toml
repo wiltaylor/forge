@@ -7,6 +7,7 @@ license.workspace = true
 publish = false
 
 [dependencies]
+forge-blocks = { workspace = true }
 forge-tui = { workspace = true, features = ["full"] }
 ratatui = "0.29"
 serde_json = "1"

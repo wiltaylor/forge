@@ -27,6 +27,7 @@ pub const SECTIONS: &[&str] = &[
     "Terminal",
     "Flow",
     "Effects",
+    "Blocks",
 ];
 
 pub struct Gallery {
@@ -45,6 +46,7 @@ pub struct Gallery {
     pub code: sections::code::CodeState,
     pub term: sections::term::TermState,
     pub effects: sections::effects::EffectsState,
+    pub blocks: sections::blocks::BlocksState,
 }
 
 impl Gallery {
@@ -65,6 +67,7 @@ impl Gallery {
             code: Default::default(),
             term: Default::default(),
             effects: Default::default(),
+            blocks: Default::default(),
         }
     }
 
@@ -83,7 +86,7 @@ impl App for Gallery {
             NavSection::new(Some("Structure"), &SECTIONS[4..6]),
             NavSection::new(Some("Data"), &SECTIONS[6..9]),
             NavSection::new(Some("Viz"), &SECTIONS[9..11]),
-            NavSection::new(Some("Specialty"), &SECTIONS[11..17]),
+            NavSection::new(Some("Specialty"), &SECTIONS[11..18]),
         ];
         let shell = AppShell::new("◆ FORGE", &nav_sections)
             .subtitle("tui gallery")
@@ -113,7 +116,8 @@ impl App for Gallery {
             13 => sections::code::draw(frame, content, ctx, &t, &mut self.code),
             14 => sections::term::draw(frame, content, ctx, &t, &mut self.term),
             15 => sections::flow::draw(frame, content, ctx, &t),
-            _ => sections::effects::draw(frame, content, ctx, &t, &mut self.effects),
+            16 => sections::effects::draw(frame, content, ctx, &t, &mut self.effects),
+            _ => sections::blocks::draw(frame, content, ctx, &t, &mut self.blocks),
         }
     }
 
@@ -138,6 +142,7 @@ impl App for Gallery {
                         13 => self.code.handle_key(focused, key),
                         14 => self.term.handle_key(focused, key, ctx),
                         16 => self.effects.handle_key(focused, key, ctx),
+                        17 => self.blocks.handle_key(focused, key),
                         _ => Outcome::Ignored,
                     }
                 };
@@ -184,12 +189,14 @@ impl App for Gallery {
                     12 => self.chat.handle_mouse(&ev, ctx),
                     13 => self.code.handle_mouse(&ev, ctx),
                     16 => self.effects.handle_mouse(&ev, ctx),
+                    17 => self.blocks.handle_mouse(&ev, ctx),
                     _ => Outcome::Ignored,
                 };
             }
             Event::Paste(text) => match self.section() {
                 2 => self.forms.paste(ctx.focus.current(), &text),
                 3 => self.pickers.paste(ctx.focus.current(), &text),
+                17 => self.blocks.paste(ctx.focus.current(), &text),
                 _ => {}
             },
             _ => {}

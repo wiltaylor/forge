@@ -1,0 +1,34 @@
+---
+source: crates/forge-tui/tests/blocks.rs
+expression: buffer_text(&buf)
+---
+  Forge Blocks 🚀
+
+  A block-based page editor with inline markdown, code, links, regrets, and ✨
+  emoji. Focus a block to edit its raw source; press / on an empty block for the
+  block palette.
+
+  Typography
+
+  • Bullet lists with bold entries
+
+    • nested by indent
+
+  1. Numbered items
+
+  [x] Ship the schema
+
+  [ ] Ship the editors
+
+  ▎ Blocks all the way down.
+
+  ──────────────────────────────────────────────────────────────────────────────
+
+  Code
+
+   rust
+   fn main() {
+       println!("hello, blocks");
+   }
+
+  Data

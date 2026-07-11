@@ -1,3 +1,5 @@
+#[cfg(feature = "blocks")]
+mod blocks;
 #[cfg(feature = "chat")]
 mod chat;
 #[cfg(feature = "code")]
@@ -8,10 +10,12 @@ mod markdown;
 #[cfg(feature = "term")]
 mod terminal;
 
+#[cfg(feature = "blocks")]
+pub use blocks::{BlockEditor, BlockEditorState, CustomBlock};
 #[cfg(feature = "chat")]
 pub use chat::{
-    ChatItem, ChatPrompt, ChatPromptState, ChatView, ChatViewState, Composer, ComposerState,
-    Role, ToolStatus,
+    ChatItem, ChatPrompt, ChatPromptState, ChatView, ChatViewState, Composer, ComposerState, Role,
+    ToolStatus,
 };
 #[cfg(feature = "code")]
 pub use code::{CodeView, CodeViewState, DiffView};

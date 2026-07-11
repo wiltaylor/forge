@@ -2535,6 +2535,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "forge-blocks"
+version = "0.1.0"
+dependencies = [
+ "pulldown-cmark",
+ "serde",
+ "serde_json",
+ "unicode-segmentation",
+ "unicode-width 0.2.0",
+]
+
+[[package]]
 name = "forge-core"
 version = "0.1.0"
 dependencies = [
@@ -2563,6 +2574,7 @@ dependencies = [
  "egui",
  "egui_extras",
  "egui_kittest",
+ "forge-blocks",
  "forge-core",
  "image",
  "pulldown-cmark",
@@ -2606,6 +2618,7 @@ dependencies = [
 name = "forge-tui"
 version = "0.1.0"
 dependencies = [
+ "forge-blocks",
  "insta",
  "portable-pty",
  "pulldown-cmark",
@@ -8024,6 +8037,7 @@ checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
 name = "tui-gallery"
 version = "0.1.0"
 dependencies = [
+ "forge-blocks",
  "forge-tui",
  "ratatui",
  "serde_json",

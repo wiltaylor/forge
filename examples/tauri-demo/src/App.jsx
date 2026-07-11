@@ -3,6 +3,7 @@ import { Tabs } from '@forge/ui';
 import Overview from './sections/Overview';
 import TermTab from './sections/TermTab';
 import DesktopTab from './sections/DesktopTab';
+import BlocksTab from './sections/BlocksTab';
 
 /* Tab panels mount on first activation (xterm.js must not initialize inside
    a display:none container — zero dimensions break its renderer), then stay
@@ -21,6 +22,7 @@ export default function App() {
       <Tabs
         tabs={[
           { id: 'overview', label: 'Overview' },
+          { id: 'blocks', label: 'Blocks' },
           { id: 'terminal', label: 'Terminal' },
           { id: 'desktop', label: 'Desktop' },
         ]}
@@ -28,6 +30,9 @@ export default function App() {
         onChange={activate}
       />
       <div style={panel('overview')}><Overview /></div>
+      <Show when={visited().blocks}>
+        <div style={panel('blocks')}><BlocksTab /></div>
+      </Show>
       <Show when={visited().terminal}>
         <div style={panel('terminal')}><TermTab /></div>
       </Show>

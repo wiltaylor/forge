@@ -42,6 +42,9 @@ importers:
 
   apps/gallery:
     dependencies:
+      '@forge/blocks':
+        specifier: workspace:^
+        version: link:../../packages/blocks
       '@forge/charts':
         specifier: workspace:^
         version: link:../../packages/charts
@@ -119,6 +122,12 @@ importers:
 
   examples/tauri-demo:
     dependencies:
+      '@forge/blocks':
+        specifier: workspace:^
+        version: link:../../packages/blocks
+      '@forge/code':
+        specifier: workspace:^
+        version: link:../../packages/code
       '@forge/desktop':
         specifier: workspace:^
         version: link:../../packages/desktop
@@ -150,6 +159,31 @@ importers:
       vite-plugin-solid:
         specifier: ^2.11.0
         version: 2.11.12(solid-js@1.9.14)(vite@6.4.3(@types/node@26.1.1))
+
+  packages/blocks:
+    dependencies:
+      '@forge/code':
+        specifier: workspace:^
+        version: link:../code
+      '@forge/ui':
+        specifier: workspace:^
+        version: link:../ui
+    devDependencies:
+      solid-js:
+        specifier: ^1.9.0
+        version: 1.9.14
+      tsup:
+        specifier: ^8.4.0
+        version: 8.5.1(postcss@8.5.16)(typescript@5.9.3)
+      tsup-preset-solid:
+        specifier: ^2.2.0
+        version: 2.2.0(esbuild@0.27.7)(solid-js@1.9.14)(tsup@8.5.1(postcss@8.5.16)(typescript@5.9.3))
+      typescript:
+        specifier: ^5.8.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.7(@types/node@26.1.1)
 
   packages/charts:
     devDependencies:
@@ -259,6 +293,10 @@ importers:
         version: 5.9.3
 
   packages/desktop:
+    dependencies:
+      fflate:
+        specifier: ^0.8.2
+        version: 0.8.3
     devDependencies:
       solid-js:
         specifier: ^1.9.0
@@ -272,6 +310,9 @@ importers:
       typescript:
         specifier: ^5.8.0
         version: 5.9.3
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.7(@types/node@26.1.1)
 
   packages/graph:
     devDependencies:
@@ -424,6 +465,9 @@ importers:
       typescript:
         specifier: ^5.8.0
         version: 5.9.3
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.7(@types/node@26.1.1)
 
 packages:
 
@@ -1414,6 +1458,9 @@ packages:
     peerDependenciesMeta:
       picomatch:
         optional: true
+
+  fflate@0.8.3:
+    resolution: {integrity: sha512-tbZNuJrLwGUp3zshBtdy4W+ORxZuIh8a5ilyIEQDC5rY1f3U20JMry0Ll3WBzU58EZKsEuJFXhb5gwv8CsPvgA==}
 
   fix-dts-default-cjs-exports@1.0.1:
     resolution: {integrity: sha512-pVIECanWFC61Hzl2+oOCtoJ3F17kglZC/6N94eRWycFgBH35hHx0Li604ZIzhseh97mf2p0cv7vVrOZGoqhlEg==}
@@ -2697,6 +2744,8 @@ snapshots:
   fdir@6.5.0(picomatch@4.0.5):
     optionalDependencies:
       picomatch: 4.0.5
+
+  fflate@0.8.3: {}
 
   fix-dts-default-cjs-exports@1.0.1:
     dependencies:

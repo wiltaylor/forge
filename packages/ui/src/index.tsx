@@ -2,6 +2,7 @@
    Import '@forge/tokens/tokens.css' then '@forge/ui/styles.css' at app entry. */
 
 export * from './types';
+export * from './md';
 export * from './primitives';
 export * from './shell';
 export * from './forms';

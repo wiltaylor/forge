@@ -9,6 +9,7 @@ export * from './prompt';
 export * from './linkcard';
 export * from './composer';
 export * from './markdown';
-export { parseMarkdown, safeUrl } from './md';
-export type { MdBlock, MdInline, MdListItem } from './md';
+/* The markdown parser lives in @forge/ui now; re-exported for compatibility. */
+export { parseMarkdown, safeUrl } from '@forge/ui';
+export type { MdBlock, MdInline, MdListItem } from '@forge/ui';
 export { formatTime, formatDay, formatBytes } from './internal/time';

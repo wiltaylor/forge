@@ -1,8 +1,8 @@
 import { For, Show, createMemo, mergeProps } from 'solid-js';
 import type { JSX } from 'solid-js';
 import { Dynamic } from 'solid-js/web';
-import { parseMarkdown } from './md';
-import type { MdBlock, MdInline } from './md';
+import { parseMarkdown } from '@forge/ui';
+import type { MdBlock, MdInline } from '@forge/ui';
 
 /* ---------------- Markdown --------------------------------------------------- */
 /* Standalone rendered-markdown control (also used by chat text blocks).

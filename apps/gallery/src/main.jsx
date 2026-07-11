@@ -9,6 +9,7 @@ import '@forge/grid/styles.css';
 import '@forge/kanban/styles.css';
 import '@forge/chat/styles.css';
 import '@forge/code/styles.css';
+import '@forge/blocks/styles.css';
 import '@forge/term/styles.css';
 import '@forge/desktop/styles.css';
 import App from './App';

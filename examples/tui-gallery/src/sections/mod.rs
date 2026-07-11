@@ -1,3 +1,4 @@
+pub mod blocks;
 pub mod board;
 pub mod charts;
 pub mod chat;

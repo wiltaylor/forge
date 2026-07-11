@@ -12,6 +12,7 @@
     "@forge/charts": "workspace:^",
     "@forge/chat": "workspace:^",
     "@forge/client": "workspace:^",
+    "@forge/blocks": "workspace:^",
     "@forge/code": "workspace:^",
     "@forge/desktop": "workspace:^",
     "@forge/graph": "workspace:^",

@@ -28,6 +28,9 @@ pulldown-cmark = { version = "0.12", optional = true, default-features = false }
 syntect = { version = "5", optional = true, default-features = false, features = ["default-fancy"] }
 time = { version = "0.3", optional = true, features = ["local-offset", "formatting", "parsing", "macros"] }
 
+# Block page editor — the shared forge-blocks document model.
+forge-blocks = { workspace = true, optional = true }
+
 # Streaming widgets: forge-core session engines bridged over in-process
 # channels. forge-core's heavy deps (ironrdp, russh, vnc-rs, portable-pty)
 # only compile under the matching features.
@@ -46,9 +49,11 @@ markdown = ["dep:pulldown-cmark"]
 chat = ["markdown"]
 code = ["dep:syntect"]
 calendar = ["dep:time"]
+# Notion-style block page editor over the forge-blocks document model.
+blocks = ["markdown", "code", "dep:forge-blocks"]
 # Renderer passthrough for apps that want wgpu instead of glow.
 wgpu = ["eframe/wgpu"]
-full = ["fonts", "images", "markdown", "chat", "code", "calendar"]
+full = ["fonts", "images", "markdown", "chat", "code", "calendar", "blocks"]
 # Streaming widgets — mirror forge-core/forge-tauri feature names. Note the
 # embedded terminal is explicitly "RCE by design": opt-in at compile time.
 term = ["dep:forge-core", "forge-core/term", "dep:tokio", "dep:vt100", "dep:tracing"]
