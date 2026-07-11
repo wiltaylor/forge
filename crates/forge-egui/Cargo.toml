@@ -1,0 +1,62 @@
+[package]
+name = "forge-egui"
+description = "Forge design system for native desktop UIs — egui widgets, theme, and app runtime"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+# The whole egui family must share one minor version; consumers should import
+# egui/eframe through `forge_egui::egui` / `forge_egui::eframe` (re-exported
+# from the prelude) so versions can never diverge.
+egui = "0.35"
+eframe = { version = "0.35", default-features = false, features = [
+    "default_fonts", # fallback when the `fonts` feature is off
+    "glow",          # default renderer; `wgpu` feature swaps it
+    "wayland",
+    "x11",
+] }
+thiserror = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Optional widget backends — mirrors forge-tui's feature shape.
+egui_extras = { version = "0.35", optional = true, default-features = false, features = ["image"] }
+image = { version = "0.25", optional = true, default-features = false, features = ["png", "jpeg", "webp"] }
+pulldown-cmark = { version = "0.12", optional = true, default-features = false }
+syntect = { version = "5", optional = true, default-features = false, features = ["default-fancy"] }
+time = { version = "0.3", optional = true, features = ["local-offset", "formatting", "parsing", "macros"] }
+
+# Streaming widgets: forge-core session engines bridged over in-process
+# channels. forge-core's heavy deps (ironrdp, russh, vnc-rs, portable-pty)
+# only compile under the matching features.
+forge-core = { workspace = true, optional = true }
+tokio = { version = "1", features = ["rt-multi-thread", "sync", "time"], optional = true }
+vt100 = { version = "0.15", optional = true }
+tracing = { version = "0.1", optional = true }
+
+[features]
+default = ["fonts"]
+# Embed IBM Plex Sans + JetBrains Mono (SIL OFL 1.1 — see LICENSES/). ~1 MB
+# binary cost; without it egui's built-in fonts are used.
+fonts = []
+images = ["dep:egui_extras", "dep:image"]
+markdown = ["dep:pulldown-cmark"]
+chat = ["markdown"]
+code = ["dep:syntect"]
+calendar = ["dep:time"]
+# Renderer passthrough for apps that want wgpu instead of glow.
+wgpu = ["eframe/wgpu"]
+full = ["fonts", "images", "markdown", "chat", "code", "calendar"]
+# Streaming widgets — mirror forge-core/forge-tauri feature names. Note the
+# embedded terminal is explicitly "RCE by design": opt-in at compile time.
+term = ["dep:forge-core", "forge-core/term", "dep:tokio", "dep:vt100", "dep:tracing"]
+term-ssh = ["term", "forge-core/term-ssh"]
+vnc = ["dep:forge-core", "forge-core/vnc", "dep:tokio", "dep:tracing"]
+rdp = ["dep:forge-core", "forge-core/rdp", "dep:tokio", "dep:tracing"]
+widgets = ["term", "term-ssh", "vnc", "rdp"]
+
+[dev-dependencies]
+egui_kittest = { version = "0.35", features = ["eframe"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync", "time"] }

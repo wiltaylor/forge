@@ -73,6 +73,11 @@ tauri-test:
 tui-test:
 	cargo test -p forge-tui --features full -p tui-gallery
 
+# Run forge-egui tests with all optional widgets compiled in
+[group('test')]
+egui-test:
+	cargo test -p forge-egui --features full -p egui-gallery
+
 # Run the forge-auth dev-login gating tests with the feature compiled in
 [group('test')]
 auth-test-devlogin:
@@ -85,7 +90,7 @@ auth-e2e-test:
 
 # Run all test suites
 [group('test')]
-test: frontend-test rust-test python-test tui-test auth-test-devlogin auth-e2e-test
+test: frontend-test rust-test python-test tui-test egui-test auth-test-devlogin auth-e2e-test
 
 # Run the Rust demo app (debug build reads gallery dist from disk).
 # Own port (8899, not the shared FORGE_PORT) so it can run beside python-demo;
@@ -108,6 +113,16 @@ tauri-demo: frontend-install
 [group('demo')]
 tui-gallery:
 	cargo run -p tui-gallery
+
+# Run the forge-egui gallery (living catalogue of every desktop widget)
+[group('demo')]
+egui-gallery:
+	cargo run -p egui-gallery
+
+# Run the forge-egui backend-integration demo (widgets need: just widgets-testenv-up)
+[group('demo')]
+egui-demo:
+	cargo run -p egui-demo
 
 # Start the gallery frontend dev server (Vite, proxies /api to FORGE_PORT)
 [group('dev')]

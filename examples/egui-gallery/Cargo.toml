@@ -1,0 +1,13 @@
+[package]
+name = "egui-gallery"
+description = "forge-egui gallery — the living catalogue of every desktop widget"
+publish = false
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+forge-egui = { workspace = true, features = ["full", "term"] }
+serde_json = "1"
+# Dev self-screenshot hook (FORGE_GALLERY_SHOT) — PNG encode only.
+image = { version = "0.25", default-features = false, features = ["png"] }

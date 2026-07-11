@@ -35,6 +35,10 @@ The contract all of them implement: [`docs/api-contract.md`](docs/api-contract.m
 Terminal UIs (no contract, standalone): `crates/forge-tui` — the design
 system as a ratatui widget kit, see [Terminal UIs](#terminal-uis-forge-tui).
 
+Desktop UIs (no contract, standalone): `crates/forge-egui` — the design
+system as an egui widget kit with native streaming widgets, see
+[Desktop UIs](#desktop-uis-forge-egui).
+
 ## Example apps
 
 - `apps/gallery` — every component + login + live SSE/WS + doc store +
@@ -48,6 +52,11 @@ system as a ratatui widget kit, see [Terminal UIs](#terminal-uis-forge-tui).
 - `examples/parity` — black-box contract tests run against either backend.
 - `examples/tui-gallery` — the forge-tui widget catalogue in the terminal
   (`just tui-gallery`).
+- `examples/egui-gallery` — the forge-egui widget catalogue as a native
+  window (`just egui-gallery`).
+- `examples/egui-demo` — native egui app on forge-core directly: doc store,
+  actions, live events, terminal and VNC/RDP viewers, all in-process with no
+  HTTP (`just egui-demo`).
 
 ## Quick start
 
@@ -240,6 +249,75 @@ impl App for Hello {
 
 `just tui-gallery` runs the living catalogue (one section per widget family,
 mirroring `apps/gallery`); `just tui-test` runs the suite with all features.
+
+## Desktop UIs (forge-egui)
+
+`crates/forge-egui` is the Forge design system for native desktop apps — an
+egui 0.35 widget kit with the same dark-default, dense, technical aesthetic,
+an app runtime over eframe, and (optionally) the streaming widgets driven by
+forge-core's engines entirely in-process. Like forge-tui it is independent of
+the API contract; unlike Tauri there is no webview and no JS anywhere.
+
+- **Theme**: the exact web tokens (bg/fg ramps, borders, accent `#2389E2`,
+  semantic triples) with real alpha tints, plus the geometry tokens a pixel
+  canvas can express (radii, 4pt spacing, type scale, control heights,
+  motion durations). IBM Plex Sans + JetBrains Mono are embedded behind the
+  default-on `fonts` feature (SIL OFL, see `LICENSES/`). Install once with
+  `Theme::apply(ctx)` — it also maps onto egui's `Style`/`Visuals` so
+  third-party egui widgets look approximately right; swap themes at runtime
+  with `Ctx::set_theme`. Override via struct-update syntax or
+  `Theme::dark().with_accent(color)`.
+- **Widgets** (~60): one shape everywhere — builder + `.show(ui)` returning
+  a `ForgeResponse` whose `#[must_use] Outcome` mirrors the kit-wide
+  contract (`Ignored/Consumed/Changed/Submitted/Cancelled`). Value-bound
+  forms borrow your data (`Input::new(&mut name)`); widgets with real state
+  pair with an explicit `FooState` you own. Primitives, full forms
+  (Select/Combobox/ListBox/Slider/ToggleGroup, indeterminate Checkbox),
+  overlays (Modal 480/720/960, Sheet, Popover, menus, tooltips), feedback
+  (Alert/Progress/Spinner + a thread-safe Toaster), structure (Tabs,
+  Pagination, SplitPane, Settings rows, Crumbs, PageHead), data (sortable
+  Table, follow-mode Logs, Tree, JsonViewer, FilePicker, drag-and-drop
+  Kanban, BlockGrid), charts on the locked CVD palette (bar/line/donut/
+  gantt/sparkline + niceTicks), particle FX (`ctx.fx().explode(rect)`,
+  Motion-gated via `FORGE_EGUI_MOTION`), and behind features: `calendar`
+  (Calendar/DatePicker), `markdown`, `chat` (transcripts, tool-call boxes,
+  prompts, composer), `code` (syntect CodeView/DiffView + LSP-style
+  annotations), a NodeGraph/Flowchart pair, or `full` for all UI features.
+- **Runtime (optional)**: `forge_egui::run(app, theme, opts)` wraps eframe —
+  `App::ui`/`App::tick`, the `Shell` app frame (topbar, grouped sidebar nav
+  with Ctrl+B rail collapse, status bar), result-cell dialogs
+  (`ctx.confirm_danger(..)` polled via `DialogResult::take`), a Ctrl+K
+  command palette, and toasts any thread can push.
+- **Streaming widgets** (features `term`/`term-ssh`/`vnc`/`rdp`, or
+  `widgets`): the embedded terminal (vt100 grid over forge-core's PTY/SSH
+  engines) and VNC/RDP viewers (dirty-rect texture updates) run over an
+  in-process channel bridge — no server, no websocket. Click a well to
+  capture the keyboard; **Ctrl+Shift+Q** releases. Sessions spawn onto an
+  injected tokio handle (`forge_egui::rt::set_handle`) or a lazy internal
+  runtime.
+
+```rust
+use forge_egui::prelude::*;
+
+struct Hello { name: String }
+
+impl App for Hello {
+    fn ui(&mut self, ui: &mut egui::Ui, ctx: &mut Ctx) {
+        if Input::new(&mut self.name).label("Who?").show(ui).submitted() {
+            ctx.toast().success(format!("Hello {}", self.name));
+        }
+    }
+}
+
+fn main() -> forge_egui::Result<()> {
+    forge_egui::run(Hello { name: String::new() }, Theme::dark(), RunOptions::default())
+}
+```
+
+`just egui-gallery` runs the living catalogue; `just egui-demo` runs the
+backend-integration demo (forge-core doc store, actions, and events consumed
+in-process, plus the terminal and VNC/RDP pages against
+`just widgets-testenv-up`); `just egui-test` runs the suite.
 
 ## Theming
 
