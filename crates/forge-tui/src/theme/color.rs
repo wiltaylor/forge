@@ -65,7 +65,9 @@ pub fn blend(fg: Color, bg: Color, alpha: f32) -> Color {
         return fg;
     };
     let mix = |f: u8, b: u8| -> u8 {
-        (f as f32 * alpha + b as f32 * (1.0 - alpha)).round().clamp(0.0, 255.0) as u8
+        (f as f32 * alpha + b as f32 * (1.0 - alpha))
+            .round()
+            .clamp(0.0, 255.0) as u8
     };
     Color::Rgb(mix(fr, br), mix(fg_, bg_), mix(fb, bb))
 }
@@ -132,13 +134,17 @@ pub fn nearest_indexed(r: u8, g: u8, b: u8) -> u8 {
 }
 
 /// RGB value of an xterm-256 palette index (16..=255).
-fn xterm_rgb(idx: u8) -> (u8, u8, u8) {
+pub(crate) fn xterm_rgb(idx: u8) -> (u8, u8, u8) {
     if idx >= 232 {
         let g = 8 + 10 * (idx - 232);
         (g, g, g)
     } else {
         let i = idx - 16;
-        (CUBE[(i / 36) as usize], CUBE[((i / 6) % 6) as usize], CUBE[(i % 6) as usize])
+        (
+            CUBE[(i / 36) as usize],
+            CUBE[((i / 6) % 6) as usize],
+            CUBE[(i % 6) as usize],
+        )
     }
 }
 
@@ -159,6 +165,17 @@ pub fn nearest_indexed_excluding(r: u8, g: u8, b: u8, used: &[u8]) -> u8 {
         }
     }
     best
+}
+
+/// Recover an approximate RGB triple from a color: `Rgb` passes through,
+/// `Indexed(16..=255)` goes through the xterm palette, everything else
+/// (named ANSI-16 colors, `Reset`) has no portable RGB value.
+pub(crate) fn approx_rgb(c: Color) -> Option<(u8, u8, u8)> {
+    match c {
+        Color::Rgb(r, g, b) => Some((r, g, b)),
+        Color::Indexed(i) if i >= 16 => Some(xterm_rgb(i)),
+        _ => None,
+    }
 }
 
 /// Quantize a single color for the given mode. RGB→indexed for 256-color

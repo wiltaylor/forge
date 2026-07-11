@@ -4,6 +4,7 @@ pub mod chat;
 pub mod code;
 pub mod data;
 pub mod date;
+pub mod effects;
 pub mod feedback;
 pub mod files;
 pub mod flow;

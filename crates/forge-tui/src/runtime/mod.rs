@@ -5,6 +5,7 @@
 
 pub mod dialogs;
 mod focus;
+mod fx;
 mod overlay;
 mod shell;
 mod toaster;
@@ -14,6 +15,7 @@ pub use dialogs::{
     PaletteOverlay,
 };
 pub use focus::{FocusId, FocusRing};
+pub use fx::{Fx, FxHandle, Motion};
 pub use overlay::{dim, Overlay, OverlayOutcome, OverlayStack};
 pub use shell::{AppShell, NavSection, ShellState};
 pub use toaster::{Toast, ToastHandle, Toaster};
@@ -26,10 +28,10 @@ use ratatui::crossterm::event::{
     self, DisableBracketedPaste, DisableMouseCapture, EnableBracketedPaste, EnableMouseCapture,
     Event, KeyCode, KeyEventKind, KeyModifiers,
 };
+use ratatui::crossterm::execute;
 use ratatui::crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
 };
-use ratatui::crossterm::execute;
 use ratatui::{Frame, Terminal};
 use std::io;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -48,6 +50,11 @@ pub struct RunOptions {
     pub mouse: bool,
     /// Bracketed paste (`Event::Paste`). On by default.
     pub paste: bool,
+    /// Particle-effect motion preference. `Auto` (default) resolves from the
+    /// environment: `FORGE_TUI_MOTION` overrides, then `TERM=dumb`,
+    /// `NO_COLOR`, 16-color terminals and tick rates above 250ms degrade to
+    /// [`Motion::Reduced`].
+    pub motion: Motion,
 }
 
 impl Default for RunOptions {
@@ -57,6 +64,7 @@ impl Default for RunOptions {
             color_mode: None,
             mouse: true,
             paste: true,
+            motion: Motion::Auto,
         }
     }
 }
@@ -68,6 +76,7 @@ pub struct Ctx {
     pub focus: FocusRing,
     pub overlays: OverlayStack,
     toaster: Toaster,
+    fx: Fx,
     /// Animation frame counter, advanced once per tick.
     pub frame: u64,
     quit: bool,
@@ -80,6 +89,7 @@ impl Ctx {
             focus: FocusRing::new(),
             overlays: OverlayStack::new(),
             toaster: Toaster::new(),
+            fx: Fx::new(),
             frame: 0,
             quit: false,
         }
@@ -105,9 +115,34 @@ impl Ctx {
         self.overlays.push(overlay);
     }
 
+    /// A `Clone + Send` handle for requesting particle effects.
+    pub fn fx(&self) -> FxHandle {
+        self.fx.handle()
+    }
+
+    /// No particle effects are running or queued.
+    pub fn fx_idle(&self) -> bool {
+        self.fx.is_idle()
+    }
+
+    /// A particle effect is running over `rect` — useful for deferring an
+    /// item's actual removal until its explosion finishes.
+    pub fn fx_active_in(&self, rect: ratatui::layout::Rect) -> bool {
+        self.fx.active_in(rect)
+    }
+
     fn draw_chrome(&mut self, frame: &mut Frame) {
         let area = frame.area();
-        let Ctx { theme, overlays, toaster, .. } = self;
+        let Ctx {
+            theme,
+            overlays,
+            toaster,
+            fx,
+            ..
+        } = self;
+        // Effects first: they sample/overdraw the app's buffer but stay under
+        // dialog scrims and toasts.
+        fx.draw(frame, area, theme);
         overlays.draw(frame, area, theme);
         toaster.draw(frame, area, theme);
     }
@@ -172,7 +207,10 @@ impl TerminalGuard {
             execute!(out, EnableBracketedPaste)?;
         }
         GUARD_ACTIVE.store(true, Ordering::SeqCst);
-        Ok(TerminalGuard { mouse: opts.mouse, paste: opts.paste })
+        Ok(TerminalGuard {
+            mouse: opts.mouse,
+            paste: opts.paste,
+        })
     }
 }
 
@@ -196,6 +234,7 @@ pub fn run(app: &mut dyn App, theme: Theme, opts: RunOptions) -> Result<()> {
     let guard = TerminalGuard::new(&opts)?;
     let mut terminal = Terminal::new(CrosstermBackend::new(io::stdout()))?;
     let mut ctx = Ctx::new(theme);
+    ctx.fx.configure(opts.tick_rate, opts.motion, mode);
     let mut last_tick = Instant::now();
 
     while !ctx.quit {
@@ -216,6 +255,7 @@ pub fn run(app: &mut dyn App, theme: Theme, opts: RunOptions) -> Result<()> {
         if last_tick.elapsed() >= opts.tick_rate {
             ctx.frame = ctx.frame.wrapping_add(1);
             ctx.toaster.tick();
+            ctx.fx.tick();
             app.tick(&mut ctx);
             last_tick = Instant::now();
         }

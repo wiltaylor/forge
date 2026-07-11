@@ -26,6 +26,7 @@ pub const SECTIONS: &[&str] = &[
     "Code",
     "Terminal",
     "Flow",
+    "Effects",
 ];
 
 pub struct Gallery {
@@ -43,6 +44,7 @@ pub struct Gallery {
     pub chat: sections::chat::ChatState,
     pub code: sections::code::CodeState,
     pub term: sections::term::TermState,
+    pub effects: sections::effects::EffectsState,
 }
 
 impl Gallery {
@@ -62,6 +64,7 @@ impl Gallery {
             chat: Default::default(),
             code: Default::default(),
             term: Default::default(),
+            effects: Default::default(),
         }
     }
 
@@ -80,7 +83,7 @@ impl App for Gallery {
             NavSection::new(Some("Structure"), &SECTIONS[4..6]),
             NavSection::new(Some("Data"), &SECTIONS[6..9]),
             NavSection::new(Some("Viz"), &SECTIONS[9..11]),
-            NavSection::new(Some("Specialty"), &SECTIONS[11..16]),
+            NavSection::new(Some("Specialty"), &SECTIONS[11..17]),
         ];
         let shell = AppShell::new("◆ FORGE", &nav_sections)
             .subtitle("tui gallery")
@@ -109,7 +112,8 @@ impl App for Gallery {
             12 => sections::chat::draw(frame, content, ctx, &t, &mut self.chat),
             13 => sections::code::draw(frame, content, ctx, &t, &mut self.code),
             14 => sections::term::draw(frame, content, ctx, &t, &mut self.term),
-            _ => sections::flow::draw(frame, content, ctx, &t),
+            15 => sections::flow::draw(frame, content, ctx, &t),
+            _ => sections::effects::draw(frame, content, ctx, &t, &mut self.effects),
         }
     }
 
@@ -133,6 +137,7 @@ impl App for Gallery {
                         12 => self.chat.handle_key(focused, key, ctx),
                         13 => self.code.handle_key(focused, key),
                         14 => self.term.handle_key(focused, key, ctx),
+                        16 => self.effects.handle_key(focused, key, ctx),
                         _ => Outcome::Ignored,
                     }
                 };
@@ -178,16 +183,15 @@ impl App for Gallery {
                     10 => self.date.handle_mouse(&ev, ctx),
                     12 => self.chat.handle_mouse(&ev, ctx),
                     13 => self.code.handle_mouse(&ev, ctx),
+                    16 => self.effects.handle_mouse(&ev, ctx),
                     _ => Outcome::Ignored,
                 };
             }
-            Event::Paste(text) => {
-                match self.section() {
-                    2 => self.forms.paste(ctx.focus.current(), &text),
-                    3 => self.pickers.paste(ctx.focus.current(), &text),
-                    _ => {}
-                }
-            }
+            Event::Paste(text) => match self.section() {
+                2 => self.forms.paste(ctx.focus.current(), &text),
+                3 => self.pickers.paste(ctx.focus.current(), &text),
+                _ => {}
+            },
             _ => {}
         }
     }

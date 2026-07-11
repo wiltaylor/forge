@@ -33,15 +33,15 @@ pub mod prelude {
     pub use crate::event::{
         clicked, in_area, is_press, left_down, mouse_pos, scroll_delta, KeyCombo, Keymap, Outcome,
     };
-    pub use ratatui::crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers, MouseEvent};
     pub use crate::runtime::{
-        run, App, AppShell, ConfirmDialog, Ctx, DialogResult, FocusId, FocusRing, HelpOverlay,
-        MenuOverlay, NavSection, Overlay, OverlayOutcome, OverlayStack, OwnedCommand,
-        OwnedMenuEntry, PaletteOverlay, RunOptions, ShellState, ToastHandle,
+        run, App, AppShell, ConfirmDialog, Ctx, DialogResult, FocusId, FocusRing, FxHandle,
+        HelpOverlay, MenuOverlay, Motion, NavSection, Overlay, OverlayOutcome, OverlayStack,
+        OwnedCommand, OwnedMenuEntry, PaletteOverlay, RunOptions, ShellState, ToastHandle,
     };
     pub use crate::theme::{
         blend, chart_series, default_theme, series_color, set_default_theme, ColorMode, Scheme,
         Severity, Theme,
     };
     pub use crate::widgets::*;
+    pub use ratatui::crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers, MouseEvent};
 }
