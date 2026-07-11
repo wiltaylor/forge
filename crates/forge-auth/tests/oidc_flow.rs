@@ -25,6 +25,7 @@ async fn test_app() -> TestApp {
         database_url: format!("sqlite://{}?mode=rwc", db_path.display()),
         cookie_secure: false,
         access_ttl: 900,
+        machine_ttl: 86400,
         refresh_ttl: 3600,
         session_idle_ttl: 3600,
         session_absolute_ttl: 7200,
@@ -114,10 +115,17 @@ async fn create_client(router: &Router, cookie: &str, overrides: Value) -> (Stri
             base.insert(k.clone(), v.clone());
         }
     }
-    let (status, res, _) = send(router, json_req("POST", "/api/admin/clients", Some(cookie), body)).await;
+    let (status, res, _) = send(
+        router,
+        json_req("POST", "/api/admin/clients", Some(cookie), body),
+    )
+    .await;
     assert_eq!(status, StatusCode::OK, "client create failed: {res}");
     let id = res["data"]["id"].as_str().unwrap().to_string();
-    let secret = res["data"]["client_secret"].as_str().unwrap_or("").to_string();
+    let secret = res["data"]["client_secret"]
+        .as_str()
+        .unwrap_or("")
+        .to_string();
     (id, secret)
 }
 
@@ -132,13 +140,25 @@ async fn get_code(router: &Router, cookie: &str, client_id: &str, challenge: &st
         .body(Body::empty())
         .unwrap();
     let (status, body, _) = send(router, req).await;
-    assert_eq!(status, StatusCode::SEE_OTHER, "authorize did not redirect: {body}");
-    let location = body["__location"].as_str().unwrap();
-    assert!(location.starts_with("http://rp.test/cb"), "unexpected redirect {location}");
-    let url = url::Url::parse(location).unwrap();
-    let code = url.query_pairs().find(|(k, _)| k == "code").map(|(_, v)| v.into_owned());
     assert_eq!(
-        url.query_pairs().find(|(k, _)| k == "state").map(|(_, v)| v.into_owned()),
+        status,
+        StatusCode::SEE_OTHER,
+        "authorize did not redirect: {body}"
+    );
+    let location = body["__location"].as_str().unwrap();
+    assert!(
+        location.starts_with("http://rp.test/cb"),
+        "unexpected redirect {location}"
+    );
+    let url = url::Url::parse(location).unwrap();
+    let code = url
+        .query_pairs()
+        .find(|(k, _)| k == "code")
+        .map(|(_, v)| v.into_owned());
+    assert_eq!(
+        url.query_pairs()
+            .find(|(k, _)| k == "state")
+            .map(|(_, v)| v.into_owned()),
         Some("xyz".to_string())
     );
     code.expect("code in redirect")
@@ -158,8 +178,12 @@ async fn full_oidc_flow() {
     let cookie = login_admin(router).await;
 
     // Client that may also exchange tokens for the "other-app" audience.
-    let (client_id, client_secret) =
-        create_client(router, &cookie, json!({"exchange_audiences": ["other-app"]})).await;
+    let (client_id, client_secret) = create_client(
+        router,
+        &cookie,
+        json!({"exchange_audiences": ["other-app"]}),
+    )
+    .await;
     let (other_id, _) = create_client(
         router,
         &cookie,
@@ -212,7 +236,14 @@ async fn full_oidc_flow() {
     assert_eq!(err["error"], "invalid_grant");
 
     // --- verify the JWT against the published JWKS ---
-    let (_, jwks, _) = send(router, Request::builder().uri("/.well-known/jwks.json").body(Body::empty()).unwrap()).await;
+    let (_, jwks, _) = send(
+        router,
+        Request::builder()
+            .uri("/.well-known/jwks.json")
+            .body(Body::empty())
+            .unwrap(),
+    )
+    .await;
     let jwk = &jwks["keys"][0];
     let key = jsonwebtoken::DecodingKey::from_rsa_components(
         jwk["n"].as_str().unwrap(),
@@ -222,8 +253,8 @@ async fn full_oidc_flow() {
     let mut validation = jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::RS256);
     validation.set_issuer(&["http://idp.test"]);
     validation.set_audience(&[&client_id]);
-    let verified =
-        jsonwebtoken::decode::<Value>(&access, &key, &validation).expect("JWKS-verified access token");
+    let verified = jsonwebtoken::decode::<Value>(&access, &key, &validation)
+        .expect("JWKS-verified access token");
     assert_eq!(verified.claims["roles"], json!(["admin"]));
     assert_eq!(verified.claims["preferred_username"], "admin");
 
@@ -289,7 +320,11 @@ async fn full_oidc_flow() {
         ),
     )
     .await;
-    assert_eq!(status, StatusCode::BAD_REQUEST, "family revocation must kill rotated token: {err}");
+    assert_eq!(
+        status,
+        StatusCode::BAD_REQUEST,
+        "family revocation must kill rotated token: {err}"
+    );
 
     // --- RFC 8693 token exchange with role mapping for the target ---
     let (status, exchanged, _) = send(
@@ -297,9 +332,15 @@ async fn full_oidc_flow() {
         form_req(
             "/oauth2/token",
             &[
-                ("grant_type", "urn:ietf:params:oauth:grant-type:token-exchange"),
+                (
+                    "grant_type",
+                    "urn:ietf:params:oauth:grant-type:token-exchange",
+                ),
                 ("subject_token", &access),
-                ("subject_token_type", "urn:ietf:params:oauth:token-type:access_token"),
+                (
+                    "subject_token_type",
+                    "urn:ietf:params:oauth:token-type:access_token",
+                ),
                 ("audience", &other_id),
                 ("client_id", &client_id),
                 ("client_secret", &client_secret),
@@ -311,7 +352,11 @@ async fn full_oidc_flow() {
     let ex_claims = decode_jwt_no_verify(exchanged["access_token"].as_str().unwrap());
     assert_eq!(ex_claims["aud"], other_id);
     assert_eq!(ex_claims["azp"], client_id);
-    assert_eq!(ex_claims["roles"], json!(["boss"]), "target role mapping applied");
+    assert_eq!(
+        ex_claims["roles"],
+        json!(["boss"]),
+        "target role mapping applied"
+    );
 
     // Exchange for a non-allowed audience must fail.
     let (status, err, _) = send(
@@ -319,7 +364,10 @@ async fn full_oidc_flow() {
         form_req(
             "/oauth2/token",
             &[
-                ("grant_type", "urn:ietf:params:oauth:grant-type:token-exchange"),
+                (
+                    "grant_type",
+                    "urn:ietf:params:oauth:grant-type:token-exchange",
+                ),
                 ("subject_token", &access),
                 ("audience", "unrelated-app"),
                 ("client_id", &client_id),
@@ -330,6 +378,116 @@ async fn full_oidc_flow() {
     .await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
     assert_eq!(err["error"], "invalid_target", "{err}");
+}
+
+#[tokio::test]
+async fn client_credentials_machine_token() {
+    let app = test_app().await;
+    let router = &app.router;
+    let cookie = login_admin(router).await;
+
+    // A machine client: client_credentials only, its own roles, a long TTL.
+    let (client_id, client_secret) = create_client(
+        router,
+        &cookie,
+        json!({
+            "id": "ci-bot",
+            "name": "CI Bot",
+            "redirect_uris": [],
+            "allowed_grants": ["client_credentials"],
+            "allowed_scopes": ["deploy", "read"],
+            "client_roles": ["deployer"],
+            "access_token_ttl": 604800,
+        }),
+    )
+    .await;
+
+    // Mint a token with a subset of the allowed scopes.
+    let (status, tokens, _) = send(
+        router,
+        form_req(
+            "/oauth2/token",
+            &[
+                ("grant_type", "client_credentials"),
+                ("scope", "deploy"),
+                ("client_id", &client_id),
+                ("client_secret", &client_secret),
+            ],
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "client_credentials failed: {tokens}");
+    assert_eq!(tokens["scope"], "deploy");
+    assert_eq!(tokens["expires_in"], 604800, "per-client TTL applies");
+    assert!(tokens["refresh_token"].is_null(), "no refresh for machines");
+    assert!(tokens["id_token"].is_null(), "no id_token for machines");
+    let access = tokens["access_token"].as_str().unwrap();
+
+    // The JWT verifies against JWKS with the client as its own subject/audience.
+    let (_, jwks, _) = send(
+        router,
+        Request::builder()
+            .uri("/.well-known/jwks.json")
+            .body(Body::empty())
+            .unwrap(),
+    )
+    .await;
+    let jwk = &jwks["keys"][0];
+    let key = jsonwebtoken::DecodingKey::from_rsa_components(
+        jwk["n"].as_str().unwrap(),
+        jwk["e"].as_str().unwrap(),
+    )
+    .unwrap();
+    let mut validation = jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::RS256);
+    validation.set_issuer(&["http://idp.test"]);
+    validation.set_audience(&[&client_id]);
+    let verified =
+        jsonwebtoken::decode::<Value>(access, &key, &validation).expect("JWKS-verified token");
+    assert_eq!(verified.claims["sub"], client_id);
+    assert_eq!(verified.claims["roles"], json!(["deployer"]));
+    assert!(
+        verified.claims["preferred_username"].is_null(),
+        "machine token carries no user identity"
+    );
+
+    // Requesting a scope outside the client's allowlist is rejected.
+    let (status, err, _) = send(
+        router,
+        form_req(
+            "/oauth2/token",
+            &[
+                ("grant_type", "client_credentials"),
+                ("scope", "admin"),
+                ("client_id", &client_id),
+                ("client_secret", &client_secret),
+            ],
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(err["error"], "invalid_scope", "{err}");
+
+    // A client without the grant in allowed_grants cannot use it.
+    let (other_id, other_secret) = create_client(
+        router,
+        &cookie,
+        json!({"id": "web-app", "name": "Web", "allowed_grants": ["authorization_code"]}),
+    )
+    .await;
+    let (status, err, _) = send(
+        router,
+        form_req(
+            "/oauth2/token",
+            &[
+                ("grant_type", "client_credentials"),
+                ("client_id", &other_id),
+                ("client_secret", &other_secret),
+            ],
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(err["error"], "invalid_grant", "{err}");
 }
 
 #[tokio::test]
@@ -393,7 +551,11 @@ async fn authorize_requires_login_and_registered_redirect() {
         "/oauth2/authorize?response_type=code&client_id={client_id}&redirect_uri=http%3A%2F%2Frp.test%2Fcb&scope=openid&code_challenge={}&code_challenge_method=S256",
         pkce_s256(&"d".repeat(43))
     );
-    let (status, body, _) = send(router, Request::builder().uri(&uri).body(Body::empty()).unwrap()).await;
+    let (status, body, _) = send(
+        router,
+        Request::builder().uri(&uri).body(Body::empty()).unwrap(),
+    )
+    .await;
     assert_eq!(status, StatusCode::SEE_OTHER);
     let location = body["__location"].as_str().unwrap();
     assert!(location.starts_with("/login?request="), "{location}");
@@ -430,8 +592,12 @@ async fn legacy_hs256_exchange_for_forge_apps() {
     let router = &app.router;
     let cookie = login_admin(router).await;
     let legacy_secret = "a-shared-forge-secret-of-32-chars!!";
-    let (client_id, client_secret) =
-        create_client(router, &cookie, json!({"exchange_audiences": ["legacy-app"]})).await;
+    let (client_id, client_secret) = create_client(
+        router,
+        &cookie,
+        json!({"exchange_audiences": ["legacy-app"]}),
+    )
+    .await;
     create_client(
         router,
         &cookie,
@@ -463,7 +629,10 @@ async fn legacy_hs256_exchange_for_forge_apps() {
         form_req(
             "/oauth2/token",
             &[
-                ("grant_type", "urn:ietf:params:oauth:grant-type:token-exchange"),
+                (
+                    "grant_type",
+                    "urn:ietf:params:oauth:grant-type:token-exchange",
+                ),
                 ("subject_token", &access),
                 ("audience", "legacy-app"),
                 ("client_id", &client_id),
@@ -480,7 +649,9 @@ async fn legacy_hs256_exchange_for_forge_apps() {
     let key = jsonwebtoken::DecodingKey::from_secret(legacy_secret.as_bytes());
     let mut validation = jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::HS256);
     validation.validate_aud = false;
-    let claims = jsonwebtoken::decode::<Value>(legacy, &key, &validation).unwrap().claims;
+    let claims = jsonwebtoken::decode::<Value>(legacy, &key, &validation)
+        .unwrap()
+        .claims;
     assert_eq!(claims["sub"], "admin");
     assert_eq!(claims["roles"], json!(["admin"]));
 }
@@ -490,13 +661,22 @@ async fn consent_flow_for_untrusted_clients() {
     let app = test_app().await;
     let router = &app.router;
     let cookie = login_admin(router).await;
-    let (client_id, _) = create_client(router, &cookie, json!({"trusted": false, "client_type": "public"})).await;
+    let (client_id, _) = create_client(
+        router,
+        &cookie,
+        json!({"trusted": false, "client_type": "public"}),
+    )
+    .await;
 
     let uri = format!(
         "/oauth2/authorize?response_type=code&client_id={client_id}&redirect_uri=http%3A%2F%2Frp.test%2Fcb&scope=openid&code_challenge={}&code_challenge_method=S256",
         pkce_s256(&"f".repeat(43))
     );
-    let req = Request::builder().uri(&uri).header(header::COOKIE, &cookie).body(Body::empty()).unwrap();
+    let req = Request::builder()
+        .uri(&uri)
+        .header(header::COOKIE, &cookie)
+        .body(Body::empty())
+        .unwrap();
     let (status, body, _) = send(router, req).await;
     assert_eq!(status, StatusCode::SEE_OTHER);
     let location = body["__location"].as_str().unwrap().to_string();
@@ -516,17 +696,27 @@ async fn consent_flow_for_untrusted_clients() {
     .await;
     assert_eq!(status, StatusCode::OK, "{decided}");
     let resume = decided["data"]["redirect_to"].as_str().unwrap().to_string();
-    let req = Request::builder().uri(&resume).header(header::COOKIE, &cookie).body(Body::empty()).unwrap();
+    let req = Request::builder()
+        .uri(&resume)
+        .header(header::COOKIE, &cookie)
+        .body(Body::empty())
+        .unwrap();
     let (status, body, _) = send(router, req).await;
     assert_eq!(status, StatusCode::SEE_OTHER);
-    assert!(body["__location"].as_str().unwrap().contains("code="), "{body}");
+    assert!(
+        body["__location"].as_str().unwrap().contains("code="),
+        "{body}"
+    );
 }
 
 #[tokio::test]
 async fn sha2_helper_matches_hex() {
     // Guard the token-hash format the DB relies on.
     let digest = hex::encode(sha2::Sha256::digest("abc"));
-    assert_eq!(digest, "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
+    assert_eq!(
+        digest,
+        "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+    );
     assert_eq!(forge_auth::util::sha256_hex("abc"), digest);
     let _ = b64url(b"x");
 }

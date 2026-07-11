@@ -125,7 +125,41 @@ pub fn sign_access(
     };
     let mut header = Header::new(Algorithm::RS256);
     header.kid = Some(keys.active_kid.clone());
-    let token = jsonwebtoken::encode(&header, &claims, &keys.encoding).map_err(AppError::internal)?;
+    let token =
+        jsonwebtoken::encode(&header, &claims, &keys.encoding).map_err(AppError::internal)?;
+    Ok((token, ttl))
+}
+
+/// Mint a machine (`client_credentials`) access token: the client is its own
+/// subject, roles come straight from `client.client_roles`, and there are no
+/// user-derived claims. TTL is decided by the caller (long-lived by design).
+pub fn sign_client_access(
+    keys: &KeySet,
+    issuer: &str,
+    ttl: i64,
+    client: &Client,
+    scope: &str,
+) -> Result<(String, i64), AppError> {
+    let ts = now();
+    let claims = AccessClaims {
+        iss: issuer.to_string(),
+        sub: client.id.clone(),
+        aud: client.id.clone(),
+        azp: None,
+        exp: ts + ttl,
+        iat: ts,
+        jti: crate::util::new_id(),
+        scope: scope.to_string(),
+        preferred_username: None,
+        email: None,
+        name: None,
+        roles: client.client_roles.clone(),
+        amr: vec![],
+    };
+    let mut header = Header::new(Algorithm::RS256);
+    header.kid = Some(keys.active_kid.clone());
+    let token =
+        jsonwebtoken::encode(&header, &claims, &keys.encoding).map_err(AppError::internal)?;
     Ok((token, ttl))
 }
 
@@ -180,7 +214,13 @@ pub fn sign_legacy_hs256(
         iss: &'a str,
     }
     let ts = now();
-    let claims = LegacyClaims { sub: username, roles, iat: ts, exp: ts + ttl, iss: issuer };
+    let claims = LegacyClaims {
+        sub: username,
+        roles,
+        iat: ts,
+        exp: ts + ttl,
+        iss: issuer,
+    };
     jsonwebtoken::encode(
         &Header::new(Algorithm::HS256),
         &claims,
@@ -223,6 +263,7 @@ mod tests {
             post_logout_redirect_uris: vec![],
             allowed_scopes: vec![],
             allowed_grants: vec![],
+            client_roles: vec![],
             access_token_ttl: None,
             refresh_token_ttl: None,
             role_mappings: mappings,
@@ -239,10 +280,7 @@ mod tests {
     fn role_mapping_passthrough_and_filter() {
         let roles = vec!["admin".to_string(), "media".to_string()];
         assert_eq!(map_roles(&client(None), &roles), roles);
-        let mapped = map_roles(
-            &client(Some(json!({"admin": "superuser"}))),
-            &roles,
-        );
+        let mapped = map_roles(&client(Some(json!({"admin": "superuser"}))), &roles);
         assert_eq!(mapped, vec!["superuser".to_string()]);
     }
 }

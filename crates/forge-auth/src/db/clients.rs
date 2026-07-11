@@ -28,13 +28,16 @@ impl Db {
     #[allow(clippy::too_many_arguments)]
     pub async fn client_create(&self, client: &Client) -> Result<(), AppError> {
         if self.client_by_id(&client.id).await?.is_some() {
-            return Err(AppError::Conflict(format!("client {:?} already exists", client.id)));
+            return Err(AppError::Conflict(format!(
+                "client {:?} already exists",
+                client.id
+            )));
         }
         sqlx::query(
             "INSERT INTO clients (id, name, client_type, secret_hash, redirect_uris, post_logout_redirect_uris,
-                 allowed_scopes, allowed_grants, access_token_ttl, refresh_token_ttl, role_mappings,
+                 allowed_scopes, allowed_grants, client_roles, access_token_ttl, refresh_token_ttl, role_mappings,
                  claims_config, exchange_audiences, trusted, legacy_hs256_secret, disabled, created_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)",
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)",
         )
         .bind(&client.id)
         .bind(&client.name)
@@ -44,6 +47,7 @@ impl Db {
         .bind(to_json(&client.post_logout_redirect_uris))
         .bind(to_json(&client.allowed_scopes))
         .bind(to_json(&client.allowed_grants))
+        .bind(to_json(&client.client_roles))
         .bind(client.access_token_ttl)
         .bind(client.refresh_token_ttl)
         .bind(client.role_mappings.as_ref().map(|v| v.to_string()))
@@ -61,9 +65,9 @@ impl Db {
     pub async fn client_update(&self, client: &Client) -> Result<(), sqlx::Error> {
         sqlx::query(
             "UPDATE clients SET name = $2, client_type = $3, redirect_uris = $4, post_logout_redirect_uris = $5,
-                 allowed_scopes = $6, allowed_grants = $7, access_token_ttl = $8, refresh_token_ttl = $9,
-                 role_mappings = $10, claims_config = $11, exchange_audiences = $12, trusted = $13,
-                 legacy_hs256_secret = $14, disabled = $15
+                 allowed_scopes = $6, allowed_grants = $7, client_roles = $8, access_token_ttl = $9, refresh_token_ttl = $10,
+                 role_mappings = $11, claims_config = $12, exchange_audiences = $13, trusted = $14,
+                 legacy_hs256_secret = $15, disabled = $16
              WHERE id = $1",
         )
         .bind(&client.id)
@@ -73,6 +77,7 @@ impl Db {
         .bind(to_json(&client.post_logout_redirect_uris))
         .bind(to_json(&client.allowed_scopes))
         .bind(to_json(&client.allowed_grants))
+        .bind(to_json(&client.client_roles))
         .bind(client.access_token_ttl)
         .bind(client.refresh_token_ttl)
         .bind(client.role_mappings.as_ref().map(|v| v.to_string()))

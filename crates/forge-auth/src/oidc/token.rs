@@ -13,7 +13,7 @@ use crate::db::models::{Client, User};
 use crate::error::OAuthError;
 use crate::state::SharedState;
 use crate::tokens::access::{
-    sign_access, sign_id_token, sign_legacy_hs256, validate_access, Mint,
+    sign_access, sign_client_access, sign_id_token, sign_legacy_hs256, validate_access, Mint,
 };
 use crate::util::{new_id, pkce_s256, random_token, sha256_hex};
 
@@ -57,7 +57,8 @@ pub async fn token(
         .grant_type
         .as_deref()
         .ok_or_else(|| OAuthError::invalid_request("missing grant_type"))?;
-    if grant_type != GRANT_TOKEN_EXCHANGE && !client.allowed_grants.iter().any(|g| g == grant_type) {
+    if grant_type != GRANT_TOKEN_EXCHANGE && !client.allowed_grants.iter().any(|g| g == grant_type)
+    {
         return Err(OAuthError::invalid_grant(format!(
             "grant {grant_type:?} not allowed for this client"
         )));
@@ -66,9 +67,13 @@ pub async fn token(
     let payload = match grant_type {
         "authorization_code" => authorization_code(&state, &client, &form).await?,
         "refresh_token" => refresh(&state, &client, &form).await?,
+        "client_credentials" => client_credentials(&state, &client, &form).await?,
         GRANT_TOKEN_EXCHANGE => {
             if !client.exchange_audiences.is_empty()
-                || client.allowed_grants.iter().any(|g| g == GRANT_TOKEN_EXCHANGE)
+                || client
+                    .allowed_grants
+                    .iter()
+                    .any(|g| g == GRANT_TOKEN_EXCHANGE)
             {
                 exchange(&state, &client, &form).await?
             } else {
@@ -131,7 +136,12 @@ async fn mint_tokens(
     let (access_token, expires_in) =
         sign_access(&keys, &state.cfg.issuer, state.cfg.access_ttl, &mint)?;
     let id_token = if scope.split_whitespace().any(|s| s == "openid") {
-        Some(sign_id_token(&keys, &state.cfg.issuer, state.cfg.access_ttl, &mint)?)
+        Some(sign_id_token(
+            &keys,
+            &state.cfg.issuer,
+            state.cfg.access_ttl,
+            &mint,
+        )?)
     } else {
         None
     };
@@ -192,7 +202,9 @@ async fn authorization_code(
         .ok_or_else(|| OAuthError::invalid_grant("code is invalid, expired or already used"))?;
 
     if auth_code.client_id != client.id {
-        return Err(OAuthError::invalid_grant("code was issued to another client"));
+        return Err(OAuthError::invalid_grant(
+            "code was issued to another client",
+        ));
     }
     if form.redirect_uri.as_deref() != Some(auth_code.redirect_uri.as_str()) {
         return Err(OAuthError::invalid_grant("redirect_uri mismatch"));
@@ -244,10 +256,14 @@ async fn refresh(
         .ok_or_else(|| OAuthError::invalid_grant("unknown refresh token"))?;
 
     if stored.client_id != client.id {
-        return Err(OAuthError::invalid_grant("refresh token was issued to another client"));
+        return Err(OAuthError::invalid_grant(
+            "refresh token was issued to another client",
+        ));
     }
     if stored.revoked_at.is_some() || stored.expires_at <= crate::util::now() {
-        return Err(OAuthError::invalid_grant("refresh token revoked or expired"));
+        return Err(OAuthError::invalid_grant(
+            "refresh token revoked or expired",
+        ));
     }
     // Rotation with reuse detection: losing the atomic mark-used race means
     // this token value was presented twice — revoke the whole family.
@@ -262,7 +278,9 @@ async fn refresh(
         Some(requested) => {
             let granted: Vec<&str> = stored.scope.split_whitespace().collect();
             if !requested.split_whitespace().all(|s| granted.contains(&s)) {
-                return Err(OAuthError::invalid_scope("requested scope exceeds the original grant"));
+                return Err(OAuthError::invalid_scope(
+                    "requested scope exceeds the original grant",
+                ));
             }
             requested.to_string()
         }
@@ -285,6 +303,51 @@ async fn refresh(
     .await
 }
 
+/// RFC 6749 §4.4: machine-to-machine. A confidential client authenticates with
+/// its secret and gets a long-lived JWT where it is its own subject, carrying
+/// its configured `client_roles`. No user, no id_token, no refresh token.
+async fn client_credentials(
+    state: &SharedState,
+    client: &Client,
+    form: &TokenForm,
+) -> Result<Value, OAuthError> {
+    if client.client_type != "confidential" {
+        return Err(OAuthError::invalid_client(
+            "client_credentials requires a confidential client",
+        ));
+    }
+    // Scope: requested must be a subset of the client's allowlist; absent means
+    // the full allowlist.
+    let scope = match form.scope.as_deref() {
+        Some(requested) => {
+            let unknown: Vec<&str> = requested
+                .split_whitespace()
+                .filter(|s| !client.allowed_scopes.iter().any(|a| a == s))
+                .collect();
+            if !unknown.is_empty() {
+                return Err(OAuthError::invalid_scope(format!(
+                    "scope(s) not allowed for this client: {}",
+                    unknown.join(" ")
+                )));
+            }
+            requested.to_string()
+        }
+        None => client.allowed_scopes.join(" "),
+    };
+
+    let ttl = client.access_token_ttl.unwrap_or(state.cfg.machine_ttl);
+    let keys = state.keys.read().await;
+    let (access_token, expires_in) =
+        sign_client_access(&keys, &state.cfg.issuer, ttl, client, &scope)?;
+    drop(keys);
+    Ok(json!({
+        "access_token": access_token,
+        "token_type": "Bearer",
+        "expires_in": expires_in,
+        "scope": scope,
+    }))
+}
+
 /// RFC 8693: swap one of our access tokens for a token scoped to another
 /// client (`audience`), with that client's role mapping and claim selection
 /// applied. This is how one login fans out to many forge apps.
@@ -294,7 +357,9 @@ async fn exchange(
     form: &TokenForm,
 ) -> Result<Value, OAuthError> {
     if requester.client_type != "confidential" {
-        return Err(OAuthError::invalid_client("token exchange requires a confidential client"));
+        return Err(OAuthError::invalid_client(
+            "token exchange requires a confidential client",
+        ));
     }
     match form.subject_token_type.as_deref() {
         None | Some(TOKEN_TYPE_ACCESS) => {}
@@ -319,7 +384,10 @@ async fn exchange(
     drop(keys);
 
     let allowed = audience == requester.id
-        || requester.exchange_audiences.iter().any(|a| a == audience || a == "*");
+        || requester
+            .exchange_audiences
+            .iter()
+            .any(|a| a == audience || a == "*");
     if !allowed {
         return Err(OAuthError::invalid_target(format!(
             "client {:?} may not exchange tokens for audience {audience:?}",

@@ -22,6 +22,7 @@ pub async fn openid_configuration(Extension(state): Extension<SharedState>) -> i
         "grant_types_supported": [
             "authorization_code",
             "refresh_token",
+            "client_credentials",
             "urn:ietf:params:oauth:grant-type:token-exchange",
         ],
         "subject_types_supported": ["public"],

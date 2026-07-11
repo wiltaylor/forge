@@ -121,6 +121,9 @@ pub struct Client {
     pub post_logout_redirect_uris: Vec<String>,
     pub allowed_scopes: Vec<String>,
     pub allowed_grants: Vec<String>,
+    /// Roles emitted for `client_credentials` (machine) tokens where the client
+    /// is its own subject. Emitted verbatim — role mapping does not apply.
+    pub client_roles: Vec<String>,
     pub access_token_ttl: Option<i64>,
     pub refresh_token_ttl: Option<i64>,
     /// `{"idp role name": "emitted role name"}`; `None` = pass roles through.
@@ -153,6 +156,7 @@ impl<'r> sqlx::FromRow<'r, AnyRow> for Client {
             post_logout_redirect_uris: get_json_vec(row, "post_logout_redirect_uris")?,
             allowed_scopes: get_json_vec(row, "allowed_scopes")?,
             allowed_grants: get_json_vec(row, "allowed_grants")?,
+            client_roles: get_json_vec(row, "client_roles")?,
             access_token_ttl: row.try_get("access_token_ttl")?,
             refresh_token_ttl: row.try_get("refresh_token_ttl")?,
             role_mappings: role_mappings.and_then(|s| serde_json::from_str(&s).ok()),

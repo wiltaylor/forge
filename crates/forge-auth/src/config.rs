@@ -10,6 +10,9 @@ pub struct Config {
     pub database_url: String,
     pub cookie_secure: bool,
     pub access_ttl: i64,
+    /// Default TTL for `client_credentials` (machine) tokens, in seconds.
+    /// A client may override it per-client via `access_token_ttl`.
+    pub machine_ttl: i64,
     pub refresh_ttl: i64,
     pub session_idle_ttl: i64,
     pub session_absolute_ttl: i64,
@@ -58,6 +61,7 @@ impl Config {
                 .unwrap_or_else(|_| "sqlite://data/forge-auth.db?mode=rwc".into()),
             cookie_secure: env_bool("FORGE_AUTH_COOKIE_SECURE", true)?,
             access_ttl: env_i64("FORGE_AUTH_ACCESS_TTL", 900)?,
+            machine_ttl: env_i64("FORGE_AUTH_MACHINE_TTL", 24 * 3600)?,
             refresh_ttl: env_i64("FORGE_AUTH_REFRESH_TTL", 30 * 24 * 3600)?,
             session_idle_ttl: env_i64("FORGE_AUTH_SESSION_IDLE_TTL", 12 * 3600)?,
             session_absolute_ttl: env_i64("FORGE_AUTH_SESSION_ABSOLUTE_TTL", 7 * 24 * 3600)?,

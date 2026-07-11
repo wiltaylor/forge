@@ -42,6 +42,8 @@ pub struct ClientBody {
     #[serde(default = "default_grants")]
     pub allowed_grants: Vec<String>,
     #[serde(default)]
+    pub client_roles: Vec<String>,
+    #[serde(default)]
     pub access_token_ttl: Option<i64>,
     #[serde(default)]
     pub refresh_token_ttl: Option<i64>,
@@ -63,7 +65,12 @@ fn default_client_type() -> String {
     "confidential".into()
 }
 fn default_scopes() -> Vec<String> {
-    vec!["openid".into(), "profile".into(), "email".into(), "roles".into()]
+    vec![
+        "openid".into(),
+        "profile".into(),
+        "email".into(),
+        "roles".into(),
+    ]
 }
 fn default_grants() -> Vec<String> {
     vec!["authorization_code".into(), "refresh_token".into()]
@@ -74,19 +81,24 @@ fn validate_body(body: &ClientBody) -> Result<(), AppError> {
         return Err(AppError::BadRequest("client name is required".into()));
     }
     if !matches!(body.client_type.as_str(), "confidential" | "public") {
-        return Err(AppError::BadRequest("client_type must be confidential or public".into()));
+        return Err(AppError::BadRequest(
+            "client_type must be confidential or public".into(),
+        ));
     }
     for uri in &body.redirect_uris {
         let parsed = url::Url::parse(uri)
             .map_err(|_| AppError::BadRequest(format!("invalid redirect_uri {uri:?}")))?;
         if parsed.fragment().is_some() {
-            return Err(AppError::BadRequest("redirect_uri must not contain a fragment".into()));
+            return Err(AppError::BadRequest(
+                "redirect_uri must not contain a fragment".into(),
+            ));
         }
     }
     if let Some(secret) = &body.legacy_hs256_secret {
         if !secret.is_empty() && secret.len() < 32 {
             return Err(AppError::BadRequest(
-                "legacy_hs256_secret must be at least 32 characters (forge-server requirement)".into(),
+                "legacy_hs256_secret must be at least 32 characters (forge-server requirement)"
+                    .into(),
             ));
         }
     }
@@ -103,6 +115,7 @@ fn build_client(id: String, body: &ClientBody) -> Client {
         post_logout_redirect_uris: body.post_logout_redirect_uris.clone(),
         allowed_scopes: body.allowed_scopes.clone(),
         allowed_grants: body.allowed_grants.clone(),
+        client_roles: body.client_roles.clone(),
         access_token_ttl: body.access_token_ttl,
         refresh_token_ttl: body.refresh_token_ttl,
         role_mappings: body.role_mappings.clone().filter(|v| !v.is_null()),
@@ -147,7 +160,11 @@ pub async fn get(
     Extension(state): Extension<SharedState>,
     Path(id): Path<String>,
 ) -> Result<impl IntoResponse, AppError> {
-    let client = state.db.client_by_id(&id).await?.ok_or(AppError::NotFound)?;
+    let client = state
+        .db
+        .client_by_id(&id)
+        .await?
+        .ok_or(AppError::NotFound)?;
     Ok(ok(client_json(&client)))
 }
 
@@ -158,7 +175,11 @@ pub async fn update(
     Json(body): Json<ClientBody>,
 ) -> Result<impl IntoResponse, AppError> {
     validate_body(&body)?;
-    let existing = state.db.client_by_id(&id).await?.ok_or(AppError::NotFound)?;
+    let existing = state
+        .db
+        .client_by_id(&id)
+        .await?
+        .ok_or(AppError::NotFound)?;
     let mut client = build_client(id, &body);
     client.secret_hash = existing.secret_hash;
     client.created_at = existing.created_at;
@@ -189,11 +210,18 @@ pub async fn regenerate_secret(
     Extension(state): Extension<SharedState>,
     Path(id): Path<String>,
 ) -> Result<impl IntoResponse, AppError> {
-    let client = state.db.client_by_id(&id).await?.ok_or(AppError::NotFound)?;
+    let client = state
+        .db
+        .client_by_id(&id)
+        .await?
+        .ok_or(AppError::NotFound)?;
     if client.client_type != "confidential" {
         return Err(AppError::BadRequest("public clients have no secret".into()));
     }
     let secret = random_token("fac_");
-    state.db.client_set_secret(&id, &hash_password(&secret)?).await?;
+    state
+        .db
+        .client_set_secret(&id, &hash_password(&secret)?)
+        .await?;
     Ok(ok(json!({ "client_id": id, "client_secret": secret })))
 }

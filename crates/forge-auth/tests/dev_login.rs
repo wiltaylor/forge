@@ -18,6 +18,7 @@ async fn test_app() -> (Router, tempfile::TempDir) {
         database_url: format!("sqlite://{}?mode=rwc", dir.path().join("t.db").display()),
         cookie_secure: false,
         access_ttl: 900,
+        machine_ttl: 86400,
         refresh_ttl: 3600,
         session_idle_ttl: 3600,
         session_absolute_ttl: 7200,
@@ -40,7 +41,10 @@ async fn get_json(router: &Router, uri: &str) -> (StatusCode, Value) {
         .unwrap();
     let status = res.status();
     let bytes = res.into_body().collect().await.unwrap().to_bytes();
-    (status, serde_json::from_slice(&bytes).unwrap_or(Value::Null))
+    (
+        status,
+        serde_json::from_slice(&bytes).unwrap_or(Value::Null),
+    )
 }
 
 #[cfg(not(feature = "dev-login"))]
