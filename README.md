@@ -53,13 +53,14 @@ system as a ratatui widget kit, see [Terminal UIs](#terminal-uis-forge-tui).
 
 ```sh
 just build            # pnpm packages + cargo build
-just rust-demo        # gallery on http://127.0.0.1:8765 (login admin/admin)
-just python-demo      # same app on the Python backend
+just rust-demo        # gallery on http://127.0.0.1:8899 (login admin/admin)
+just python-demo      # same app on the Python backend (http://127.0.0.1:8765)
 just test             # frontend + rust + python test suites
 ```
 
 Dev loop for the frontend: `just gallery-dev` (Vite on :5173, proxying `/api`
-to :8765 — start a demo backend alongside).
+to `FORGE_PORT`, default :8765 — start a demo backend alongside; use
+`FORGE_PORT=8899 just gallery-dev` to pair with rust-demo).
 
 ## Using Forge in another app
 

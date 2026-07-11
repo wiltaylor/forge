@@ -87,10 +87,12 @@ auth-e2e-test:
 [group('test')]
 test: frontend-test rust-test python-test tui-test auth-test-devlogin auth-e2e-test
 
-# Run the Rust demo app (debug build reads gallery dist from disk)
+# Run the Rust demo app (debug build reads gallery dist from disk).
+# Own port (8899, not the shared FORGE_PORT) so it can run beside python-demo;
+# pair the dev proxy with it via `FORGE_PORT=8899 just gallery-dev`.
 [group('demo')]
 rust-demo: frontend-build
-	cd examples/rust-demo && cargo run -p rust-demo
+	cd examples/rust-demo && FORGE_PORT=8899 cargo run -p rust-demo
 
 # Run the Python demo app (uv single-file script)
 [group('demo')]
