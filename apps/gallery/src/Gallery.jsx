@@ -1,7 +1,7 @@
 import { Show, createSignal, onCleanup } from 'solid-js';
 import { Hexagon, LogOut, Moon, Palette } from 'lucide-solid';
 import {
-  AppShell, NavSection, NavLink, Crumbs, IconButton, Badge, Toaster,
+  AppShell, NavSection, NavLink, Crumbs, IconButton, Badge, Toaster, FxLayer,
 } from '@forge/ui';
 import { applyTheme, darkTheme, defineTheme } from '@forge/tokens';
 import Primitives from './sections/Primitives';
@@ -25,6 +25,7 @@ import DataDemo from './sections/DataDemo';
 import RemoteDemo from './sections/RemoteDemo';
 import TermDemo from './sections/TermDemo';
 import DesktopDemo from './sections/DesktopDemo';
+import FxDemo from './sections/FxDemo';
 
 const SECTIONS = [
   ['primitives', 'Primitives', Primitives],
@@ -43,6 +44,7 @@ const SECTIONS = [
   ['chat', 'Chat', ChatDemo],
   ['code', 'Code', CodeDemo],
   ['charts', 'Charts', ChartsDemo],
+  ['fx', 'Particle FX', FxDemo],
 ];
 
 const BACKEND_SECTIONS = [
@@ -143,6 +145,7 @@ export default function Gallery(props) {
       }
     >
       <Toaster />
+      <FxLayer />
       {[...SECTIONS, ...BACKEND_SECTIONS].map(([id, label, Section]) => (
         <section id={id} style={{ 'margin-bottom': '40px' }}>
           <Section />

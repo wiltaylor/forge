@@ -12,3 +12,4 @@ export * from './toaster';
 export * from './data';
 export * from './theme';
 export * from './overlay-mount';
+export * from './fx';

@@ -596,6 +596,13 @@
   padding: 12px 16px; border-top: 1px solid var(--border-subtle); flex: none;
 }
 
+/* ---------------- Particle FX layer ----------------------------------------- */
+.ffx-layer {
+  position: fixed; inset: 0; z-index: 90;  /* above toaster (70) and menus (80) */
+  width: 100vw; height: 100vh;
+  pointer-events: none;
+}
+
 /* ---------------- Toaster --------------------------------------------------- */
 .ftoaster {
   position: fixed; right: 16px; bottom: 16px; z-index: 70;  /* above modal */
