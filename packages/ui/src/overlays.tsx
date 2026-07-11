@@ -15,6 +15,8 @@ export interface ModalProps {
   open?: boolean;
   onClose?: () => void;
   title?: string;
+  /** Panel width: md 480px (default), lg 720px, xl 960px. */
+  size?: 'md' | 'lg' | 'xl';
   footer?: JSX.Element;
   children?: JSX.Element;
 }
@@ -31,7 +33,7 @@ export function Modal(props: ModalProps) {
     <Show when={props.open}>
       <Portal mount={mount}>
         <div class="fmodal" onClick={(e) => { if (e.target === e.currentTarget) props.onClose?.(); }}>
-          <div class="fmodal-panel" role="dialog" aria-modal="true" aria-label={props.title}>
+          <div class="fmodal-panel" classList={{ 'is-lg': props.size === 'lg', 'is-xl': props.size === 'xl' }} role="dialog" aria-modal="true" aria-label={props.title}>
             <header class="fmodal-head">
               <h3>{props.title}</h3>
               <button class="ftopbar-icon-btn" aria-label="Close" onClick={() => props.onClose?.()}>

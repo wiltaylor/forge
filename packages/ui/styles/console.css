@@ -299,6 +299,8 @@
   display: flex; flex-direction: column;
   animation: fmodal-in var(--dur-3) var(--ease-out);
 }
+.fmodal-panel.is-lg { width: min(720px, 100%); }
+.fmodal-panel.is-xl { width: min(960px, 100%); }
 @keyframes fmodal-in { from { opacity: 0; transform: translateY(8px); } }
 .fmodal-head {
   display: flex; align-items: center; justify-content: space-between;
