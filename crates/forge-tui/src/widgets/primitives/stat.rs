@@ -26,7 +26,13 @@ pub struct Stat<'a> {
 
 impl<'a> Stat<'a> {
     pub fn new(label: &'a str, value: &'a str) -> Stat<'a> {
-        Stat { label, value, delta: None, up_is_good: true, theme: None }
+        Stat {
+            label,
+            value,
+            delta: None,
+            up_is_good: true,
+            theme: None,
+        }
     }
 
     pub fn delta(mut self, delta: &'a str, trend: Trend) -> Self {

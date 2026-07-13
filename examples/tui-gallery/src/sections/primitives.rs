@@ -29,7 +29,10 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme) {
         ];
         let mut bx = r.x;
         for (i, (label, variant, disabled)) in labels.iter().enumerate() {
-            let b = Button::new(label).variant(*variant).disabled(*disabled).theme(t);
+            let b = Button::new(label)
+                .variant(*variant)
+                .disabled(*disabled)
+                .theme(t);
             let bw = b.width();
             if bx + bw > r.x + r.width {
                 break;
@@ -75,7 +78,11 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme) {
                 break;
             }
             frame.render_widget(
-                StatusDot::new(sev).label(label).pulse(pulse).frame(ctx.frame).theme(t),
+                StatusDot::new(sev)
+                    .label(label)
+                    .pulse(pulse)
+                    .frame(ctx.frame)
+                    .theme(t),
                 Rect::new(bx + 1, r.y, need, 1),
             );
             bx += need + 1;

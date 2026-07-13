@@ -45,7 +45,9 @@ impl Db {
             .fetch_one(&self.pool)
             .await,
         )?;
-        let Some(session) = session else { return Ok(None) };
+        let Some(session) = session else {
+            return Ok(None);
+        };
         if session.created_at + absolute_ttl <= ts {
             return Ok(None);
         }

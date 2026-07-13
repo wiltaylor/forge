@@ -1,6 +1,4 @@
-use forge_tui::theme::{
-    blend, chart_series, color::nearest_indexed, ColorMode, Severity, Theme,
-};
+use forge_tui::theme::{blend, chart_series, color::nearest_indexed, ColorMode, Severity, Theme};
 use ratatui::style::Color;
 
 /// The five near-black dark backgrounds must stay distinct after 256-color
@@ -8,14 +6,13 @@ use ratatui::style::Color;
 #[test]
 fn dark_bg_ramp_stays_distinct_in_256_colors() {
     let q = Theme::dark().quantized(ColorMode::Indexed256);
-    let mut indices: Vec<u8> = q
-        .bg
-        .iter()
-        .map(|c| match c {
-            Color::Indexed(i) => *i,
-            other => panic!("expected indexed color, got {other:?}"),
-        })
-        .collect();
+    let mut indices: Vec<u8> =
+        q.bg.iter()
+            .map(|c| match c {
+                Color::Indexed(i) => *i,
+                other => panic!("expected indexed color, got {other:?}"),
+            })
+            .collect();
     indices.dedup();
     assert_eq!(indices.len(), 5, "bg ramp collapsed: {indices:?}");
 }

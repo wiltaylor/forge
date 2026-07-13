@@ -55,7 +55,11 @@ async fn main() -> Result<(), ForgeError> {
     // .env is already loaded by ForgeApp::new above).
     let host = std::env::var("FORGE_HOST").unwrap_or_else(|_| "127.0.0.1".into());
     let port = std::env::var("FORGE_PORT").unwrap_or_else(|_| "8765".into());
-    let display_host = if host == "0.0.0.0" { "127.0.0.1" } else { &host };
+    let display_host = if host == "0.0.0.0" {
+        "127.0.0.1"
+    } else {
+        &host
+    };
     println!("\n  rust-demo → http://{display_host}:{port}/\n");
 
     app.serve().await

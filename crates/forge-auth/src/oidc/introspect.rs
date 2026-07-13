@@ -35,7 +35,9 @@ pub async fn introspect(
     .await?;
 
     let inactive = Json(json!({ "active": false }));
-    let Some(token) = form.token.as_deref() else { return Ok(inactive) };
+    let Some(token) = form.token.as_deref() else {
+        return Ok(inactive);
+    };
 
     // Access JWT?
     let keys = state.keys.read().await;
@@ -59,7 +61,8 @@ pub async fn introspect(
 
     // Refresh token?
     if let Some(stored) = state.db.refresh_token_by_hash(&sha256_hex(token)).await? {
-        let active = stored.revoked_at.is_none() && stored.used_at.is_none() && stored.expires_at > now();
+        let active =
+            stored.revoked_at.is_none() && stored.used_at.is_none() && stored.expires_at > now();
         if active {
             return Ok(Json(json!({
                 "active": true,

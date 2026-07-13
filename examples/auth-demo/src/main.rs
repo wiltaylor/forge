@@ -41,7 +41,10 @@ async fn login() -> Redirect {
     let state = random();
     let verifier = random();
     let challenge = URL_SAFE_NO_PAD.encode(Sha256::digest(verifier.as_bytes()));
-    PKCE.lock().unwrap().get_or_insert_with(HashMap::new).insert(state.clone(), verifier);
+    PKCE.lock()
+        .unwrap()
+        .get_or_insert_with(HashMap::new)
+        .insert(state.clone(), verifier);
     Redirect::to(&format!(
         "{auth}/oauth2/authorize?response_type=code&client_id={client_id}\
          &redirect_uri=http%3A%2F%2F127.0.0.1%3A9000%2Fcb&scope=openid%20profile%20email%20roles\
@@ -54,7 +57,12 @@ async fn callback(Query(q): Query<HashMap<String, String>>) -> impl IntoResponse
     let (Some(code), Some(state)) = (q.get("code"), q.get("state")) else {
         return Html(format!("<h1>Error</h1><pre>{q:?}</pre>"));
     };
-    let Some(verifier) = PKCE.lock().unwrap().get_or_insert_with(HashMap::new).remove(state) else {
+    let Some(verifier) = PKCE
+        .lock()
+        .unwrap()
+        .get_or_insert_with(HashMap::new)
+        .remove(state)
+    else {
         return Html("<h1>Error</h1><p>unknown state</p>".into());
     };
 

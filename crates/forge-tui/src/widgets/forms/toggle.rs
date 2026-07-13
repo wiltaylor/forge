@@ -15,7 +15,10 @@ pub struct ToggleState {
 
 impl ToggleState {
     pub fn new(on: bool) -> ToggleState {
-        ToggleState { on, area: Rect::default() }
+        ToggleState {
+            on,
+            area: Rect::default(),
+        }
     }
 
     /// Click anywhere on the control toggles it.
@@ -53,7 +56,12 @@ pub struct Toggle<'a> {
 
 impl<'a> Toggle<'a> {
     pub fn new(label: &'a str) -> Toggle<'a> {
-        Toggle { label, focused: false, disabled: false, theme: None }
+        Toggle {
+            label,
+            focused: false,
+            disabled: false,
+            theme: None,
+        }
     }
 
     pub fn focused(mut self, focused: bool) -> Self {
@@ -92,7 +100,12 @@ impl<'a> StatefulWidget for Toggle<'a> {
         // Paint track and knob separately so the knob pops.
         buf.set_string(area.x, area.y, switch, Style::new().fg(track));
         let knob_x = if state.on { area.x + 2 } else { area.x };
-        buf.set_string(knob_x, area.y, if state.on { "●" } else { "○" }, Style::new().fg(knob));
+        buf.set_string(
+            knob_x,
+            area.y,
+            if state.on { "●" } else { "○" },
+            Style::new().fg(knob),
+        );
         if area.width > 4 {
             let mut style = Style::new().fg(if self.disabled { t.fg[3] } else { t.fg[0] });
             if self.focused {

@@ -76,15 +76,24 @@ pub struct KeyCombo {
 
 impl KeyCombo {
     pub const fn new(code: KeyCode) -> KeyCombo {
-        KeyCombo { code, mods: KeyModifiers::NONE }
+        KeyCombo {
+            code,
+            mods: KeyModifiers::NONE,
+        }
     }
 
     pub const fn ctrl(code: KeyCode) -> KeyCombo {
-        KeyCombo { code, mods: KeyModifiers::CONTROL }
+        KeyCombo {
+            code,
+            mods: KeyModifiers::CONTROL,
+        }
     }
 
     pub const fn alt(code: KeyCode) -> KeyCombo {
-        KeyCombo { code, mods: KeyModifiers::ALT }
+        KeyCombo {
+            code,
+            mods: KeyModifiers::ALT,
+        }
     }
 
     pub const fn char(c: char) -> KeyCombo {
@@ -161,7 +170,11 @@ impl Keymap {
     }
 
     pub fn bind(mut self, action: &'static str, combo: KeyCombo, help: &'static str) -> Keymap {
-        self.bindings.push(Binding { action, combo, help });
+        self.bindings.push(Binding {
+            action,
+            combo,
+            help,
+        });
         self
     }
 

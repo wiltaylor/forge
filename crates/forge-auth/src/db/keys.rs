@@ -30,10 +30,12 @@ impl Db {
 
     /// Retire every active key (rotation makes a new active one after this).
     pub async fn signing_keys_retire_active(&self) -> Result<(), sqlx::Error> {
-        sqlx::query("UPDATE signing_keys SET status = 'retired', retired_at = $1 WHERE status = 'active'")
-            .bind(now())
-            .execute(&self.pool)
-            .await?;
+        sqlx::query(
+            "UPDATE signing_keys SET status = 'retired', retired_at = $1 WHERE status = 'active'",
+        )
+        .bind(now())
+        .execute(&self.pool)
+        .await?;
         Ok(())
     }
 

@@ -47,7 +47,11 @@ pub async fn start_upstream_login(
     // Reuse the pending /authorize request or create a bare one.
     let request_id = match &params.request {
         Some(id) => {
-            state.db.auth_request_get(id).await?.ok_or(AppError::NotFound)?;
+            state
+                .db
+                .auth_request_get(id)
+                .await?
+                .ok_or(AppError::NotFound)?;
             id.clone()
         }
         None => {
@@ -63,10 +67,17 @@ pub async fn start_upstream_login(
     let (url, mut upstream) = match provider.kind.as_str() {
         "oidc" => oidc::start(&state, &provider, &request_id).await?,
         "github" => github::start(&state, &provider, &request_id)?,
-        other => return Err(AppError::BadRequest(format!("cannot start login for kind {other:?}"))),
+        other => {
+            return Err(AppError::BadRequest(format!(
+                "cannot start login for kind {other:?}"
+            )))
+        }
     };
     upstream["slug"] = serde_json::json!(provider.slug);
-    state.db.auth_request_set_upstream(&request_id, &upstream).await?;
+    state
+        .db
+        .auth_request_set_upstream(&request_id, &upstream)
+        .await?;
     Ok(Redirect::to(&url).into_response())
 }
 
@@ -168,6 +179,8 @@ pub async fn test_provider(
         "oidc" => oidc::test(state, provider).await,
         "github" => github::test(provider),
         "ldap" => ldap::test(state, provider).await,
-        other => Err(AppError::BadRequest(format!("unknown provider kind {other:?}"))),
+        other => Err(AppError::BadRequest(format!(
+            "unknown provider kind {other:?}"
+        ))),
     }
 }

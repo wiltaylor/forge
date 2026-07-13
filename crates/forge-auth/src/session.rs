@@ -28,7 +28,12 @@ pub async fn start_session(
     let value = random_token("fas_");
     state
         .db
-        .session_create(&sha256_hex(&value), user_id, amr, state.cfg.session_idle_ttl)
+        .session_create(
+            &sha256_hex(&value),
+            user_id,
+            amr,
+            state.cfg.session_idle_ttl,
+        )
         .await?;
     Ok(build_cookie(state, value))
 }
@@ -61,10 +66,14 @@ fn csrf_ok(parts: &Parts) -> bool {
         || parts.headers.contains_key(CSRF_HEADER)
 }
 
-async fn session_from_parts(parts: &Parts) -> Result<Option<(SharedState, Session, User)>, AppError> {
+async fn session_from_parts(
+    parts: &Parts,
+) -> Result<Option<(SharedState, Session, User)>, AppError> {
     let state = shared_state(parts)?;
     let jar = CookieJar::from_headers(&parts.headers);
-    let Some(cookie) = jar.get(COOKIE_NAME) else { return Ok(None) };
+    let Some(cookie) = jar.get(COOKIE_NAME) else {
+        return Ok(None);
+    };
     let Some(session) = state
         .db
         .session_touch(
@@ -76,7 +85,9 @@ async fn session_from_parts(parts: &Parts) -> Result<Option<(SharedState, Sessio
     else {
         return Ok(None);
     };
-    let Some(user) = state.db.user_by_id(&session.user_id).await? else { return Ok(None) };
+    let Some(user) = state.db.user_by_id(&session.user_id).await? else {
+        return Ok(None);
+    };
     if user.disabled {
         return Ok(None);
     }
@@ -102,7 +113,11 @@ impl<S: Send + Sync> FromRequestParts<S> for SessionUser {
             return Err(AppError::Unauthorized);
         };
         let roles = state.db.user_role_names(&user.id).await?;
-        Ok(Self { session, user, roles })
+        Ok(Self {
+            session,
+            user,
+            roles,
+        })
     }
 }
 

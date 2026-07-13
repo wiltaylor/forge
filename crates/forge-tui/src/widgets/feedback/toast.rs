@@ -17,7 +17,11 @@ pub struct ToastView<'a> {
 
 impl<'a> ToastView<'a> {
     pub fn new(severity: Severity, message: &'a str) -> ToastView<'a> {
-        ToastView { severity, message, theme: None }
+        ToastView {
+            severity,
+            message,
+            theme: None,
+        }
     }
 
     pub fn theme(mut self, theme: &'a Theme) -> Self {
@@ -56,7 +60,12 @@ impl Widget for ToastView<'_> {
         if inner.is_empty() {
             return;
         }
-        buf.set_string(inner.x + 1, inner.y, self.glyph().as_str(), Style::new().fg(tri.base).bg(t.bg[4]));
+        buf.set_string(
+            inner.x + 1,
+            inner.y,
+            self.glyph().as_str(),
+            Style::new().fg(tri.base).bg(t.bg[4]),
+        );
         buf.set_string(
             inner.x + 3,
             inner.y,

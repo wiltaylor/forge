@@ -1,5 +1,5 @@
-use forge_server::ForgeApp;
 use forge_auth::{app, config::Config, error::AppError, init_state, spawn_sweeper};
+use forge_server::ForgeApp;
 
 /// Release builds embed the built SPA; debug builds serve `apps/auth/dist`
 /// from disk (relative to the repo root — run via `just auth-dev`) so

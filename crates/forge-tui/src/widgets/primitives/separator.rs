@@ -21,11 +21,17 @@ pub struct Separator<'a> {
 
 impl<'a> Separator<'a> {
     pub fn horizontal() -> Separator<'a> {
-        Separator { orientation: Orientation::Horizontal, theme: None }
+        Separator {
+            orientation: Orientation::Horizontal,
+            theme: None,
+        }
     }
 
     pub fn vertical() -> Separator<'a> {
-        Separator { orientation: Orientation::Vertical, theme: None }
+        Separator {
+            orientation: Orientation::Vertical,
+            theme: None,
+        }
     }
 
     pub fn theme(mut self, theme: &'a Theme) -> Self {

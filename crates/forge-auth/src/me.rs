@@ -55,7 +55,9 @@ pub async fn change_password(
     Json(body): Json<ChangePassword>,
 ) -> Result<impl IntoResponse, AppError> {
     if body.new_password.len() < 8 {
-        return Err(AppError::BadRequest("password must be at least 8 characters".into()));
+        return Err(AppError::BadRequest(
+            "password must be at least 8 characters".into(),
+        ));
     }
     // Users with an existing password must prove it; federated-only accounts
     // may set their first password freely.

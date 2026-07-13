@@ -1,12 +1,15 @@
 /* ---------------- DesktopViewer ----------------------------------------------
    Shared VNC/RDP canvas: the backend decodes the desktop protocol and streams
-   raw RGBA rects; this widget only blits them and forwards input. Binary rect
-   frame: u8 version=1, u8 encoding=0(raw), u16 x, u16 y, u16 w, u16 h (LE,
-   10 bytes) + w*h*4 RGBA. JSON text frames for control. No auto-reconnect. */
+   RGBA rects; this widget only blits them and forwards input. Binary rect
+   frame: u8 version=1, u8 encoding, u16 x, u16 y, u16 w, u16 h (LE, 10 bytes)
+   + payload — raw RGBA, deflated RGBA, or JPEG per the encodings negotiated
+   in the connect frame (see rects.ts). JSON text frames for control. No
+   auto-reconnect. */
 import { createSignal, onMount, onCleanup, Show } from 'solid-js';
 import type { JSX } from 'solid-js';
 import { connectTransport } from './transport';
 import type { WidgetTransport } from './transport';
+import { parseRect, decodeRgba, createPaintQueue, SUPPORTED_ENCODINGS, ENC_JPEG } from './rects';
 
 export type DesktopStatus = 'disconnected' | 'connecting' | 'ready' | 'closed' | 'error';
 
@@ -33,6 +36,11 @@ export interface DesktopViewerProps {
   autoConnect?: boolean;
   /** 'fit' (default) scales to the frame; 'native' is 1:1 with scrollbars. */
   scale?: 'fit' | 'native';
+  /** 'lossless' (default) keeps rects pixel-exact (raw/deflate); 'lossy'
+      additionally lets the server send JPEG rects for constrained links. */
+  quality?: 'lossless' | 'lossy';
+  /** JPEG quality 1-100 (server default 75). Lossy mode only. */
+  jpegQuality?: number;
   /** Render only; forward no keyboard/mouse input. */
   viewOnly?: boolean;
   /** Head strip with special-key buttons (Ctrl+Alt+Del). Default true. */
@@ -57,23 +65,39 @@ export function DesktopViewer(props: DesktopViewerProps) {
     ws?.send(JSON.stringify(msg));
   };
 
+  /* Rects must paint in arrival order even though JPEG decodes async. */
+  const paint = createPaintQueue();
+
   const disconnect = () => {
     const sock = ws;
     ws = undefined;
+    paint.bump();
     sock?.close();
     if (sock) report('disconnected');
   };
 
   const handleRect = (buf: ArrayBuffer) => {
-    if (buf.byteLength < 10) return;
-    const dv = new DataView(buf);
-    if (dv.getUint8(0) !== 1) return; /* unknown frame version */
-    const x = dv.getUint16(2, true);
-    const y = dv.getUint16(4, true);
-    const w = dv.getUint16(6, true);
-    const h = dv.getUint16(8, true);
-    if (!w || !h || buf.byteLength !== 10 + w * h * 4) return;
-    ctx?.putImageData(new ImageData(new Uint8ClampedArray(buf, 10), w, h), x, y);
+    const rect = parseRect(buf);
+    if (!rect) return;
+    if (rect.encoding === ENC_JPEG) {
+      /* Decode starts now, in parallel; painting waits its turn in the queue.
+         Failures resolve to null so a skipped job never leaks a rejection. */
+      const bmp = createImageBitmap(new Blob([rect.payload], { type: 'image/jpeg' }))
+        .catch(() => null);
+      paint.enqueue(async (stale) => {
+        const img = await bmp;
+        if (!img) return;
+        if (!stale()) ctx?.drawImage(img, rect.x, rect.y);
+        img.close();
+      });
+    } else {
+      const rgba = decodeRgba(rect);
+      if (rgba) {
+        paint.enqueue(() => {
+          ctx?.putImageData(new ImageData(rgba, rect.w, rect.h), rect.x, rect.y);
+        });
+      }
+    }
   };
 
   const connect = () => {
@@ -88,6 +112,7 @@ export function DesktopViewer(props: DesktopViewerProps) {
       return;
     }
     ws = sock;
+    paint.bump();
     sock.onopen = () => {
       sock.send(JSON.stringify({
         type: 'connect',
@@ -95,6 +120,9 @@ export function DesktopViewer(props: DesktopViewerProps) {
         port: props.port,
         username: props.username,
         password: props.password,
+        encodings: SUPPORTED_ENCODINGS,
+        quality: props.quality ?? 'lossless',
+        jpeg_quality: props.jpegQuality,
       }));
     };
     sock.onmessage = (data) => {
@@ -103,6 +131,9 @@ export function DesktopViewer(props: DesktopViewerProps) {
         try { msg = JSON.parse(data); } catch { return; }
         if (msg.type === 'ready' || msg.type === 'resize') {
           if (msg.width && msg.height) {
+            /* Resizing clears the canvas: rects from the old framebuffer
+               must not land after it. */
+            paint.bump();
             canvas.width = msg.width;
             canvas.height = msg.height;
           }

@@ -12,7 +12,9 @@ use crate::event::{clicked, is_press, left_down, Keymap, Outcome};
 use crate::runtime::{Overlay, OverlayOutcome};
 use crate::text;
 use crate::theme::Theme;
-use crate::widgets::overlays::{Command, DropdownMenu, MenuEntry, MenuState, Modal, Palette, PaletteState};
+use crate::widgets::overlays::{
+    Command, DropdownMenu, MenuEntry, MenuState, Modal, Palette, PaletteState,
+};
 use crate::widgets::primitives::{Button, Variant};
 use ratatui::crossterm::event::{Event, KeyCode, MouseEventKind};
 use ratatui::layout::Rect;
@@ -60,7 +62,10 @@ pub struct ConfirmDialog {
 }
 
 impl ConfirmDialog {
-    pub fn new(title: impl Into<String>, message: impl Into<String>) -> (ConfirmDialog, DialogResult<bool>) {
+    pub fn new(
+        title: impl Into<String>,
+        message: impl Into<String>,
+    ) -> (ConfirmDialog, DialogResult<bool>) {
         let (a, b) = DialogResult::new();
         (
             ConfirmDialog {
@@ -106,12 +111,23 @@ impl Overlay for ConfirmDialog {
             if y + 2 >= inner.y + inner.height {
                 break;
             }
-            buf.set_string(inner.x, y, line, Style::new().fg(theme.fg[1]).bg(theme.bg[4]));
+            buf.set_string(
+                inner.x,
+                y,
+                line,
+                Style::new().fg(theme.fg[1]).bg(theme.bg[4]),
+            );
         }
         let by = inner.y + inner.height.saturating_sub(1);
-        let cancel = Button::new("Cancel").focused(!self.focus_confirm).theme(theme);
+        let cancel = Button::new("Cancel")
+            .focused(!self.focus_confirm)
+            .theme(theme);
         let confirm = Button::new(&self.confirm_label)
-            .variant(if self.danger { Variant::Danger } else { Variant::Primary })
+            .variant(if self.danger {
+                Variant::Danger
+            } else {
+                Variant::Primary
+            })
             .focused(self.focus_confirm)
             .theme(theme);
         let cw = confirm.width();
@@ -222,7 +238,12 @@ impl Overlay for HelpOverlay {
             if y >= inner.y + inner.height {
                 break;
             }
-            buf.set_string(inner.x, y, kbd, Style::new().fg(theme.fg[0]).bg(theme.bg[3]));
+            buf.set_string(
+                inner.x,
+                y,
+                kbd,
+                Style::new().fg(theme.fg[0]).bg(theme.bg[3]),
+            );
             buf.set_string(
                 inner.x + kbd_w + 2,
                 y,
@@ -262,7 +283,12 @@ pub enum OwnedMenuEntry {
 
 impl OwnedMenuEntry {
     pub fn item(label: impl Into<String>) -> OwnedMenuEntry {
-        OwnedMenuEntry::Item { label: label.into(), kbd: None, danger: false, disabled: false }
+        OwnedMenuEntry::Item {
+            label: label.into(),
+            kbd: None,
+            danger: false,
+            disabled: false,
+        }
     }
 
     pub fn item_kbd(label: impl Into<String>, kbd: impl Into<String>) -> OwnedMenuEntry {
@@ -275,7 +301,12 @@ impl OwnedMenuEntry {
     }
 
     pub fn danger(label: impl Into<String>) -> OwnedMenuEntry {
-        OwnedMenuEntry::Item { label: label.into(), kbd: None, danger: true, disabled: false }
+        OwnedMenuEntry::Item {
+            label: label.into(),
+            kbd: None,
+            danger: true,
+            disabled: false,
+        }
     }
 
     pub fn section(title: impl Into<String>) -> OwnedMenuEntry {
@@ -297,21 +328,33 @@ pub struct MenuOverlay {
 }
 
 impl MenuOverlay {
-    pub fn new(entries: Vec<OwnedMenuEntry>, anchor: Rect) -> (MenuOverlay, DialogResult<Option<usize>>) {
+    pub fn new(
+        entries: Vec<OwnedMenuEntry>,
+        anchor: Rect,
+    ) -> (MenuOverlay, DialogResult<Option<usize>>) {
         let (a, b) = DialogResult::new();
         (
-            MenuOverlay { entries, anchor, state: MenuState::new(), result: a },
+            MenuOverlay {
+                entries,
+                anchor,
+                state: MenuState::new(),
+                result: a,
+            },
             b,
         )
     }
-
 }
 
 fn borrow_entries(entries: &[OwnedMenuEntry]) -> Vec<MenuEntry<'_>> {
     entries
         .iter()
         .map(|e| match e {
-            OwnedMenuEntry::Item { label, kbd, danger, disabled } => MenuEntry::Item {
+            OwnedMenuEntry::Item {
+                label,
+                kbd,
+                danger,
+                disabled,
+            } => MenuEntry::Item {
                 label,
                 kbd: kbd.as_deref(),
                 danger: *danger,
@@ -370,7 +413,11 @@ pub struct OwnedCommand {
 
 impl OwnedCommand {
     pub fn new(id: impl Into<String>, label: impl Into<String>) -> OwnedCommand {
-        OwnedCommand { id: id.into(), label: label.into(), kbd: None }
+        OwnedCommand {
+            id: id.into(),
+            label: label.into(),
+            kbd: None,
+        }
     }
 
     pub fn kbd(mut self, kbd: impl Into<String>) -> OwnedCommand {
@@ -391,17 +438,24 @@ impl PaletteOverlay {
     pub fn new(commands: Vec<OwnedCommand>) -> (PaletteOverlay, DialogResult<Option<String>>) {
         let (a, b) = DialogResult::new();
         (
-            PaletteOverlay { commands, state: PaletteState::new(), result: a },
+            PaletteOverlay {
+                commands,
+                state: PaletteState::new(),
+                result: a,
+            },
             b,
         )
     }
-
 }
 
 fn borrow_commands(commands: &[OwnedCommand]) -> Vec<Command<'_>> {
     commands
         .iter()
-        .map(|c| Command { id: &c.id, label: &c.label, kbd: c.kbd.as_deref() })
+        .map(|c| Command {
+            id: &c.id,
+            label: &c.label,
+            kbd: c.kbd.as_deref(),
+        })
         .collect()
 }
 

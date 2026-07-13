@@ -60,7 +60,12 @@ pub struct SettingsRow<'a> {
 
 impl<'a> SettingsRow<'a> {
     pub fn new(label: &'a str) -> SettingsRow<'a> {
-        SettingsRow { label, help: None, label_width: 28, theme: None }
+        SettingsRow {
+            label,
+            help: None,
+            label_width: 28,
+            theme: None,
+        }
     }
 
     pub fn help(mut self, help: &'a str) -> Self {
@@ -81,7 +86,12 @@ impl<'a> SettingsRow<'a> {
     /// Where the row's control belongs.
     pub fn control_area(&self, area: Rect) -> Rect {
         let lw = self.label_width.min(area.width);
-        Rect::new(area.x + lw, area.y, area.width.saturating_sub(lw), area.height)
+        Rect::new(
+            area.x + lw,
+            area.y,
+            area.width.saturating_sub(lw),
+            area.height,
+        )
     }
 }
 

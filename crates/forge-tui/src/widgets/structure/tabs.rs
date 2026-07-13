@@ -16,7 +16,10 @@ pub struct TabsState {
 
 impl TabsState {
     pub fn new(selected: usize) -> TabsState {
-        TabsState { selected, ..Default::default() }
+        TabsState {
+            selected,
+            ..Default::default()
+        }
     }
 
     /// Click a tab label to select it.
@@ -25,7 +28,11 @@ impl TabsState {
             if clicked(ev, *rect) {
                 let changed = self.selected != i;
                 self.selected = i;
-                return if changed { Outcome::Changed } else { Outcome::Consumed };
+                return if changed {
+                    Outcome::Changed
+                } else {
+                    Outcome::Consumed
+                };
             }
         }
         Outcome::Ignored
@@ -79,7 +86,11 @@ pub struct Tabs<'a> {
 
 impl<'a> Tabs<'a> {
     pub fn new(labels: &'a [&'a str]) -> Tabs<'a> {
-        Tabs { labels, focused: false, theme: None }
+        Tabs {
+            labels,
+            focused: false,
+            theme: None,
+        }
     }
 
     pub fn focused(mut self, focused: bool) -> Self {

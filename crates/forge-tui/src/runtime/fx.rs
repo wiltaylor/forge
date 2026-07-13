@@ -57,8 +57,7 @@ impl Motion {
         }
         let dumb = matches!(std::env::var("TERM").as_deref(), Ok("dumb"));
         let no_color = std::env::var("NO_COLOR").is_ok_and(|v| !v.is_empty());
-        if dumb || no_color || mode == ColorMode::Ansi16 || tick_rate > Duration::from_millis(250)
-        {
+        if dumb || no_color || mode == ColorMode::Ansi16 || tick_rate > Duration::from_millis(250) {
             Motion::Reduced
         } else {
             Motion::Full
@@ -282,8 +281,7 @@ impl Fx {
             if effect.reduced {
                 continue;
             }
-            let converging =
-                effect.kind == FxKind::Materialize || effect.age >= effect.converge_at;
+            let converging = effect.kind == FxKind::Materialize || effect.age >= effect.converge_at;
             let last = effect.age + 1 >= effect.len;
             for p in &mut effect.particles {
                 if p.delay > 0 {
@@ -601,17 +599,18 @@ mod tests {
     fn recreate_particles_land_home() {
         let theme = Theme::dark();
         let mut fx = Fx::with_seed(9);
-        fx.configure(Duration::from_millis(80), Motion::Full, ColorMode::TrueColor);
+        fx.configure(
+            Duration::from_millis(80),
+            Motion::Full,
+            ColorMode::TrueColor,
+        );
         let rect = Rect::new(5, 5, 10, 3);
         fx.handle().recreate(rect);
 
         let mut terminal = Terminal::new(TestBackend::new(40, 20)).unwrap();
         terminal
             .draw(|f| {
-                f.render_widget(
-                    Paragraph::new("##########\n##########\n##########"),
-                    rect,
-                );
+                f.render_widget(Paragraph::new("##########\n##########\n##########"), rect);
                 let area = f.area();
                 fx.draw(f, area, &theme);
             })
@@ -637,7 +636,11 @@ mod tests {
     fn explode_scatters_and_finishes() {
         let theme = Theme::dark();
         let mut fx = Fx::with_seed(3);
-        fx.configure(Duration::from_millis(80), Motion::Full, ColorMode::TrueColor);
+        fx.configure(
+            Duration::from_millis(80),
+            Motion::Full,
+            ColorMode::TrueColor,
+        );
         let rect = Rect::new(10, 8, 8, 2);
         fx.handle().explode(rect);
 

@@ -49,19 +49,39 @@ pub enum ChatItem {
 
 impl ChatItem {
     pub fn user(body: impl Into<String>) -> ChatItem {
-        ChatItem::Message { role: Role::User, author: None, ts: None, body: body.into() }
+        ChatItem::Message {
+            role: Role::User,
+            author: None,
+            ts: None,
+            body: body.into(),
+        }
     }
 
     pub fn assistant(body: impl Into<String>) -> ChatItem {
-        ChatItem::Message { role: Role::Assistant, author: None, ts: None, body: body.into() }
+        ChatItem::Message {
+            role: Role::Assistant,
+            author: None,
+            ts: None,
+            body: body.into(),
+        }
     }
 
     pub fn system(body: impl Into<String>) -> ChatItem {
-        ChatItem::Message { role: Role::System, author: None, ts: None, body: body.into() }
+        ChatItem::Message {
+            role: Role::System,
+            author: None,
+            ts: None,
+            body: body.into(),
+        }
     }
 
     pub fn tool(name: impl Into<String>, status: ToolStatus) -> ChatItem {
-        ChatItem::ToolCall { name: name.into(), status, detail: None, open: false }
+        ChatItem::ToolCall {
+            name: name.into(),
+            status,
+            detail: None,
+            open: false,
+        }
     }
 }
 
@@ -77,7 +97,13 @@ pub struct ChatViewState {
 
 impl Default for ChatViewState {
     fn default() -> ChatViewState {
-        ChatViewState { follow: true, offset: 0, total: 0, view_h: 0, area: Rect::default() }
+        ChatViewState {
+            follow: true,
+            offset: 0,
+            total: 0,
+            view_h: 0,
+            area: Rect::default(),
+        }
     }
 }
 
@@ -146,7 +172,12 @@ pub struct ChatView<'a> {
 
 impl<'a> ChatView<'a> {
     pub fn new(items: &'a [ChatItem]) -> ChatView<'a> {
-        ChatView { items, frame: 0, focused: false, theme: None }
+        ChatView {
+            items,
+            frame: 0,
+            focused: false,
+            theme: None,
+        }
     }
 
     pub fn frame(mut self, frame: u64) -> Self {
@@ -185,9 +216,18 @@ impl<'a> ChatView<'a> {
 
     fn item_lines(&self, item: &ChatItem, width: usize, t: &Theme) -> Vec<Line<'static>> {
         match item {
-            ChatItem::Message { role, author, ts, body } => {
-                let mut lines =
-                    vec![ChatView::role_header(*role, author.as_deref(), ts.as_deref(), t)];
+            ChatItem::Message {
+                role,
+                author,
+                ts,
+                body,
+            } => {
+                let mut lines = vec![ChatView::role_header(
+                    *role,
+                    author.as_deref(),
+                    ts.as_deref(),
+                    t,
+                )];
                 let body_w = width.saturating_sub(2).max(8);
                 for line in markdown_lines(body, body_w, t) {
                     let mut spans = vec![Span::raw("  ")];
@@ -197,7 +237,12 @@ impl<'a> ChatView<'a> {
                 lines.push(Line::default());
                 lines
             }
-            ChatItem::ToolCall { name, status, detail, open } => {
+            ChatItem::ToolCall {
+                name,
+                status,
+                detail,
+                open,
+            } => {
                 let (dot, color): (&str, Color) = match status {
                     ToolStatus::Running => ("◌", t.info.base),
                     ToolStatus::Ok => ("●", t.success.base),
@@ -324,7 +369,10 @@ pub struct Composer<'a> {
 
 impl<'a> Composer<'a> {
     pub fn new() -> Composer<'a> {
-        Composer { placeholder: "Message… (Enter send · Alt+Enter newline)", ..Default::default() }
+        Composer {
+            placeholder: "Message… (Enter send · Alt+Enter newline)",
+            ..Default::default()
+        }
     }
 
     pub fn placeholder(mut self, placeholder: &'a str) -> Self {
@@ -413,7 +461,12 @@ pub struct ChatPrompt<'a> {
 
 impl<'a> ChatPrompt<'a> {
     pub fn new(question: &'a str, options: &'a [&'a str]) -> ChatPrompt<'a> {
-        ChatPrompt { question, options, focused: false, theme: None }
+        ChatPrompt {
+            question,
+            options,
+            focused: false,
+            theme: None,
+        }
     }
 
     pub fn focused(mut self, focused: bool) -> Self {

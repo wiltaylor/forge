@@ -1,9 +1,7 @@
 use forge_tui::event::Outcome;
 use forge_tui::runtime::{FocusId, FocusRing, Overlay, OverlayOutcome, OverlayStack};
 use forge_tui::theme::Theme;
-use forge_tui::widgets::{
-    CheckboxState, InputState, RadioGroup, RadioState, ToggleState,
-};
+use forge_tui::widgets::{CheckboxState, InputState, RadioGroup, RadioState, ToggleState};
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 use ratatui::layout::Rect;
@@ -53,7 +51,10 @@ fn input_cursor_and_word_movement() {
         .then_some(())
         .unwrap();
     assert_eq!(s.cursor(), 6); // start of "beta"
-    s.handle_key(key(KeyCode::Home)).is_handled().then_some(()).unwrap();
+    s.handle_key(key(KeyCode::Home))
+        .is_handled()
+        .then_some(())
+        .unwrap();
     assert_eq!(s.cursor(), 0);
     s.handle_key(KeyEvent::new(KeyCode::Right, KeyModifiers::CONTROL))
         .is_handled()
@@ -187,8 +188,12 @@ fn overlay_stack_esc_closes_by_default_and_swallows_events() {
     let mut stack = OverlayStack::new();
     assert!(!stack.handle(&Event::Key(key(KeyCode::Esc)))); // empty: not swallowed
 
-    stack.push(Box::new(DummyOverlay { outcome: OverlayOutcome::Ignored }));
-    stack.push(Box::new(DummyOverlay { outcome: OverlayOutcome::Consumed }));
+    stack.push(Box::new(DummyOverlay {
+        outcome: OverlayOutcome::Ignored,
+    }));
+    stack.push(Box::new(DummyOverlay {
+        outcome: OverlayOutcome::Consumed,
+    }));
     assert_eq!(stack.len(), 2);
 
     // Top consumes: stays open, event swallowed.

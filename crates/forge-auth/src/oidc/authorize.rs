@@ -57,7 +57,9 @@ fn bad_request(msg: &str) -> Response {
 }
 
 fn html_escape(s: &str) -> String {
-    s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;")
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
 }
 
 /// Error redirect back to the RP (only used once redirect_uri is validated).
@@ -83,7 +85,11 @@ pub async fn authorize(
                     serde_json::from_value(req.params.clone()).unwrap_or_default();
                 (req.id, params, req.consented)
             }
-            None => return Ok(bad_request("login request expired — start again from the application")),
+            None => {
+                return Ok(bad_request(
+                    "login request expired — start again from the application",
+                ))
+            }
         },
         None => {
             let id = new_id();
@@ -100,30 +106,53 @@ pub async fn authorize(
     let Some(client_id) = params.client_id.as_deref() else {
         return Ok(bad_request("missing client_id"));
     };
-    let Some(client) = state.db.client_by_id(client_id).await?.filter(|c| !c.disabled) else {
+    let Some(client) = state
+        .db
+        .client_by_id(client_id)
+        .await?
+        .filter(|c| !c.disabled)
+    else {
         return Ok(bad_request("unknown or disabled client"));
     };
     let Some(redirect_uri) = params.redirect_uri.as_deref() else {
         return Ok(bad_request("missing redirect_uri"));
     };
     if !client.redirect_uris.iter().any(|u| u == redirect_uri) {
-        return Ok(bad_request("redirect_uri is not registered for this client"));
+        return Ok(bad_request(
+            "redirect_uri is not registered for this client",
+        ));
     }
 
     // From here on, errors go back to the RP.
     let rp_state = params.state.as_deref();
     if params.response_type.as_deref() != Some("code") {
-        return Ok(error_redirect(redirect_uri, "unsupported_response_type", rp_state));
+        return Ok(error_redirect(
+            redirect_uri,
+            "unsupported_response_type",
+            rp_state,
+        ));
     }
     let scope = params.scope.clone().unwrap_or_else(|| "openid".to_string());
-    if !super::scope_is_supported(&scope) || !super::scope_allowed_for_client(&scope, &client.allowed_scopes)
+    if !super::scope_is_supported(&scope)
+        || !super::scope_allowed_for_client(&scope, &client.allowed_scopes)
     {
         return Ok(error_redirect(redirect_uri, "invalid_scope", rp_state));
     }
-    if !client.allowed_grants.iter().any(|g| g == "authorization_code") {
-        return Ok(error_redirect(redirect_uri, "unauthorized_client", rp_state));
+    if !client
+        .allowed_grants
+        .iter()
+        .any(|g| g == "authorization_code")
+    {
+        return Ok(error_redirect(
+            redirect_uri,
+            "unauthorized_client",
+            rp_state,
+        ));
     }
-    match (params.code_challenge.as_deref(), params.code_challenge_method.as_deref()) {
+    match (
+        params.code_challenge.as_deref(),
+        params.code_challenge_method.as_deref(),
+    ) {
         (Some(_), Some("S256")) | (Some(_), None) => {}
         (Some(_), Some(_)) => return Ok(error_redirect(redirect_uri, "invalid_request", rp_state)),
         (None, _) => {
@@ -157,7 +186,10 @@ pub async fn authorize(
             nonce: params.nonce.clone(),
             code_challenge: params.code_challenge.clone(),
             code_challenge_method: Some(
-                params.code_challenge_method.clone().unwrap_or_else(|| "S256".into()),
+                params
+                    .code_challenge_method
+                    .clone()
+                    .unwrap_or_else(|| "S256".into()),
             )
             .filter(|_| params.code_challenge.is_some()),
             auth_time: session.session.auth_time,
@@ -184,7 +216,11 @@ pub async fn consent_info(
     _user: SessionUser,
     axum::extract::Path(id): axum::extract::Path<String>,
 ) -> Result<impl IntoResponse, AppError> {
-    let request = state.db.auth_request_get(&id).await?.ok_or(AppError::NotFound)?;
+    let request = state
+        .db
+        .auth_request_get(&id)
+        .await?
+        .ok_or(AppError::NotFound)?;
     let params: AuthorizeParams = serde_json::from_value(request.params).unwrap_or_default();
     let client: Option<Client> = match params.client_id.as_deref() {
         Some(cid) => state.db.client_by_id(cid).await?,
@@ -213,11 +249,17 @@ pub async fn consent_decide(
     axum::extract::Path(id): axum::extract::Path<String>,
     Json(body): Json<ConsentBody>,
 ) -> Result<impl IntoResponse, AppError> {
-    let request = state.db.auth_request_get(&id).await?.ok_or(AppError::NotFound)?;
+    let request = state
+        .db
+        .auth_request_get(&id)
+        .await?
+        .ok_or(AppError::NotFound)?;
     let params: AuthorizeParams = serde_json::from_value(request.params).unwrap_or_default();
     if body.approve {
         state.db.auth_request_set_consented(&id).await?;
-        return Ok(ok(json!({ "redirect_to": format!("/oauth2/authorize?request={id}") })));
+        return Ok(ok(
+            json!({ "redirect_to": format!("/oauth2/authorize?request={id}") }),
+        ));
     }
     // Denied: bounce back to the RP with access_denied when we can.
     state.db.auth_request_delete(&id).await?;

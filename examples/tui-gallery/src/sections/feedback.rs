@@ -18,7 +18,12 @@ const TOASTS: [(Severity, &str, &str); 4] = [
 ];
 
 impl FeedbackState {
-    pub fn handle_key(&mut self, focused: Option<FocusId>, key: KeyEvent, ctx: &mut Ctx) -> Outcome {
+    pub fn handle_key(
+        &mut self,
+        focused: Option<FocusId>,
+        key: KeyEvent,
+        ctx: &mut Ctx,
+    ) -> Outcome {
         if !is_press(&key) || !matches!(key.code, KeyCode::Enter | KeyCode::Char(' ')) {
             return Outcome::Ignored;
         }
@@ -63,9 +68,21 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
         frame.render_widget(Eyebrow::new("Alerts").theme(t), r);
     }
     let alerts = [
-        (Severity::Info, "Heads up", "A new forge-tui version is available."),
-        (Severity::Success, "All systems go", "Deploy finished in 42s."),
-        (Severity::Warning, "Degraded", "Event bus is lagging behind."),
+        (
+            Severity::Info,
+            "Heads up",
+            "A new forge-tui version is available.",
+        ),
+        (
+            Severity::Success,
+            "All systems go",
+            "Deploy finished in 42s.",
+        ),
+        (
+            Severity::Warning,
+            "Degraded",
+            "Event bus is lagging behind.",
+        ),
         (Severity::Danger, "Down", "forge-auth is unreachable."),
     ];
     for (sev, title, body) in alerts {
@@ -83,12 +100,18 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
     }
     if let Some(r) = row(1, 0, &mut y) {
         frame.render_widget(
-            Progress::new(0.82).label("disk").severity(Severity::Warning).theme(t),
+            Progress::new(0.82)
+                .label("disk")
+                .severity(Severity::Warning)
+                .theme(t),
             r,
         );
     }
     if let Some(r) = row(1, 1, &mut y) {
-        frame.render_widget(Spinner::new().frame(ctx.frame).label("Deploying…").theme(t), r);
+        frame.render_widget(
+            Spinner::new().frame(ctx.frame).label("Deploying…").theme(t),
+            r,
+        );
     }
 
     if let Some(r) = row(1, 0, &mut y) {

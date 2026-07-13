@@ -46,9 +46,10 @@ impl Widget for Avatar<'_> {
         }
         let t = self.theme.unwrap_or_else(|| default_theme());
         let hues = chart_series(t);
-        let hash: usize = self.name.bytes().fold(0usize, |a, b| {
-            a.wrapping_mul(31).wrapping_add(b as usize)
-        });
+        let hash: usize = self
+            .name
+            .bytes()
+            .fold(0usize, |a, b| a.wrapping_mul(31).wrapping_add(b as usize));
         let bg = hues[hash % hues.len()];
         let style = Style::new()
             .fg(t.accent.contrast)

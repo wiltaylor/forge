@@ -366,7 +366,9 @@ impl<'a> StatefulWidget for Textarea<'a> {
         } else {
             for vis in 0..inner.height as usize {
                 let li = state.scroll_row + vis;
-                let Some(line) = state.lines.get(li) else { break };
+                let Some(line) = state.lines.get(li) else {
+                    break;
+                };
                 let start = byte_at_cells(line, state.scroll_col);
                 let visible = text::truncate(&line[start..], inner.width as usize);
                 buf.set_string(inner.x, inner.y + vis as u16, visible, Style::new().fg(fg));

@@ -17,7 +17,12 @@ pub struct Empty<'a> {
 
 impl<'a> Empty<'a> {
     pub fn new(title: &'a str) -> Empty<'a> {
-        Empty { title, hint: None, glyph: Glyph::Circle, theme: None }
+        Empty {
+            title,
+            hint: None,
+            glyph: Glyph::Circle,
+            theme: None,
+        }
     }
 
     pub fn hint(mut self, hint: &'a str) -> Self {

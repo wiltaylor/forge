@@ -7,9 +7,11 @@ use crate::util::{new_id, now};
 
 impl Db {
     pub async fn providers_list(&self) -> Result<Vec<UpstreamProvider>, sqlx::Error> {
-        sqlx::query_as::<_, UpstreamProvider>("SELECT * FROM upstream_providers ORDER BY display_name")
-            .fetch_all(&self.pool)
-            .await
+        sqlx::query_as::<_, UpstreamProvider>(
+            "SELECT * FROM upstream_providers ORDER BY display_name",
+        )
+        .fetch_all(&self.pool)
+        .await
     }
 
     pub async fn providers_enabled(&self) -> Result<Vec<UpstreamProvider>, sqlx::Error> {
@@ -20,12 +22,17 @@ impl Db {
         .await
     }
 
-    pub async fn provider_by_slug(&self, slug: &str) -> Result<Option<UpstreamProvider>, sqlx::Error> {
+    pub async fn provider_by_slug(
+        &self,
+        slug: &str,
+    ) -> Result<Option<UpstreamProvider>, sqlx::Error> {
         opt_row(
-            sqlx::query_as::<_, UpstreamProvider>("SELECT * FROM upstream_providers WHERE slug = $1")
-                .bind(slug)
-                .fetch_one(&self.pool)
-                .await,
+            sqlx::query_as::<_, UpstreamProvider>(
+                "SELECT * FROM upstream_providers WHERE slug = $1",
+            )
+            .bind(slug)
+            .fetch_one(&self.pool)
+            .await,
         )
     }
 
@@ -66,7 +73,10 @@ impl Db {
             .bind(ts)
             .execute(&self.pool)
             .await?;
-            return Ok(self.provider_by_id(&existing.id).await?.expect("just updated"));
+            return Ok(self
+                .provider_by_id(&existing.id)
+                .await?
+                .expect("just updated"));
         }
         let id = new_id();
         sqlx::query(
@@ -138,7 +148,10 @@ impl Db {
         Ok(())
     }
 
-    pub async fn identities_for_user(&self, user_id: &str) -> Result<Vec<OauthIdentity>, sqlx::Error> {
+    pub async fn identities_for_user(
+        &self,
+        user_id: &str,
+    ) -> Result<Vec<OauthIdentity>, sqlx::Error> {
         sqlx::query_as::<_, OauthIdentity>(
             "SELECT * FROM oauth_identities WHERE user_id = $1 ORDER BY created_at",
         )
@@ -147,7 +160,11 @@ impl Db {
         .await
     }
 
-    pub async fn identity_unlink(&self, user_id: &str, identity_id: &str) -> Result<bool, sqlx::Error> {
+    pub async fn identity_unlink(
+        &self,
+        user_id: &str,
+        identity_id: &str,
+    ) -> Result<bool, sqlx::Error> {
         let res = sqlx::query("DELETE FROM oauth_identities WHERE id = $1 AND user_id = $2")
             .bind(identity_id)
             .bind(user_id)
@@ -207,7 +224,8 @@ impl Db {
             .execute(&self.pool)
             .await?;
         for (external_group, role_id) in mappings {
-            self.group_mapping_add(provider_id, external_group, role_id).await?;
+            self.group_mapping_add(provider_id, external_group, role_id)
+                .await?;
         }
         Ok(())
     }

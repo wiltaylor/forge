@@ -26,7 +26,12 @@ impl EffectsState {
         }
     }
 
-    pub fn handle_key(&mut self, focused: Option<FocusId>, key: KeyEvent, ctx: &mut Ctx) -> Outcome {
+    pub fn handle_key(
+        &mut self,
+        focused: Option<FocusId>,
+        key: KeyEvent,
+        ctx: &mut Ctx,
+    ) -> Outcome {
         if !is_press(&key) || !matches!(key.code, KeyCode::Enter | KeyCode::Char(' ')) {
             return Outcome::Ignored;
         }
@@ -91,8 +96,15 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
         let mut bx = r.x;
         for (i, label) in BUTTONS.iter().enumerate() {
             let focused = ctx.focus.register(FocusId::indexed(FX_BTN, i as u32));
-            let variant = if i == 1 { Variant::Primary } else { Variant::Default };
-            let b = Button::new(label).variant(variant).focused(focused).theme(t);
+            let variant = if i == 1 {
+                Variant::Primary
+            } else {
+                Variant::Default
+            };
+            let b = Button::new(label)
+                .variant(variant)
+                .focused(focused)
+                .theme(t);
             let bw = b.width();
             if bx + bw > r.x + r.width {
                 break;

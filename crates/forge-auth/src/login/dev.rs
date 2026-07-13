@@ -39,7 +39,10 @@ pub async fn seed(state: &SharedState) -> Result<(), AppError> {
             }
         };
         for role_name in *roles {
-            let role = state.db.role_ensure(role_name, Some("dev-login seed")).await?;
+            let role = state
+                .db
+                .role_ensure(role_name, Some("dev-login seed"))
+                .await?;
             state.db.user_role_add(&user.id, &role.id, "manual").await?;
         }
     }

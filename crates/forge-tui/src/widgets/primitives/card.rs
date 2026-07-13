@@ -40,9 +40,9 @@ impl<'a> Card<'a> {
             .style(Style::new().bg(t.bg[1]))
             .padding(Padding::horizontal(1));
         if let Some(title) = self.title {
-            block = block.title(title).title_style(
-                Style::new().fg(t.fg[0]).add_modifier(Modifier::BOLD),
-            );
+            block = block
+                .title(title)
+                .title_style(Style::new().fg(t.fg[0]).add_modifier(Modifier::BOLD));
         }
         if let Some(footer) = self.footer {
             block = block

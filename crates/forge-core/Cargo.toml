@@ -13,8 +13,8 @@ repository.workspace = true
 # builders gate them again).
 term = ["dep:portable-pty", "tokio/time"]
 term-ssh = ["term", "dep:russh"]
-vnc = ["dep:vnc-rs", "tokio/net", "tokio/time"]
-rdp = ["dep:ironrdp", "dep:ironrdp-tokio", "dep:ironrdp-tls", "tokio/net", "tokio/time"]
+vnc = ["dep:vnc-rs", "dep:flate2", "dep:jpeg-encoder", "tokio/net", "tokio/time"]
+rdp = ["dep:ironrdp", "dep:ironrdp-tokio", "dep:ironrdp-tls", "dep:flate2", "dep:jpeg-encoder", "tokio/net", "tokio/time"]
 widgets = ["term", "term-ssh", "vnc", "rdp"]
 
 [dependencies]
@@ -32,8 +32,14 @@ vnc-rs = { version = "0.5", optional = true }
 ironrdp = { version = "0.16", features = ["connector", "session", "graphics", "input", "pdu"], optional = true }
 ironrdp-tokio = { version = "0.9", optional = true }
 ironrdp-tls = { version = "0.2", features = ["rustls"], optional = true }
+# Per-rect wire compression for the desktop widgets (vnc/rdp features).
+flate2 = { version = "1", optional = true }
+jpeg-encoder = { version = "0.6", optional = true }
 
 [dev-dependencies]
 tempfile = "3"
 # `tokio::io::duplex` for the widget session tests.
 tokio = { version = "1", features = ["io-util"] }
+# Decode-side verification of the deflate/JPEG rect encodings.
+flate2 = "1"
+zune-jpeg = "0.4"

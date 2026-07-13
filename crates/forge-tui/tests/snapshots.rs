@@ -32,9 +32,17 @@ fn render<W: Widget>(widget: W, w: u16, h: u16) -> Buffer {
 fn button_variants() {
     let t = Theme::dark();
     let mut buf = Buffer::empty(Rect::new(0, 0, 40, 1));
-    Button::new("Save").variant(Variant::Primary).theme(&t).render(Rect::new(0, 0, 8, 1), &mut buf);
-    Button::new("Cancel").theme(&t).render(Rect::new(10, 0, 10, 1), &mut buf);
-    Button::new("Ghost").variant(Variant::Ghost).theme(&t).render(Rect::new(22, 0, 9, 1), &mut buf);
+    Button::new("Save")
+        .variant(Variant::Primary)
+        .theme(&t)
+        .render(Rect::new(0, 0, 8, 1), &mut buf);
+    Button::new("Cancel")
+        .theme(&t)
+        .render(Rect::new(10, 0, 10, 1), &mut buf);
+    Button::new("Ghost")
+        .variant(Variant::Ghost)
+        .theme(&t)
+        .render(Rect::new(22, 0, 9, 1), &mut buf);
     insta::assert_snapshot!(buffer_text(&buf));
     // Primary buttons paint solid accent with contrast text.
     assert_eq!(buf[(2, 0)].style().bg, Some(t.accent.base));
@@ -54,10 +62,16 @@ fn bordered_button_focus_ring() {
 fn badge_and_kbd_and_status() {
     let t = Theme::dark();
     let mut buf = Buffer::empty(Rect::new(0, 0, 44, 1));
-    Badge::new("ready").severity(forge_tui::theme::Severity::Success).theme(&t)
+    Badge::new("ready")
+        .severity(forge_tui::theme::Severity::Success)
+        .theme(&t)
         .render(Rect::new(0, 0, 8, 1), &mut buf);
-    Kbd::new("⌃K").theme(&t).render(Rect::new(9, 0, 5, 1), &mut buf);
-    StatusDot::new(forge_tui::theme::Severity::Danger).label("down").theme(&t)
+    Kbd::new("⌃K")
+        .theme(&t)
+        .render(Rect::new(9, 0, 5, 1), &mut buf);
+    StatusDot::new(forge_tui::theme::Severity::Danger)
+        .label("down")
+        .theme(&t)
         .render(Rect::new(16, 0, 8, 1), &mut buf);
     insta::assert_snapshot!(buffer_text(&buf));
     assert_eq!(buf[(1, 0)].style().fg, Some(t.success.fg));
@@ -72,7 +86,10 @@ fn card_stat_and_alert() {
     let card = Card::new().title(" Metrics ").theme(&t);
     let inner = card.inner(Rect::new(0, 0, 20, 5));
     card.render(Rect::new(0, 0, 20, 5), &mut buf);
-    Stat::new("requests", "48.2k").delta("12%", Trend::Up).theme(&t).render(inner, &mut buf);
+    Stat::new("requests", "48.2k")
+        .delta("12%", Trend::Up)
+        .theme(&t)
+        .render(inner, &mut buf);
     Alert::new(forge_tui::theme::Severity::Warning, "Degraded")
         .body("Event bus lagging.")
         .theme(&t)
@@ -84,7 +101,10 @@ fn card_stat_and_alert() {
 fn progress_fill_math() {
     let t = Theme::dark();
     let buf = render(Progress::new(0.5).show_percent(false).theme(&t), 10, 1);
-    let cells: String = (0..10).map(|x| buf[(x, 0)].symbol()).collect::<Vec<_>>().join("");
+    let cells: String = (0..10)
+        .map(|x| buf[(x, 0)].symbol())
+        .collect::<Vec<_>>()
+        .join("");
     assert_eq!(cells, "█████     ");
 }
 
@@ -93,10 +113,16 @@ fn input_renders_value_cursor_and_placeholder() {
     let t = Theme::dark();
     let mut buf = Buffer::empty(Rect::new(0, 0, 24, 1));
     let mut state = InputState::with_value("hello");
-    Input::new().focused(true).theme(&t).render(Rect::new(0, 0, 12, 1), &mut buf, &mut state);
+    Input::new()
+        .focused(true)
+        .theme(&t)
+        .render(Rect::new(0, 0, 12, 1), &mut buf, &mut state);
     let mut empty = InputState::new();
-    Input::new().placeholder("Search…").theme(&t)
-        .render(Rect::new(13, 0, 11, 1), &mut buf, &mut empty);
+    Input::new().placeholder("Search…").theme(&t).render(
+        Rect::new(13, 0, 11, 1),
+        &mut buf,
+        &mut empty,
+    );
     insta::assert_snapshot!(buffer_text(&buf));
     // Focused edge bar is accent; placeholder is disabled-tone.
     assert_eq!(buf[(0, 0)].style().fg, Some(t.accent.base));
@@ -108,10 +134,19 @@ fn input_scrolls_to_keep_cursor_visible() {
     let t = Theme::dark();
     let mut buf = Buffer::empty(Rect::new(0, 0, 10, 1));
     let mut state = InputState::with_value("abcdefghijklmnop");
-    Input::new().focused(true).theme(&t).render(Rect::new(0, 0, 10, 1), &mut buf, &mut state);
+    Input::new()
+        .focused(true)
+        .theme(&t)
+        .render(Rect::new(0, 0, 10, 1), &mut buf, &mut state);
     // Cursor is at the end; the visible tail must include the last chars.
-    let visible: String = (1..9).map(|x| buf[(x, 0)].symbol()).collect::<Vec<_>>().join("");
-    assert!(visible.contains("op"), "viewport did not follow cursor: {visible:?}");
+    let visible: String = (1..9)
+        .map(|x| buf[(x, 0)].symbol())
+        .collect::<Vec<_>>()
+        .join("");
+    assert!(
+        visible.contains("op"),
+        "viewport did not follow cursor: {visible:?}"
+    );
 }
 
 #[test]

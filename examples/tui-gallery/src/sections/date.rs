@@ -21,14 +21,20 @@ impl Default for DateState {
 }
 
 impl DateState {
-    pub fn handle_key(&mut self, focused: Option<FocusId>, key: KeyEvent, ctx: &mut Ctx) -> Outcome {
+    pub fn handle_key(
+        &mut self,
+        focused: Option<FocusId>,
+        key: KeyEvent,
+        ctx: &mut Ctx,
+    ) -> Outcome {
         let outcome = match focused {
             Some(id) if id == CAL => self.cal.handle_key(key),
             Some(id) if id == PICKER => self.picker.handle_key(key),
             _ => Outcome::Ignored,
         };
         if outcome == Outcome::Submitted && focused == Some(CAL) {
-            ctx.toast().success(format!("Selected {}", self.cal.selected));
+            ctx.toast()
+                .success(format!("Selected {}", self.cal.selected));
             return Outcome::Consumed;
         }
         outcome
@@ -47,7 +53,8 @@ impl DateState {
         if out.is_handled() {
             ctx.focus.focus(CAL);
             if out == Outcome::Submitted {
-                ctx.toast().success(format!("Selected {}", self.cal.selected));
+                ctx.toast()
+                    .success(format!("Selected {}", self.cal.selected));
                 return Outcome::Consumed;
             }
         }

@@ -27,7 +27,10 @@ impl ListBoxState {
     }
 
     pub fn multi() -> ListBoxState {
-        ListBoxState { multi: true, ..Default::default() }
+        ListBoxState {
+            multi: true,
+            ..Default::default()
+        }
     }
 
     pub fn is_multi(&self) -> bool {
@@ -165,7 +168,11 @@ pub struct ListBox<'a> {
 
 impl<'a> ListBox<'a> {
     pub fn new(items: &'a [&'a str]) -> ListBox<'a> {
-        ListBox { items, focused: false, theme: None }
+        ListBox {
+            items,
+            focused: false,
+            theme: None,
+        }
     }
 
     pub fn focused(mut self, focused: bool) -> Self {
@@ -205,14 +212,20 @@ impl<'a> StatefulWidget for ListBox<'a> {
             let is_selected = state.is_selected(i);
             let mut style = Style::new().fg(if is_selected { t.accent.fg } else { t.fg[1] });
             if is_cursor {
-                style = style.bg(t.bg[3]).fg(if is_selected { t.accent.fg } else { t.fg[0] });
+                style = style
+                    .bg(t.bg[3])
+                    .fg(if is_selected { t.accent.fg } else { t.fg[0] });
                 if self.focused {
                     style = style.add_modifier(Modifier::BOLD);
                 }
                 buf.set_style(Rect::new(area.x, y, text_w, 1), style);
             }
             let mark = if state.multi {
-                if is_selected { "✓ " } else { "  " }
+                if is_selected {
+                    "✓ "
+                } else {
+                    "  "
+                }
             } else if is_selected {
                 "● "
             } else {

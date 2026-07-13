@@ -15,9 +15,12 @@
 //! ```
 //!
 //! Click the well to capture the keyboard (Tab/arrows/Esc are locked to the
-//! terminal); **Ctrl+Shift+Q** releases the capture. Scrollback/selection are
-//! deferred (forge-tui parity) — the wheel maps to arrow keys in alternate
-//! screen apps only.
+//! terminal); **Ctrl+Shift+Q** releases the capture. Mouse clicks, drags, and
+//! wheel are forwarded to the session as xterm mouse reports when the running
+//! program enables mouse tracking (htop/vim/tmux); a plain shell gets none.
+//! Local scrollback/selection are still deferred (forge-tui parity) — outside
+//! mouse-tracking apps the wheel maps to arrow keys in alternate-screen apps
+//! only.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -123,6 +126,9 @@ pub struct TermState {
     pending_resize: Option<((u16, u16), f64)>,
     /// Wheel remainder in points, converted to arrow keys row by row.
     scroll_accum: f32,
+    /// Cell of the last reported mouse motion, so button-motion/any-motion
+    /// modes only report when the pointer crosses into a new cell.
+    last_mouse_cell: Option<(u16, u16)>,
 }
 
 impl TermState {
@@ -173,6 +179,7 @@ impl TermState {
             grid: (80, 24),
             pending_resize: None,
             scroll_accum: 0.0,
+            last_mouse_cell: None,
         }
     }
 
@@ -208,6 +215,7 @@ impl TermState {
         self.started = false;
         self.pending_resize = None;
         self.scroll_accum = 0.0;
+        self.last_mouse_cell = None;
     }
 
     /// Drain frames from the engine: tty bytes into the parser, control
@@ -387,13 +395,15 @@ impl Terminal {
         }
         let focused = response.has_focus();
 
+        let origin = rect.min + Vec2::splat(PAD);
         let mut outcome = Outcome::Ignored;
         if focused {
-            if self.handle_input(ui, state, &response, cell_h) {
+            if self.handle_input(ui, state, &response, origin, cell_w, cell_h) {
                 outcome = Outcome::Consumed;
             }
         } else {
             state.scroll_accum = 0.0;
+            state.last_mouse_cell = None;
         }
         // Re-read after input: Ctrl+Shift+Q surrenders focus this frame.
         let focused = response.has_focus();
@@ -420,6 +430,8 @@ impl Terminal {
         ui: &mut Ui,
         state: &mut TermState,
         response: &egui::Response,
+        origin: egui::Pos2,
+        cell_w: f32,
         cell_h: f32,
     ) -> bool {
         // Keep Tab/arrows/Esc on the terminal instead of moving focus.
@@ -435,14 +447,20 @@ impl Terminal {
             );
         });
 
-        let (app_cursor, bracketed, alternate) = {
+        let (app_cursor, bracketed, alternate, mouse_mode, mouse_encoding) = {
             let s = state.parser.screen();
             (
                 s.application_cursor(),
                 s.bracketed_paste(),
                 s.alternate_screen(),
+                s.mouse_protocol_mode(),
+                s.mouse_protocol_encoding(),
             )
         };
+        // Only forward pointer events when the running program asked for mouse
+        // tracking; otherwise the wheel keeps its arrow-key scrollback shim.
+        let mouse_on = mouse_mode != vt100::MouseProtocolMode::None;
+        let any_down = ui.input(|i| i.pointer.any_down());
 
         let mut bytes = Vec::new();
         let mut saw_modified_key = false;
@@ -483,15 +501,89 @@ impl Terminal {
                         bytes.extend_from_slice(text.as_bytes());
                     }
                 }
+                egui::Event::PointerButton {
+                    pos,
+                    button,
+                    pressed,
+                    modifiers,
+                } if mouse_on => {
+                    if let Some(base) = button_base(button) {
+                        if mode_allows(mouse_mode, base, false, !pressed) {
+                            let (col, row) = cell_at(pos, origin, cell_w, cell_h, state.grid);
+                            state.last_mouse_cell = Some((col, row));
+                            bytes.extend_from_slice(&encode_mouse(
+                                mouse_encoding,
+                                base,
+                                false,
+                                !pressed,
+                                col,
+                                row,
+                                modifiers.shift,
+                                modifiers.alt,
+                                modifiers.ctrl,
+                            ));
+                        }
+                    }
+                }
+                egui::Event::PointerMoved(pos) if mouse_on => {
+                    // A held button makes this a drag (button id in the low
+                    // bits — egui doesn't say which, so use left per xterm
+                    // convention); no button makes it bare motion (id "none").
+                    let base = if any_down { 0 } else { BUTTON_NONE };
+                    let (col, row) = cell_at(pos, origin, cell_w, cell_h, state.grid);
+                    if mode_allows(mouse_mode, base, true, false)
+                        && state.last_mouse_cell != Some((col, row))
+                    {
+                        state.last_mouse_cell = Some((col, row));
+                        bytes.extend_from_slice(&encode_mouse(
+                            mouse_encoding,
+                            base,
+                            true,
+                            false,
+                            col,
+                            row,
+                            false,
+                            false,
+                            false,
+                        ));
+                    }
+                }
                 _ => {}
             }
         }
 
-        // Wheel → arrow keys, but only for alternate-screen apps (less/vim/
-        // htop); the primary screen has no scrollback in v1 (forge-tui parity).
+        // Wheel: when the app tracks the mouse, report it as wheel buttons on
+        // the hovered cell; otherwise keep the arrow-key scrollback shim for
+        // alternate-screen apps (less/vim/htop). The primary screen has no
+        // scrollback in v1 (forge-tui parity).
         if response.hovered() {
             let dy = ui.input(|i| i.smooth_scroll_delta.y);
-            if alternate && dy != 0.0 {
+            if mouse_on {
+                if dy != 0.0 {
+                    state.scroll_accum += dy;
+                    let lines = (state.scroll_accum / cell_h) as i32;
+                    if lines != 0 {
+                        state.scroll_accum -= lines as f32 * cell_h;
+                        let base = if lines > 0 { WHEEL_UP } else { WHEEL_DOWN };
+                        if let Some(pos) = ui.input(|i| i.pointer.hover_pos()) {
+                            let (col, row) = cell_at(pos, origin, cell_w, cell_h, state.grid);
+                            for _ in 0..lines.unsigned_abs() {
+                                bytes.extend_from_slice(&encode_mouse(
+                                    mouse_encoding,
+                                    base,
+                                    false,
+                                    false,
+                                    col,
+                                    row,
+                                    false,
+                                    false,
+                                    false,
+                                ));
+                            }
+                        }
+                    }
+                }
+            } else if alternate && dy != 0.0 {
                 state.scroll_accum += dy;
                 let lines = (state.scroll_accum / cell_h) as i32;
                 if lines != 0 {
@@ -517,6 +609,127 @@ impl Terminal {
         }
         sent
     }
+}
+
+// xterm mouse button codes (the low bits of `cb`, before modifier/motion bits).
+const BUTTON_NONE: u16 = 3; // no button held (bare motion, X10 release)
+const WHEEL_UP: u16 = 64;
+const WHEEL_DOWN: u16 = 65;
+
+fn button_base(b: egui::PointerButton) -> Option<u16> {
+    match b {
+        egui::PointerButton::Primary => Some(0),
+        egui::PointerButton::Middle => Some(1),
+        egui::PointerButton::Secondary => Some(2),
+        _ => None,
+    }
+}
+
+/// Pixel position → 0-based cell, clamped to the grid.
+fn cell_at(
+    pos: egui::Pos2,
+    origin: egui::Pos2,
+    cell_w: f32,
+    cell_h: f32,
+    grid: (u16, u16),
+) -> (u16, u16) {
+    let col = ((pos.x - origin.x) / cell_w)
+        .floor()
+        .clamp(0.0, grid.0.saturating_sub(1) as f32) as u16;
+    let row = ((pos.y - origin.y) / cell_h)
+        .floor()
+        .clamp(0.0, grid.1.saturating_sub(1) as f32) as u16;
+    (col, row)
+}
+
+/// Does the active tracking mode want to report this event? Mirrors xterm:
+/// `Press` reports button-down + wheel only; `PressRelease` adds releases;
+/// `ButtonMotion` adds drags (motion with a button); `AnyMotion` adds bare
+/// motion. Wheel is a "press" and is reported by every non-`None` mode.
+fn mode_allows(mode: vt100::MouseProtocolMode, button: u16, motion: bool, release: bool) -> bool {
+    use vt100::MouseProtocolMode as M;
+    let wheel = button >= WHEEL_UP;
+    match mode {
+        M::None => false,
+        M::Press => !release && (!motion || wheel),
+        M::PressRelease => !motion || wheel,
+        M::ButtonMotion => wheel || !(motion && button == BUTTON_NONE),
+        M::AnyMotion => true,
+    }
+}
+
+/// Build an xterm mouse report in the screen's active encoding. `col`/`row` are
+/// 0-based cells; the wire format is 1-based. `button` is the base code
+/// (0/1/2, [`BUTTON_NONE`], or a `WHEEL_*`); modifier and motion bits are added
+/// here.
+#[allow(clippy::too_many_arguments)]
+fn encode_mouse(
+    encoding: vt100::MouseProtocolEncoding,
+    button: u16,
+    motion: bool,
+    release: bool,
+    col: u16,
+    row: u16,
+    shift: bool,
+    alt: bool,
+    ctrl: bool,
+) -> Vec<u8> {
+    let mut cb = button;
+    if shift {
+        cb += 4;
+    }
+    if alt {
+        cb += 8;
+    }
+    if ctrl {
+        cb += 16;
+    }
+    if motion {
+        cb += 32;
+    }
+    match encoding {
+        vt100::MouseProtocolEncoding::Sgr => {
+            let final_byte = if release { 'm' } else { 'M' };
+            format!("\x1b[<{};{};{}{}", cb, col + 1, row + 1, final_byte).into_bytes()
+        }
+        vt100::MouseProtocolEncoding::Utf8 => {
+            // Release drops the button id to "none" (X10 has no release byte).
+            let cb = if release {
+                (cb & !0b11) | BUTTON_NONE
+            } else {
+                cb
+            };
+            let mut out = vec![0x1b, b'[', b'M'];
+            push_utf8(&mut out, cb + 32);
+            push_utf8(&mut out, col + 1 + 32);
+            push_utf8(&mut out, row + 1 + 32);
+            out
+        }
+        // Default (X10): single printable byte per field, saturating at 255.
+        _ => {
+            let cb = if release {
+                (cb & !0b11) | BUTTON_NONE
+            } else {
+                cb
+            };
+            vec![
+                0x1b,
+                b'[',
+                b'M',
+                (cb + 32).min(255) as u8,
+                (col + 1 + 32).min(255) as u8,
+                (row + 1 + 32).min(255) as u8,
+            ]
+        }
+    }
+}
+
+/// Append `v` as a UTF-8 code point (the `?1005` encoding widens coords past
+/// the 223-cell wall the single-byte form hits).
+fn push_utf8(out: &mut Vec<u8>, v: u16) {
+    let ch = char::from_u32(v as u32).unwrap_or('\u{fffd}');
+    let mut buf = [0u8; 4];
+    out.extend_from_slice(ch.encode_utf8(&mut buf).as_bytes());
 }
 
 /// Paint the well, grid, cursor, capture badge, and status overlays.
@@ -934,6 +1147,70 @@ mod tests {
         );
         // Plain printable keys are Text events, never encoded here.
         assert_eq!(encode_key(Key::A, none, false), None);
+    }
+
+    #[test]
+    fn xterm_mouse_encoding() {
+        use vt100::{MouseProtocolEncoding as Enc, MouseProtocolMode as Mode};
+        let sgr = |button, motion, release, col, row| {
+            String::from_utf8(encode_mouse(
+                Enc::Sgr,
+                button,
+                motion,
+                release,
+                col,
+                row,
+                false,
+                false,
+                false,
+            ))
+            .unwrap()
+        };
+        // Left press/release at 0-based cell → 1-based coords, M vs m final.
+        assert_eq!(sgr(0, false, false, 0, 0), "\x1b[<0;1;1M");
+        assert_eq!(sgr(0, false, true, 4, 2), "\x1b[<0;5;3m");
+        // Right-button drag sets the motion bit (+32).
+        assert_eq!(sgr(2, true, false, 9, 1), "\x1b[<34;10;2M");
+        // Wheel up is a press with cb 64.
+        assert_eq!(sgr(WHEEL_UP, false, false, 3, 3), "\x1b[<64;4;4M");
+        // Ctrl+Shift left press → cb 20.
+        assert_eq!(
+            String::from_utf8(encode_mouse(
+                Enc::Sgr,
+                0,
+                false,
+                false,
+                0,
+                0,
+                true,
+                false,
+                true
+            ))
+            .unwrap(),
+            "\x1b[<20;1;1M"
+        );
+        // X10 default bytes: ESC [ M then 32+cb, 32+col+1, 32+row+1; release
+        // drops the button id to "none" (3).
+        assert_eq!(
+            encode_mouse(Enc::Default, 0, false, false, 0, 0, false, false, false),
+            vec![0x1b, b'[', b'M', 32, 33, 33]
+        );
+        assert_eq!(
+            encode_mouse(Enc::Default, 2, false, true, 0, 0, false, false, false),
+            vec![0x1b, b'[', b'M', 32 + 3, 33, 33]
+        );
+
+        // Mode gating (mirrors forge-tui).
+        assert!(mode_allows(Mode::Press, 0, false, false)); // down
+        assert!(mode_allows(Mode::Press, WHEEL_UP, false, false)); // wheel
+        assert!(!mode_allows(Mode::Press, 0, false, true)); // up
+        assert!(!mode_allows(Mode::Press, 0, true, false)); // drag
+        assert!(mode_allows(Mode::PressRelease, 0, false, true)); // up
+        assert!(!mode_allows(Mode::PressRelease, 0, true, false)); // move
+        assert!(mode_allows(Mode::ButtonMotion, 0, true, false)); // drag
+        assert!(!mode_allows(Mode::ButtonMotion, BUTTON_NONE, true, false)); // bare move
+        assert!(mode_allows(Mode::AnyMotion, BUTTON_NONE, true, false)); // bare move
+        assert!(!mode_allows(Mode::None, 0, false, false)); // nothing
     }
 
     /// End-to-end over the real engine + lazy runtime: start → ready →

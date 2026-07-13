@@ -40,7 +40,12 @@ impl FormsState {
         self.handle.value().contains(' ')
     }
 
-    pub fn handle_key(&mut self, focused: Option<FocusId>, key: KeyEvent, ctx: &mut Ctx) -> Outcome {
+    pub fn handle_key(
+        &mut self,
+        focused: Option<FocusId>,
+        key: KeyEvent,
+        ctx: &mut Ctx,
+    ) -> Outcome {
         let outcome = match focused {
             Some(id) if id == NAME => self.name.handle_key(key),
             Some(id) if id == PASSWORD => self.password.handle_key(key),
@@ -68,7 +73,8 @@ impl FormsState {
                 if self.handle_invalid() {
                     ctx.toast().error("Handle must not contain spaces");
                 } else {
-                    ctx.toast().success(format!("Saved profile for {}", self.name.value()));
+                    ctx.toast()
+                        .success(format!("Saved profile for {}", self.name.value()));
                 }
                 Outcome::Consumed
             }
@@ -97,7 +103,8 @@ impl FormsState {
             if self.handle_invalid() {
                 ctx.toast().error("Handle must not contain spaces");
             } else {
-                ctx.toast().success(format!("Saved profile for {}", self.name.value()));
+                ctx.toast()
+                    .success(format!("Saved profile for {}", self.name.value()));
             }
             return Outcome::Consumed;
         }
@@ -134,7 +141,10 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
     if let Some(r) = row(1, 1, &mut y) {
         let focused = ctx.focus.register(NAME);
         frame.render_stateful_widget(
-            Input::new().placeholder("Full name").focused(focused).theme(t),
+            Input::new()
+                .placeholder("Full name")
+                .focused(focused)
+                .theme(t),
             r,
             &mut state.name,
         );
@@ -142,7 +152,11 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
     if let Some(r) = row(1, 1, &mut y) {
         let focused = ctx.focus.register(PASSWORD);
         frame.render_stateful_widget(
-            Input::new().placeholder("Password").masked(true).focused(focused).theme(t),
+            Input::new()
+                .placeholder("Password")
+                .masked(true)
+                .focused(focused)
+                .theme(t),
             r,
             &mut state.password,
         );
@@ -151,7 +165,11 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
     if let Some(r) = row(1, 0, &mut y) {
         let focused = ctx.focus.register(HANDLE);
         frame.render_stateful_widget(
-            Input::new().placeholder("Handle").invalid(invalid).focused(focused).theme(t),
+            Input::new()
+                .placeholder("Handle")
+                .invalid(invalid)
+                .focused(focused)
+                .theme(t),
             r,
             &mut state.handle,
         );
@@ -159,7 +177,9 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
     if let Some(r) = row(1, 1, &mut y) {
         if invalid {
             frame.render_widget(
-                Badge::new("handle must not contain spaces").severity(Severity::Danger).theme(t),
+                Badge::new("handle must not contain spaces")
+                    .severity(Severity::Danger)
+                    .theme(t),
                 r,
             );
         }
@@ -191,7 +211,9 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
     if let Some(r) = row(3, 1, &mut y) {
         let focused = ctx.focus.register(LEVEL);
         frame.render_stateful_widget(
-            RadioGroup::new(&["debug", "info", "warning"]).focused(focused).theme(t),
+            RadioGroup::new(&["debug", "info", "warning"])
+                .focused(focused)
+                .theme(t),
             r,
             &mut state.level,
         );
@@ -199,7 +221,10 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
 
     if let Some(r) = row(1, 0, &mut y) {
         let focused = ctx.focus.register(SUBMIT);
-        let b = Button::new("Save profile").variant(Variant::Primary).focused(focused).theme(t);
+        let b = Button::new("Save profile")
+            .variant(Variant::Primary)
+            .focused(focused)
+            .theme(t);
         let bw = b.width().min(r.width);
         state.submit_rect = Rect::new(r.x, r.y, bw, 1);
         frame.render_widget(b, state.submit_rect);

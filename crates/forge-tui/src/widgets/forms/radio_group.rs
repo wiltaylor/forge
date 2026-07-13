@@ -18,7 +18,10 @@ pub struct RadioState {
 
 impl RadioState {
     pub fn new(selected: usize) -> RadioState {
-        RadioState { selected, ..Default::default() }
+        RadioState {
+            selected,
+            ..Default::default()
+        }
     }
 
     /// Click an option to select it.
@@ -27,7 +30,11 @@ impl RadioState {
             if clicked(ev, *rect) {
                 let changed = self.selected != i;
                 self.selected = i;
-                return if changed { Outcome::Changed } else { Outcome::Consumed };
+                return if changed {
+                    Outcome::Changed
+                } else {
+                    Outcome::Consumed
+                };
             }
         }
         Outcome::Ignored
@@ -158,7 +165,12 @@ impl<'a> StatefulWidget for RadioGroup<'a> {
                 let (mark, label) = self.item_style(t, selected);
                 let y = area.y + i as u16;
                 state.item_rects.push(Rect::new(area.x, y, area.width, 1));
-                buf.set_string(area.x, y, format!("({})", if selected { "•" } else { " " }), mark);
+                buf.set_string(
+                    area.x,
+                    y,
+                    format!("({})", if selected { "•" } else { " " }),
+                    mark,
+                );
                 if area.width > 4 {
                     buf.set_string(
                         area.x + 4,

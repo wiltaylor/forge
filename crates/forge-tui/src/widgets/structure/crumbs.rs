@@ -14,7 +14,10 @@ pub struct Crumbs<'a> {
 
 impl<'a> Crumbs<'a> {
     pub fn new(segments: &'a [&'a str]) -> Crumbs<'a> {
-        Crumbs { segments, theme: None }
+        Crumbs {
+            segments,
+            theme: None,
+        }
     }
 
     pub fn theme(mut self, theme: &'a Theme) -> Self {

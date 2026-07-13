@@ -1566,9 +1566,11 @@ checksum = "aa9a19cbb55df58761df49b23516a86d432839add4af60fc256da840f66ed35b"
 name = "forge-core"
 version = "0.1.0"
 dependencies = [
+ "flate2",
  "ironrdp",
  "ironrdp-tls",
  "ironrdp-tokio",
+ "jpeg-encoder",
  "portable-pty",
  "russh",
  "serde",
@@ -2761,6 +2763,12 @@ dependencies = [
  "getrandom 0.4.3",
  "libc",
 ]
+
+[[package]]
+name = "jpeg-encoder"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b454d911ac55068f53495488d8ccd0646eaa540c033a28ee15b07838afafb01f"
 
 [[package]]
 name = "js-sys"

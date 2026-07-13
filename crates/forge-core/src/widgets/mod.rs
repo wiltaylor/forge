@@ -11,6 +11,8 @@
 //! connections. Trusted dev contexts only — see docs/widgets-protocol.md.
 
 #[cfg(any(feature = "vnc", feature = "rdp"))]
+pub mod coalesce;
+#[cfg(any(feature = "vnc", feature = "rdp"))]
 pub mod keymap;
 pub mod proto;
 #[cfg(feature = "rdp")]

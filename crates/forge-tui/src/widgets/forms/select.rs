@@ -24,7 +24,10 @@ impl SelectState {
     }
 
     pub fn with_value(value: usize) -> SelectState {
-        SelectState { value: Some(value), ..Default::default() }
+        SelectState {
+            value: Some(value),
+            ..Default::default()
+        }
     }
 
     pub fn handle_key(&mut self, key: KeyEvent) -> Outcome {
@@ -163,7 +166,10 @@ impl<'a> StatefulWidget for Select<'a> {
         buf.set_style(field, Style::new().bg(t.bg[2]));
         buf.set_string(area.x, area.y, "▎", Style::new().fg(edge).bg(t.bg[2]));
         let (label, style) = match state.value.and_then(|i| self.items.get(i)) {
-            Some(v) => (*v, Style::new().fg(if self.disabled { t.fg[3] } else { t.fg[0] })),
+            Some(v) => (
+                *v,
+                Style::new().fg(if self.disabled { t.fg[3] } else { t.fg[0] }),
+            ),
             None => (self.placeholder, Style::new().fg(t.fg[3])),
         };
         buf.set_string(
@@ -183,8 +189,7 @@ impl<'a> StatefulWidget for Select<'a> {
 
         if state.open && !self.disabled {
             let rows = (self.items.len() as u16).min(self.max_popup);
-            let popup = Rect::new(area.x, area.y + 1, area.width, rows + 2)
-                .intersection(buf.area);
+            let popup = Rect::new(area.x, area.y + 1, area.width, rows + 2).intersection(buf.area);
             if popup.height >= 3 {
                 Clear.render(popup, buf);
                 let block = Block::bordered()
@@ -199,11 +204,10 @@ impl<'a> StatefulWidget for Select<'a> {
                     Some(v) => display.select_only(v),
                     None => display.clear_selection(),
                 }
-                ListBox::new(self.items).focused(self.focused).theme(t).render(
-                    inner,
-                    buf,
-                    &mut display,
-                );
+                ListBox::new(self.items)
+                    .focused(self.focused)
+                    .theme(t)
+                    .render(inner, buf, &mut display);
                 display.clear_selection();
                 state.list = display;
             }

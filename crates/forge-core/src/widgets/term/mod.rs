@@ -37,9 +37,7 @@ pub async fn session<S: WidgetStream>(mut stream: S, config: Arc<TermConfig>) {
             }) => (mode, host, port, username, password, cols, rows),
             _ => return fail(stream, "first frame must be a start message").await,
         },
-        WidgetMsg::Binary(_) => {
-            return fail(stream, "first frame must be a start message").await
-        }
+        WidgetMsg::Binary(_) => return fail(stream, "first frame must be a start message").await,
         WidgetMsg::Close => return,
     };
 

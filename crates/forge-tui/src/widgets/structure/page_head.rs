@@ -16,7 +16,11 @@ pub struct PageHead<'a> {
 
 impl<'a> PageHead<'a> {
     pub fn new(title: &'a str) -> PageHead<'a> {
-        PageHead { title, description: None, theme: None }
+        PageHead {
+            title,
+            description: None,
+            theme: None,
+        }
     }
 
     pub fn description(mut self, description: &'a str) -> Self {

@@ -18,7 +18,11 @@ pub struct PaginationState {
 
 impl PaginationState {
     pub fn new(page: usize, pages: usize) -> PaginationState {
-        PaginationState { page, pages, targets: Vec::new() }
+        PaginationState {
+            page,
+            pages,
+            targets: Vec::new(),
+        }
     }
 
     /// Click a page number or an arrow.
@@ -115,12 +119,18 @@ impl<'a> StatefulWidget for Pagination<'a> {
         let mut x = area.x;
         let arrow = |enabled: bool| {
             Style::new().fg(if enabled {
-                if self.focused { t.accent.fg } else { t.fg[1] }
+                if self.focused {
+                    t.accent.fg
+                } else {
+                    t.fg[1]
+                }
             } else {
                 t.fg[3]
             })
         };
-        state.targets.push((Rect::new(x, area.y, 1, 1), state.page.saturating_sub(1)));
+        state
+            .targets
+            .push((Rect::new(x, area.y, 1, 1), state.page.saturating_sub(1)));
         buf.set_string(x, area.y, "‹", arrow(state.page > 0));
         x += 2;
         for entry in page_model(state.page, state.pages) {
@@ -151,7 +161,9 @@ impl<'a> StatefulWidget for Pagination<'a> {
             }
         }
         if x < right {
-            state.targets.push((Rect::new(x, area.y, 1, 1), state.page + 1));
+            state
+                .targets
+                .push((Rect::new(x, area.y, 1, 1), state.page + 1));
             buf.set_string(x, area.y, "›", arrow(state.page + 1 < state.pages));
         }
     }

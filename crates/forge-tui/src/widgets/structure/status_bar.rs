@@ -16,7 +16,11 @@ pub struct StatusBar<'a> {
 
 impl<'a> StatusBar<'a> {
     pub fn new(left: &'a str) -> StatusBar<'a> {
-        StatusBar { left, right: "", theme: None }
+        StatusBar {
+            left,
+            right: "",
+            theme: None,
+        }
     }
 
     pub fn right(mut self, right: &'a str) -> Self {

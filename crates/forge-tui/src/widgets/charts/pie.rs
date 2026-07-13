@@ -31,7 +31,12 @@ pub struct PieChart<'a> {
 
 impl<'a> PieChart<'a> {
     pub fn new(slices: &'a [PieSlice<'a>]) -> PieChart<'a> {
-        PieChart { slices, donut: true, legend: true, theme: None }
+        PieChart {
+            slices,
+            donut: true,
+            legend: true,
+            theme: None,
+        }
     }
 
     pub fn donut(mut self, donut: bool) -> Self {
@@ -68,7 +73,7 @@ impl Widget for PieChart<'_> {
                 .max()
                 .unwrap_or(0) as u16
                 + 9)
-                .min(area.width / 2)
+            .min(area.width / 2)
         } else {
             0
         };
@@ -96,11 +101,12 @@ impl Widget for PieChart<'_> {
                             r += 0.04;
                         }
                     }
-                    let coords: Vec<(f64, f64)> = points
-                        .iter()
-                        .map(|(cx, cy, r)| (cx * r, cy * r))
-                        .collect();
-                    ctx.draw(&Points { coords: &coords, color });
+                    let coords: Vec<(f64, f64)> =
+                        points.iter().map(|(cx, cy, r)| (cx * r, cy * r)).collect();
+                    ctx.draw(&Points {
+                        coords: &coords,
+                        color,
+                    });
                     start += sweep;
                 }
             });

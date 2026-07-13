@@ -63,7 +63,11 @@ impl Widget for StatusDot<'_> {
         }
         let t = self.theme.unwrap_or_else(|| default_theme());
         let color = self.color.unwrap_or(t.severity(self.severity).base);
-        let dot = if self.pulse && self.frame % 8 < 4 { "◌" } else { "●" };
+        let dot = if self.pulse && self.frame % 8 < 4 {
+            "◌"
+        } else {
+            "●"
+        };
         buf.set_string(area.x, area.y, dot, Style::new().fg(color));
         if let Some(label) = self.label {
             if area.width > 2 {

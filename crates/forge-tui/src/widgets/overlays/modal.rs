@@ -19,7 +19,13 @@ pub struct Modal<'a> {
 
 impl<'a> Modal<'a> {
     pub fn new() -> Modal<'a> {
-        Modal { title: None, footer: None, width: 56, height: 10, theme: None }
+        Modal {
+            title: None,
+            footer: None,
+            width: 56,
+            height: 10,
+            theme: None,
+        }
     }
 
     pub fn title(mut self, title: &'a str) -> Self {

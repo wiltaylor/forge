@@ -11,7 +11,10 @@ use crate::session::AdminUser;
 use crate::state::SharedState;
 use crate::util::hash_password;
 
-async fn user_json(state: &SharedState, user: &crate::db::models::User) -> Result<serde_json::Value, AppError> {
+async fn user_json(
+    state: &SharedState,
+    user: &crate::db::models::User,
+) -> Result<serde_json::Value, AppError> {
     let roles = state.db.user_role_names(&user.id).await?;
     let mut value = serde_json::to_value(user).map_err(AppError::internal)?;
     value["roles"] = json!(roles);
@@ -64,7 +67,10 @@ pub async fn create(
         })
         .await?;
     if let Some(password) = &body.password {
-        state.db.password_set(&user.id, &hash_password(password)?).await?;
+        state
+            .db
+            .password_set(&user.id, &hash_password(password)?)
+            .await?;
     }
     set_roles(&state, &user.id, &body.roles).await?;
     Ok(ok(user_json(&state, &user).await?))
@@ -123,7 +129,9 @@ pub async fn delete(
     Path(id): Path<String>,
 ) -> Result<impl IntoResponse, AppError> {
     if admin.user.id == id {
-        return Err(AppError::BadRequest("refusing to delete the signed-in admin".into()));
+        return Err(AppError::BadRequest(
+            "refusing to delete the signed-in admin".into(),
+        ));
     }
     if !state.db.user_delete(&id).await? {
         return Err(AppError::NotFound);
@@ -143,10 +151,15 @@ pub async fn set_password(
     Json(body): Json<SetPassword>,
 ) -> Result<impl IntoResponse, AppError> {
     if body.password.len() < 8 {
-        return Err(AppError::BadRequest("password must be at least 8 characters".into()));
+        return Err(AppError::BadRequest(
+            "password must be at least 8 characters".into(),
+        ));
     }
     state.db.user_by_id(&id).await?.ok_or(AppError::NotFound)?;
-    state.db.password_set(&id, &hash_password(&body.password)?).await?;
+    state
+        .db
+        .password_set(&id, &hash_password(&body.password)?)
+        .await?;
     Ok(ok(json!({ "updated": true })))
 }
 
@@ -168,7 +181,11 @@ pub async fn set_user_roles(
 
 /// Resolve role names → ids (rejecting unknown names) and replace the user's
 /// manually-assigned roles.
-async fn set_roles(state: &SharedState, user_id: &str, role_names: &[String]) -> Result<(), AppError> {
+async fn set_roles(
+    state: &SharedState,
+    user_id: &str,
+    role_names: &[String],
+) -> Result<(), AppError> {
     let mut role_ids = Vec::with_capacity(role_names.len());
     for name in role_names {
         let role = state
@@ -178,6 +195,9 @@ async fn set_roles(state: &SharedState, user_id: &str, role_names: &[String]) ->
             .ok_or_else(|| AppError::BadRequest(format!("unknown role {name:?}")))?;
         role_ids.push(role.id);
     }
-    state.db.user_roles_replace(user_id, &role_ids, "manual").await?;
+    state
+        .db
+        .user_roles_replace(user_id, &role_ids, "manual")
+        .await?;
     Ok(())
 }

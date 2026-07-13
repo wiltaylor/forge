@@ -16,7 +16,10 @@ pub struct HelpBar<'a> {
 
 impl<'a> HelpBar<'a> {
     pub fn new(keymap: &'a Keymap) -> HelpBar<'a> {
-        HelpBar { keymap, theme: None }
+        HelpBar {
+            keymap,
+            theme: None,
+        }
     }
 
     pub fn theme(mut self, theme: &'a Theme) -> Self {

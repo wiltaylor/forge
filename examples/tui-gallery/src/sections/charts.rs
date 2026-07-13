@@ -19,14 +19,20 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme) {
 
     // Line chart.
     if let Some(r) = blocks.first().filter(|r| r.height > 2) {
-        frame.render_widget(Eyebrow::new("LineChart").theme(t), Rect::new(r.x, r.y, r.width, 1));
+        frame.render_widget(
+            Eyebrow::new("LineChart").theme(t),
+            Rect::new(r.x, r.y, r.width, 1),
+        );
         let requests: Vec<(f64, f64)> = (0..24)
             .map(|h| (h as f64, 40.0 + 30.0 * ((h as f64) / 3.0).sin() + h as f64))
             .collect();
         let errors: Vec<(f64, f64)> = (0..24)
             .map(|h| (h as f64, 8.0 + 6.0 * ((h as f64) / 5.0).cos()))
             .collect();
-        let series = [LineSeries::new("requests", &requests), LineSeries::new("errors", &errors)];
+        let series = [
+            LineSeries::new("requests", &requests),
+            LineSeries::new("errors", &errors),
+        ];
         frame.render_widget(
             LineChart::new(&series).theme(t),
             Rect::new(r.x, r.y + 1, r.width, r.height - 1),
@@ -35,7 +41,10 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme) {
 
     // Pie.
     if let Some(r) = blocks.get(1).filter(|r| r.height > 2) {
-        frame.render_widget(Eyebrow::new("PieChart").theme(t), Rect::new(r.x, r.y, r.width, 1));
+        frame.render_widget(
+            Eyebrow::new("PieChart").theme(t),
+            Rect::new(r.x, r.y, r.width, 1),
+        );
         let slices = [
             PieSlice::new("api", 46.0),
             PieSlice::new("static", 28.0),
@@ -51,8 +60,17 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme) {
 
     // Bar chart.
     if let Some(r) = blocks.get(2).filter(|r| r.height > 2) {
-        frame.render_widget(Eyebrow::new("BarChart").theme(t), Rect::new(r.x, r.y, r.width, 1));
-        let data = [("mon", 32u64), ("tue", 41), ("wed", 28), ("thu", 52), ("fri", 47)];
+        frame.render_widget(
+            Eyebrow::new("BarChart").theme(t),
+            Rect::new(r.x, r.y, r.width, 1),
+        );
+        let data = [
+            ("mon", 32u64),
+            ("tue", 41),
+            ("wed", 28),
+            ("thu", 52),
+            ("fri", 47),
+        ];
         frame.render_widget(
             BarChart::new(&data).theme(t),
             Rect::new(r.x, r.y + 1, r.width, r.height - 1),
@@ -61,7 +79,10 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme) {
 
     // Gantt.
     if let Some(r) = blocks.get(3).filter(|r| r.height > 2) {
-        frame.render_widget(Eyebrow::new("Gantt").theme(t), Rect::new(r.x, r.y, r.width, 1));
+        frame.render_widget(
+            Eyebrow::new("Gantt").theme(t),
+            Rect::new(r.x, r.y, r.width, 1),
+        );
         let tasks = [
             GanttTask::new("design", 0.0, 3.0),
             GanttTask::new("theme", 2.0, 5.0),
@@ -77,7 +98,9 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme) {
 
     // Sparkline + legend strip.
     if let Some(r) = blocks.get(4).filter(|r| r.height >= 2) {
-        let data: Vec<u64> = (0..r.width as u64).map(|i| 3 + (i * 7 % 13) + ctx.frame % 5).collect();
+        let data: Vec<u64> = (0..r.width as u64)
+            .map(|i| 3 + (i * 7 % 13) + ctx.frame % 5)
+            .collect();
         frame.render_widget(
             forge_tui::widgets::charts::Sparkline::new(&data).theme(t),
             Rect::new(r.x, r.y, r.width / 2, 1),

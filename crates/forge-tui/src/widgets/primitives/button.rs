@@ -69,15 +69,17 @@ impl<'a> Button<'a> {
             return Style::new().fg(t.fg[3]).bg(t.bg[2]);
         }
         let s = match self.variant {
-            Variant::Primary => Style::new()
-                .fg(t.accent.contrast)
-                .bg(if self.focused { t.accent.hover } else { t.accent.base }),
-            Variant::Danger => Style::new()
-                .fg(t.accent.contrast)
-                .bg(t.danger.base),
-            Variant::Default => Style::new()
-                .fg(t.fg[0])
-                .bg(if self.focused { t.bg[4] } else { t.bg[3] }),
+            Variant::Primary => Style::new().fg(t.accent.contrast).bg(if self.focused {
+                t.accent.hover
+            } else {
+                t.accent.base
+            }),
+            Variant::Danger => Style::new().fg(t.accent.contrast).bg(t.danger.base),
+            Variant::Default => {
+                Style::new()
+                    .fg(t.fg[0])
+                    .bg(if self.focused { t.bg[4] } else { t.bg[3] })
+            }
             Variant::Ghost => Style::new().fg(if self.focused { t.accent.fg } else { t.fg[1] }),
         };
         if self.focused {

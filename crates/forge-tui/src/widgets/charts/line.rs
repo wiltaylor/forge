@@ -29,7 +29,12 @@ pub struct LineChart<'a> {
 
 impl<'a> LineChart<'a> {
     pub fn new(series: &'a [LineSeries<'a>]) -> LineChart<'a> {
-        LineChart { series, x_bounds: None, y_bounds: None, theme: None }
+        LineChart {
+            series,
+            x_bounds: None,
+            y_bounds: None,
+            theme: None,
+        }
     }
 
     pub fn x_bounds(mut self, bounds: [f64; 2]) -> Self {

@@ -17,7 +17,11 @@ pub struct Tooltip<'a> {
 
 impl<'a> Tooltip<'a> {
     pub fn new(text: &'a str, anchor: Rect) -> Tooltip<'a> {
-        Tooltip { text, anchor, theme: None }
+        Tooltip {
+            text,
+            anchor,
+            theme: None,
+        }
     }
 
     pub fn theme(mut self, theme: &'a Theme) -> Self {

@@ -37,7 +37,11 @@ impl OverlaysState {
 
     pub fn open_help(&mut self, ctx: &mut Ctx) {
         let keymap = Keymap::new()
-            .bind("palette", KeyCombo::ctrl(KeyCode::Char('k')), "Open the command palette")
+            .bind(
+                "palette",
+                KeyCombo::ctrl(KeyCode::Char('k')),
+                "Open the command palette",
+            )
             .bind("help", KeyCombo::char('?'), "This help")
             .bind("theme", KeyCombo::char('t'), "Toggle dark/light")
             .bind("nav", KeyCombo::new(KeyCode::Tab), "Move focus")
@@ -56,7 +60,12 @@ impl OverlaysState {
         Outcome::Ignored
     }
 
-    pub fn handle_key(&mut self, focused: Option<FocusId>, key: KeyEvent, ctx: &mut Ctx) -> Outcome {
+    pub fn handle_key(
+        &mut self,
+        focused: Option<FocusId>,
+        key: KeyEvent,
+        ctx: &mut Ctx,
+    ) -> Outcome {
         if !is_press(&key) {
             return Outcome::Ignored;
         }
@@ -153,7 +162,10 @@ struct SheetDemo;
 
 impl Overlay for SheetDemo {
     fn draw(&mut self, frame: &mut Frame, area: Rect, theme: &Theme) {
-        let sheet = Sheet::new(Side::Right).size(34).title(" node-3 ").theme(theme);
+        let sheet = Sheet::new(Side::Right)
+            .size(34)
+            .title(" node-3 ")
+            .theme(theme);
         let inner = sheet.inner(area);
         frame.render_widget(sheet, area);
         let rows = [
@@ -169,8 +181,18 @@ impl Overlay for SheetDemo {
             if y >= inner.y + inner.height {
                 break;
             }
-            buf.set_string(inner.x + 1, y, *k, ratatui::style::Style::new().fg(theme.fg[2]).bg(theme.bg[1]));
-            buf.set_string(inner.x + 12, y, *v, ratatui::style::Style::new().fg(theme.fg[0]).bg(theme.bg[1]));
+            buf.set_string(
+                inner.x + 1,
+                y,
+                *k,
+                ratatui::style::Style::new().fg(theme.fg[2]).bg(theme.bg[1]),
+            );
+            buf.set_string(
+                inner.x + 12,
+                y,
+                *v,
+                ratatui::style::Style::new().fg(theme.fg[0]).bg(theme.bg[1]),
+            );
         }
     }
 
@@ -204,7 +226,10 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
                 1 => Variant::Danger,
                 _ => Variant::Default,
             };
-            let b = Button::new(label).variant(variant).focused(focused).theme(t);
+            let b = Button::new(label)
+                .variant(variant)
+                .focused(focused)
+                .theme(t);
             let bw = b.width();
             if bx + bw > r.x + r.width {
                 break;
@@ -224,22 +249,44 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
     if let Some(r) = row(8, 1, &mut y) {
         // Static anchored demos: a badge with a tooltip, a popover panel.
         let anchor = Rect::new(r.x + 2, r.y + 1, 10, 1);
-        frame.render_widget(Badge::new("hover me").severity(Severity::Info).theme(t), anchor);
-        frame.render_widget(Tooltip::new("Tooltips anchor to a rect", anchor).theme(t), r);
+        frame.render_widget(
+            Badge::new("hover me").severity(Severity::Info).theme(t),
+            anchor,
+        );
+        frame.render_widget(
+            Tooltip::new("Tooltips anchor to a rect", anchor).theme(t),
+            r,
+        );
 
         let pop_anchor = Rect::new(r.x + 30, r.y, 12, 1);
         frame.render_widget(Badge::new("popover ▾").theme(t), pop_anchor);
-        let popover = Popover::new(pop_anchor).size(30, 6).title(" Node info ").theme(t);
+        let popover = Popover::new(pop_anchor)
+            .size(30, 6)
+            .title(" Node info ")
+            .theme(t);
         let inner = popover.inner(r);
         frame.render_widget(popover, r);
         let buf = frame.buffer_mut();
-        for (i, (k, v)) in [("state", "ready"), ("cpu", "42%"), ("uptime", "12d")].iter().enumerate() {
+        for (i, (k, v)) in [("state", "ready"), ("cpu", "42%"), ("uptime", "12d")]
+            .iter()
+            .enumerate()
+        {
             let yy = inner.y + i as u16;
             if yy >= inner.y + inner.height {
                 break;
             }
-            buf.set_string(inner.x + 1, yy, *k, ratatui::style::Style::new().fg(t.fg[2]).bg(t.bg[4]));
-            buf.set_string(inner.x + 10, yy, *v, ratatui::style::Style::new().fg(t.fg[0]).bg(t.bg[4]));
+            buf.set_string(
+                inner.x + 1,
+                yy,
+                *k,
+                ratatui::style::Style::new().fg(t.fg[2]).bg(t.bg[4]),
+            );
+            buf.set_string(
+                inner.x + 10,
+                yy,
+                *v,
+                ratatui::style::Style::new().fg(t.fg[0]).bg(t.bg[4]),
+            );
         }
     }
 

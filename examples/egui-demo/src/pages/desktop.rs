@@ -61,8 +61,7 @@ impl DesktopPage {
                 let target = VncTarget {
                     host: self.vnc_host.clone(),
                     port: self.vnc_port.trim().parse().unwrap_or(5900),
-                    password: (!self.vnc_password.is_empty())
-                        .then(|| self.vnc_password.clone()),
+                    password: (!self.vnc_password.is_empty()).then(|| self.vnc_password.clone()),
                 };
                 self.vnc = Some(DesktopState::vnc(ui.ctx(), target));
             }

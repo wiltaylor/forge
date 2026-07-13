@@ -23,7 +23,10 @@ pub struct ToastHandle {
 
 impl ToastHandle {
     pub fn push(&self, severity: Severity, message: impl Into<String>) {
-        let _ = self.tx.send(Toast { severity, message: message.into() });
+        let _ = self.tx.send(Toast {
+            severity,
+            message: message.into(),
+        });
     }
 
     pub fn info(&self, message: impl Into<String>) {
@@ -64,11 +67,18 @@ impl Default for Toaster {
 impl Toaster {
     pub fn new() -> Toaster {
         let (tx, rx) = channel();
-        Toaster { tx, rx, active: Vec::new(), max_visible: 4 }
+        Toaster {
+            tx,
+            rx,
+            active: Vec::new(),
+            max_visible: 4,
+        }
     }
 
     pub fn handle(&self) -> ToastHandle {
-        ToastHandle { tx: self.tx.clone() }
+        ToastHandle {
+            tx: self.tx.clone(),
+        }
     }
 
     fn ttl(severity: Severity) -> Duration {

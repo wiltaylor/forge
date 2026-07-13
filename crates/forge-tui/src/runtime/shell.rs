@@ -53,7 +53,11 @@ impl ShellState {
             if clicked(ev, *rect) {
                 let changed = self.selected != i;
                 self.selected = i;
-                return if changed { Outcome::Changed } else { Outcome::Consumed };
+                return if changed {
+                    Outcome::Changed
+                } else {
+                    Outcome::Consumed
+                };
             }
         }
         Outcome::Ignored
@@ -166,7 +170,14 @@ impl<'a> AppShell<'a> {
         self
     }
 
-    fn draw_sidebar(&self, area: Rect, buf: &mut Buffer, t: &Theme, state: &mut ShellState, slim: bool) {
+    fn draw_sidebar(
+        &self,
+        area: Rect,
+        buf: &mut Buffer,
+        t: &Theme,
+        state: &mut ShellState,
+        slim: bool,
+    ) {
         state.item_rects.clear();
         buf.set_style(area, Style::new().bg(t.bg[1]));
         if area.is_empty() {
@@ -181,7 +192,10 @@ impl<'a> AppShell<'a> {
                 area.x + 1,
                 y,
                 text::truncate(brand, area.width.saturating_sub(2) as usize),
-                Style::new().fg(t.accent.base).add_modifier(Modifier::BOLD).bg(t.bg[1]),
+                Style::new()
+                    .fg(t.accent.base)
+                    .add_modifier(Modifier::BOLD)
+                    .bg(t.bg[1]),
             );
             y += 1;
         }
@@ -266,7 +280,12 @@ impl<'a> StatefulWidget for AppShell<'a> {
         let has_topbar = self.topbar.is_some() || self.topbar_right.is_some();
         let topbar_h: u16 = u16::from(has_topbar);
 
-        let sidebar = Rect::new(area.x, area.y, sidebar_w, area.height - status_h.min(area.height));
+        let sidebar = Rect::new(
+            area.x,
+            area.y,
+            sidebar_w,
+            area.height - status_h.min(area.height),
+        );
         self.draw_sidebar(sidebar, buf, t, state, slim);
 
         let main_x = area.x + sidebar_w;

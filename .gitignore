@@ -19,3 +19,4 @@ data/
 *.db-wal
 *.db-shm
 .prepare-lock/
+*.bundled_*.mjs

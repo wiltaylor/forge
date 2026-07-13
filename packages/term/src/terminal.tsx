@@ -58,6 +58,8 @@ export function Terminal(props: TerminalProps) {
   let term: XTerm | undefined;
   let fit: FitAddon | undefined;
   let ws: WidgetTransport | undefined;
+  let measured = false;
+  let wantConnect = false;
   const [status, setStatus] = createSignal<TerminalStatus>('disconnected');
   const enc = new TextEncoder();
 
@@ -67,14 +69,37 @@ export function Terminal(props: TerminalProps) {
   };
 
   const disconnect = () => {
+    wantConnect = false;
     const sock = ws;
     ws = undefined;
     sock?.close();
     if (sock) report('disconnected');
   };
 
+  // A hidden host (display:none) can't be measured, leaving xterm at its
+  // fabricated 80x24 default. fit() only when a measure succeeds, and hold
+  // connect() until then — servers size shared PTYs to the min across
+  // clients, so one unmeasured claim would clamp every other viewer.
+  const tryFit = () => {
+    if (!fit) return;
+    const dims = fit.proposeDimensions();
+    if (!dims || !dims.cols || !dims.rows || Number.isNaN(dims.cols) || Number.isNaN(dims.rows)) {
+      return;
+    }
+    measured = true;
+    fit.fit();
+    if (wantConnect) {
+      wantConnect = false;
+      connect();
+    }
+  };
+
   const connect = () => {
     if (!term || ws) return;
+    if (!measured) {
+      wantConnect = true;
+      return;
+    }
     report('connecting');
     let sock: WidgetTransport;
     try {
@@ -138,7 +163,7 @@ export function Terminal(props: TerminalProps) {
         t.loadAddon(webgl);
       } catch { /* DOM renderer fallback */ }
     }
-    fit.fit();
+    tryFit();
 
     t.onData((d) => send(enc.encode(d)));
     t.onBinary((d) => {
@@ -150,7 +175,7 @@ export function Terminal(props: TerminalProps) {
       ws?.send(JSON.stringify({ type: 'resize', cols, rows }));
     });
 
-    const ro = new ResizeObserver(() => fit?.fit());
+    const ro = new ResizeObserver(() => tryFit());
     ro.observe(host);
     const unwatch = watchTheme(() => { t.options.theme = readTermTheme(host); });
 
@@ -158,7 +183,7 @@ export function Terminal(props: TerminalProps) {
       connect,
       disconnect,
       focus: () => t.focus(),
-      fit: () => fit?.fit(),
+      fit: () => tryFit(),
       write: (d) => t.write(d),
     });
 

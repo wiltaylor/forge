@@ -41,7 +41,11 @@ impl Widget for Skeleton<'_> {
         for dy in 0..area.height {
             for dx in 0..area.width {
                 let phase = (dx as i64 + dy as i64 - sweep).rem_euclid(24);
-                let (ch, style) = if phase < 4 { ("▒", shine) } else { ("░", base) };
+                let (ch, style) = if phase < 4 {
+                    ("▒", shine)
+                } else {
+                    ("░", base)
+                };
                 buf.set_string(area.x + dx, area.y + dy, ch, style);
             }
         }

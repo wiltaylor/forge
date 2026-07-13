@@ -16,7 +16,12 @@ pub struct GanttTask<'a> {
 
 impl<'a> GanttTask<'a> {
     pub fn new(label: &'a str, start: f64, end: f64) -> GanttTask<'a> {
-        GanttTask { label, start, end, severity: None }
+        GanttTask {
+            label,
+            start,
+            end,
+            severity: None,
+        }
     }
 
     pub fn severity(mut self, severity: Severity) -> Self {
@@ -36,7 +41,11 @@ pub struct Gantt<'a> {
 
 impl<'a> Gantt<'a> {
     pub fn new(tasks: &'a [GanttTask<'a>]) -> Gantt<'a> {
-        Gantt { tasks, bounds: None, theme: None }
+        Gantt {
+            tasks,
+            bounds: None,
+            theme: None,
+        }
     }
 
     pub fn bounds(mut self, min: f64, max: f64) -> Self {
@@ -57,8 +66,16 @@ impl Widget for Gantt<'_> {
         }
         let t = self.theme.unwrap_or_else(|| default_theme());
         let (min, max) = self.bounds.unwrap_or_else(|| {
-            let min = self.tasks.iter().map(|k| k.start).fold(f64::INFINITY, f64::min);
-            let max = self.tasks.iter().map(|k| k.end).fold(f64::NEG_INFINITY, f64::max);
+            let min = self
+                .tasks
+                .iter()
+                .map(|k| k.start)
+                .fold(f64::INFINITY, f64::min);
+            let max = self
+                .tasks
+                .iter()
+                .map(|k| k.end)
+                .fold(f64::NEG_INFINITY, f64::max);
             (min, max)
         });
         if !(max - min).is_finite() || max <= min {
@@ -71,15 +88,14 @@ impl Widget for Gantt<'_> {
             .max()
             .unwrap_or(0) as u16
             + 1)
-            .min(area.width / 2);
+        .min(area.width / 2);
         let track_x = area.x + label_w;
         let track_w = area.width - label_w;
         if track_w < 4 {
             return;
         }
-        let scale = |v: f64| -> u16 {
-            (((v - min) / (max - min)) * (track_w - 1) as f64).round() as u16
-        };
+        let scale =
+            |v: f64| -> u16 { (((v - min) / (max - min)) * (track_w - 1) as f64).round() as u16 };
         for (i, task) in self.tasks.iter().enumerate() {
             let y = area.y + i as u16;
             if y + 1 >= area.y + area.height {
@@ -125,7 +141,12 @@ impl Widget for Gantt<'_> {
             buf.set_string(track_x, axis_y, &lo, Style::new().fg(t.fg[2]));
             let hw = text::width(&hi) as u16;
             if track_w > hw {
-                buf.set_string(track_x + track_w - hw, axis_y, &hi, Style::new().fg(t.fg[2]));
+                buf.set_string(
+                    track_x + track_w - hw,
+                    axis_y,
+                    &hi,
+                    Style::new().fg(t.fg[2]),
+                );
             }
         }
     }

@@ -35,7 +35,12 @@ pub struct Popover<'a> {
 
 impl<'a> Popover<'a> {
     pub fn new(anchor: Rect) -> Popover<'a> {
-        Popover { anchor, size: (30, 8), title: None, theme: None }
+        Popover {
+            anchor,
+            size: (30, 8),
+            title: None,
+            theme: None,
+        }
     }
 
     pub fn size(mut self, width: u16, height: u16) -> Self {

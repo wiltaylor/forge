@@ -15,7 +15,11 @@ pub struct Sparkline<'a> {
 
 impl<'a> Sparkline<'a> {
     pub fn new(data: &'a [u64]) -> Sparkline<'a> {
-        Sparkline { data, color: None, theme: None }
+        Sparkline {
+            data,
+            color: None,
+            theme: None,
+        }
     }
 
     pub fn color(mut self, color: Color) -> Self {

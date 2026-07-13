@@ -58,7 +58,11 @@ pub struct Icon<'a> {
 
 impl<'a> Icon<'a> {
     pub fn new(glyph: Glyph) -> Icon<'a> {
-        Icon { glyph, color: None, theme: None }
+        Icon {
+            glyph,
+            color: None,
+            theme: None,
+        }
     }
 
     pub fn color(mut self, color: Color) -> Self {

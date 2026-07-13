@@ -17,21 +17,33 @@ impl Default for BoardState {
             columns: vec![
                 (
                     "Backlog".into(),
-                    vec!["RDP clipboard".into(), "Chart tooltips".into(), "Kanban swimlanes".into()],
+                    vec![
+                        "RDP clipboard".into(),
+                        "Chart tooltips".into(),
+                        "Kanban swimlanes".into(),
+                    ],
                 ),
                 (
                     "In progress".into(),
                     vec!["forge-tui phase 3".into(), "Docs pass".into()],
                 ),
                 ("Review".into(), vec!["Auth session rotation".into()]),
-                ("Done".into(), vec!["Terminal widget".into(), "VNC viewer".into()]),
+                (
+                    "Done".into(),
+                    vec!["Terminal widget".into(), "VNC viewer".into()],
+                ),
             ],
         }
     }
 }
 
 impl BoardState {
-    pub fn handle_key(&mut self, focused: Option<FocusId>, key: KeyEvent, ctx: &mut Ctx) -> Outcome {
+    pub fn handle_key(
+        &mut self,
+        focused: Option<FocusId>,
+        key: KeyEvent,
+        ctx: &mut Ctx,
+    ) -> Outcome {
         if focused != Some(BOARD) {
             return Outcome::Ignored;
         }

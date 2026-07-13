@@ -3,8 +3,8 @@
 
 use oauth2::basic::BasicClient;
 use oauth2::{
-    AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, RedirectUrl, Scope, TokenResponse,
-    TokenUrl,
+    AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, RedirectUrl, Scope,
+    TokenResponse, TokenUrl,
 };
 use serde_json::Value;
 
@@ -24,7 +24,10 @@ fn cfg_str<'a>(provider: &'a UpstreamProvider, key: &str) -> Result<&'a str, App
         .and_then(|v| v.as_str())
         .filter(|s| !s.is_empty())
         .ok_or_else(|| {
-            AppError::Config(format!("provider {:?} is missing config key {key:?}", provider.slug))
+            AppError::Config(format!(
+                "provider {:?} is missing config key {key:?}",
+                provider.slug
+            ))
         })
 }
 
@@ -41,14 +44,21 @@ fn build_client(
     >,
     AppError,
 > {
-    Ok(BasicClient::new(ClientId::new(cfg_str(provider, "client_id")?.to_string()))
-        .set_client_secret(ClientSecret::new(cfg_str(provider, "client_secret")?.to_string()))
-        .set_auth_uri(AuthUrl::new(AUTH_URL.to_string()).map_err(AppError::internal)?)
-        .set_token_uri(TokenUrl::new(TOKEN_URL.to_string()).map_err(AppError::internal)?)
-        .set_redirect_uri(
-            RedirectUrl::new(format!("{}/api/callback/{}", state.cfg.issuer, provider.slug))
+    Ok(
+        BasicClient::new(ClientId::new(cfg_str(provider, "client_id")?.to_string()))
+            .set_client_secret(ClientSecret::new(
+                cfg_str(provider, "client_secret")?.to_string(),
+            ))
+            .set_auth_uri(AuthUrl::new(AUTH_URL.to_string()).map_err(AppError::internal)?)
+            .set_token_uri(TokenUrl::new(TOKEN_URL.to_string()).map_err(AppError::internal)?)
+            .set_redirect_uri(
+                RedirectUrl::new(format!(
+                    "{}/api/callback/{}",
+                    state.cfg.issuer, provider.slug
+                ))
                 .map_err(AppError::internal)?,
-        ))
+            ),
+    )
 }
 
 pub fn start(
@@ -63,7 +73,10 @@ pub fn start(
         .add_scope(Scope::new("read:user".into()))
         .add_scope(Scope::new("user:email".into()))
         .url();
-    Ok((url.to_string(), serde_json::json!({ "slug": provider.slug })))
+    Ok((
+        url.to_string(),
+        serde_json::json!({ "slug": provider.slug }),
+    ))
 }
 
 pub async fn finish(
@@ -87,7 +100,9 @@ pub async fn finish(
         .to_string();
 
     // Primary verified email (the profile "email" field is often null).
-    let emails: Value = api_get(state, token, "/user/emails").await.unwrap_or(Value::Null);
+    let emails: Value = api_get(state, token, "/user/emails")
+        .await
+        .unwrap_or(Value::Null);
     let primary = emails.as_array().and_then(|list| {
         list.iter()
             .find(|e| e["primary"] == true && e["verified"] == true)
@@ -117,7 +132,10 @@ async fn api_get(state: &SharedState, token: &str, path: &str) -> Result<Value, 
         .await
         .map_err(|e| AppError::Internal(format!("github api call failed: {e}")))?;
     if !res.status().is_success() {
-        return Err(AppError::Internal(format!("github api {path} returned {}", res.status())));
+        return Err(AppError::Internal(format!(
+            "github api {path} returned {}",
+            res.status()
+        )));
     }
     res.json().await.map_err(AppError::internal)
 }

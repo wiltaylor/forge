@@ -15,7 +15,11 @@ pub struct Badge<'a> {
 
 impl<'a> Badge<'a> {
     pub fn new(label: &'a str) -> Badge<'a> {
-        Badge { label, severity: None, theme: None }
+        Badge {
+            label,
+            severity: None,
+            theme: None,
+        }
     }
 
     pub fn severity(mut self, severity: Severity) -> Self {

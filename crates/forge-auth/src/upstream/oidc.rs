@@ -20,7 +20,10 @@ fn cfg_str<'a>(provider: &'a UpstreamProvider, key: &str) -> Result<&'a str, App
         .and_then(|v| v.as_str())
         .filter(|s| !s.is_empty())
         .ok_or_else(|| {
-            AppError::Config(format!("provider {:?} is missing config key {key:?}", provider.slug))
+            AppError::Config(format!(
+                "provider {:?} is missing config key {key:?}",
+                provider.slug
+            ))
         })
 }
 
@@ -31,23 +34,28 @@ fn redirect_url(state: &SharedState, slug: &str) -> String {
 async fn build_client(
     state: &SharedState,
     provider: &UpstreamProvider,
-) -> Result<CoreClient<
-    openidconnect::EndpointSet,
-    openidconnect::EndpointNotSet,
-    openidconnect::EndpointNotSet,
-    openidconnect::EndpointNotSet,
-    openidconnect::EndpointMaybeSet,
-    openidconnect::EndpointMaybeSet,
->, AppError> {
-    let issuer = IssuerUrl::new(cfg_str(provider, "issuer_url")?.to_string())
-        .map_err(AppError::internal)?;
+) -> Result<
+    CoreClient<
+        openidconnect::EndpointSet,
+        openidconnect::EndpointNotSet,
+        openidconnect::EndpointNotSet,
+        openidconnect::EndpointNotSet,
+        openidconnect::EndpointMaybeSet,
+        openidconnect::EndpointMaybeSet,
+    >,
+    AppError,
+> {
+    let issuer =
+        IssuerUrl::new(cfg_str(provider, "issuer_url")?.to_string()).map_err(AppError::internal)?;
     let metadata = CoreProviderMetadata::discover_async(issuer, &state.http)
         .await
         .map_err(|e| AppError::Internal(format!("upstream discovery failed: {e}")))?;
     let client = CoreClient::from_provider_metadata(
         metadata,
         ClientId::new(cfg_str(provider, "client_id")?.to_string()),
-        Some(ClientSecret::new(cfg_str(provider, "client_secret")?.to_string())),
+        Some(ClientSecret::new(
+            cfg_str(provider, "client_secret")?.to_string(),
+        )),
     )
     .set_redirect_uri(
         RedirectUrl::new(redirect_url(state, &provider.slug)).map_err(AppError::internal)?,
@@ -137,7 +145,11 @@ pub async fn finish(
         .and_then(|v| v.as_str())
         .filter(|s| !s.is_empty())
         .and_then(|claim| raw.as_ref()?.get(claim)?.as_array().cloned())
-        .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect());
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(String::from))
+                .collect()
+        });
 
     Ok(FederatedProfile {
         subject: claims.subject().to_string(),
@@ -151,7 +163,12 @@ pub async fn finish(
         preferred_username: claims
             .preferred_username()
             .map(|u| u.to_string())
-            .or_else(|| raw.as_ref()?.get("preferred_username")?.as_str().map(String::from)),
+            .or_else(|| {
+                raw.as_ref()?
+                    .get("preferred_username")?
+                    .as_str()
+                    .map(String::from)
+            }),
         raw_claims: raw,
         groups,
     })
@@ -166,8 +183,8 @@ fn decode_jwt_payload(token: &str) -> Option<Value> {
 
 /// Admin "test": run discovery and report the token endpoint.
 pub async fn test(state: &SharedState, provider: &UpstreamProvider) -> Result<String, AppError> {
-    let issuer = IssuerUrl::new(cfg_str(provider, "issuer_url")?.to_string())
-        .map_err(AppError::internal)?;
+    let issuer =
+        IssuerUrl::new(cfg_str(provider, "issuer_url")?.to_string()).map_err(AppError::internal)?;
     let metadata = CoreProviderMetadata::discover_async(issuer, &state.http)
         .await
         .map_err(|e| AppError::Internal(format!("discovery failed: {e}")))?;

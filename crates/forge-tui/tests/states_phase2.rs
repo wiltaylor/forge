@@ -90,7 +90,10 @@ fn listbox_scrolls_to_cursor() {
     assert_eq!(state.highlight, 19);
     let buf = render_stateful(ListBox::new(&refs).theme(&t), 20, 5, &mut state);
     let last_row: String = (0..20u16).map(|x| buf[(x, 4)].symbol()).collect();
-    assert!(last_row.contains("item-19"), "viewport did not follow: {last_row:?}");
+    assert!(
+        last_row.contains("item-19"),
+        "viewport did not follow: {last_row:?}"
+    );
 }
 
 #[test]
@@ -139,7 +142,10 @@ fn combobox_filters_and_submits() {
     }
     assert!(s.open);
     assert_eq!(s.matches(), &[1]);
-    assert_eq!(s.handle_key(key(KeyCode::Enter), &items), Outcome::Submitted);
+    assert_eq!(
+        s.handle_key(key(KeyCode::Enter), &items),
+        Outcome::Submitted
+    );
     assert_eq!(s.input.value(), "debian/12");
     assert!(!s.open);
 }
@@ -179,11 +185,9 @@ fn menu_state_skips_and_submits() {
     let t = Theme::dark();
     let mut state = MenuState::new();
     let mut buf = Buffer::empty(Rect::new(0, 0, 30, 10));
-    DropdownMenu::new(&entries, Rect::new(0, 0, 1, 1)).theme(&t).render(
-        Rect::new(0, 0, 30, 10),
-        &mut buf,
-        &mut state,
-    );
+    DropdownMenu::new(&entries, Rect::new(0, 0, 1, 1))
+        .theme(&t)
+        .render(Rect::new(0, 0, 30, 10), &mut buf, &mut state);
     let _ = state.handle_key(key(KeyCode::Down));
     let _ = state.handle_key(key(KeyCode::Down));
     assert_eq!(state.highlight, 2); // "Delete" (selectable index)
@@ -206,11 +210,20 @@ fn palette_filters_and_navigates() {
     state.filter(&commands);
     assert_eq!(state.matches().len(), 3);
     for c in "restart".chars() {
-        let _ = state.handle_key(KeyEvent::new(KeyCode::Char(c), KeyModifiers::NONE), &commands);
+        let _ = state.handle_key(
+            KeyEvent::new(KeyCode::Char(c), KeyModifiers::NONE),
+            &commands,
+        );
     }
     assert_eq!(state.highlighted(), Some(1));
-    assert_eq!(state.handle_key(key(KeyCode::Enter), &commands), Outcome::Submitted);
-    assert_eq!(state.handle_key(key(KeyCode::Esc), &commands), Outcome::Cancelled);
+    assert_eq!(
+        state.handle_key(key(KeyCode::Enter), &commands),
+        Outcome::Submitted
+    );
+    assert_eq!(
+        state.handle_key(key(KeyCode::Esc), &commands),
+        Outcome::Cancelled
+    );
 }
 
 #[test]

@@ -14,7 +14,9 @@ pub mod userinfo;
 pub const SUPPORTED_SCOPES: &[&str] = &["openid", "profile", "email", "roles", "offline_access"];
 
 pub fn scope_is_supported(scope: &str) -> bool {
-    scope.split_whitespace().all(|s| SUPPORTED_SCOPES.contains(&s))
+    scope
+        .split_whitespace()
+        .all(|s| SUPPORTED_SCOPES.contains(&s))
 }
 
 pub fn scope_allowed_for_client(scope: &str, allowed: &[String]) -> bool {

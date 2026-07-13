@@ -18,6 +18,7 @@ export default function DesktopDemo() {
   const [username, setUsername] = createSignal('');
   const [password, setPassword] = createSignal('');
   const [scale, setScale] = createSignal('fit');
+  const [quality, setQuality] = createSignal('lossless');
   const [status, setStatus] = createSignal('disconnected');
   let viewer;
 
@@ -74,6 +75,18 @@ export default function DesktopDemo() {
                              ]} />
               </div>
             </div>
+            <div class="ffield">
+              <span class="ffield-label">Quality</span>
+              <div>
+                {/* Takes effect on the next connect (negotiated in the
+                    connect frame). */}
+                <ToggleGroup value={quality()} onChange={setQuality}
+                             options={[
+                               { value: 'lossless', label: 'Lossless' },
+                               { value: 'lossy', label: 'Lossy' },
+                             ]} />
+              </div>
+            </div>
             <Show when={!busy()} fallback={
               <Button onClick={() => viewer?.disconnect()}>Disconnect</Button>
             }>
@@ -100,6 +113,7 @@ export default function DesktopDemo() {
             username={username() || undefined}
             password={password() || undefined}
             scale={scale()}
+            quality={quality()}
             ref={(v) => { viewer = v; }}
             onStatus={setStatus}
           />

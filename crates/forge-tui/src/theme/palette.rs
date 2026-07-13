@@ -78,12 +78,7 @@ pub const LIGHT: Theme = Theme {
         rgb(0xEAECEF), // pressed / active row
         rgb(0xFFFFFF), // popover, dropdown
     ],
-    fg: [
-        rgb(0x0C0F14),
-        rgb(0x3D4654),
-        rgb(0x6B7383),
-        rgb(0xA0A6B2),
-    ],
+    fg: [rgb(0x0C0F14), rgb(0x3D4654), rgb(0x6B7383), rgb(0xA0A6B2)],
     border: BorderTokens {
         subtle: rgb(0xEEF0F3),
         default: rgb(0xDCDFE4),

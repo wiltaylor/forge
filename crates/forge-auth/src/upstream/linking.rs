@@ -26,7 +26,11 @@ pub async fn resolve_user(
     profile: &FederatedProfile,
 ) -> Result<User, AppError> {
     // 1. Existing link.
-    if let Some(identity) = state.db.identity_lookup(&provider.id, &profile.subject).await? {
+    if let Some(identity) = state
+        .db
+        .identity_lookup(&provider.id, &profile.subject)
+        .await?
+    {
         let user = state
             .db
             .user_by_id(&identity.user_id)
@@ -106,15 +110,28 @@ pub async fn sync_groups(
     user: &User,
     profile: &FederatedProfile,
 ) -> Result<(), AppError> {
-    let Some(groups) = &profile.groups else { return Ok(()) };
+    let Some(groups) = &profile.groups else {
+        return Ok(());
+    };
     let mappings = state.db.group_mappings_for_provider(&provider.id).await?;
     let role_ids: Vec<String> = mappings
         .iter()
-        .filter(|m| groups.iter().any(|g| g.eq_ignore_ascii_case(&m.external_group)))
+        .filter(|m| {
+            groups
+                .iter()
+                .any(|g| g.eq_ignore_ascii_case(&m.external_group))
+        })
         .map(|m| m.role_id.clone())
         .collect();
-    let source = if provider.kind == "ldap" { "ldap" } else { "federated" };
-    state.db.user_roles_replace(&user.id, &role_ids, source).await?;
+    let source = if provider.kind == "ldap" {
+        "ldap"
+    } else {
+        "federated"
+    };
+    state
+        .db
+        .user_roles_replace(&user.id, &role_ids, source)
+        .await?;
     Ok(())
 }
 
@@ -133,11 +150,23 @@ async fn unique_username(
                 .and_then(|e| e.split('@').next())
                 .map(String::from)
         })
-        .unwrap_or_else(|| format!("{}-{}", provider.slug, &profile.subject.chars().take(8).collect::<String>()));
+        .unwrap_or_else(|| {
+            format!(
+                "{}-{}",
+                provider.slug,
+                &profile.subject.chars().take(8).collect::<String>()
+            )
+        });
     let base: String = base
         .to_lowercase()
         .chars()
-        .map(|c| if c.is_ascii_alphanumeric() || c == '-' || c == '.' || c == '_' { c } else { '-' })
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '-' || c == '.' || c == '_' {
+                c
+            } else {
+                '-'
+            }
+        })
         .collect();
 
     if state.db.user_by_username(&base).await?.is_none() {
@@ -149,5 +178,7 @@ async fn unique_username(
             return Ok(candidate);
         }
     }
-    Err(AppError::Conflict("could not derive a unique username".into()))
+    Err(AppError::Conflict(
+        "could not derive a unique username".into(),
+    ))
 }

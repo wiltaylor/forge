@@ -50,7 +50,8 @@ pub async fn end_session(
                 None => false,
             };
             if registered {
-                let mut url = url::Url::parse(uri).map_err(|_| AppError::BadRequest("bad post_logout_redirect_uri".into()))?;
+                let mut url = url::Url::parse(uri)
+                    .map_err(|_| AppError::BadRequest("bad post_logout_redirect_uri".into()))?;
                 if let Some(s) = params.state.as_deref() {
                     url.query_pairs_mut().append_pair("state", s);
                 }

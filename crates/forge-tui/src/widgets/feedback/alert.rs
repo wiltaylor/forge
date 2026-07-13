@@ -18,7 +18,12 @@ pub struct Alert<'a> {
 
 impl<'a> Alert<'a> {
     pub fn new(severity: Severity, title: &'a str) -> Alert<'a> {
-        Alert { severity, title, body: None, theme: None }
+        Alert {
+            severity,
+            title,
+            body: None,
+            theme: None,
+        }
     }
 
     pub fn body(mut self, body: &'a str) -> Self {
@@ -59,7 +64,12 @@ impl Widget for Alert<'_> {
         let tri = t.severity(self.severity);
         buf.set_style(area, Style::new().bg(tri.bg));
         for dy in 0..area.height {
-            buf.set_string(area.x, area.y + dy, "▎", Style::new().fg(tri.base).bg(tri.bg));
+            buf.set_string(
+                area.x,
+                area.y + dy,
+                "▎",
+                Style::new().fg(tri.base).bg(tri.bg),
+            );
         }
         let inner_w = area.width.saturating_sub(4) as usize;
         let title = format!("{} {}", self.glyph().as_str(), self.title);
@@ -67,7 +77,10 @@ impl Widget for Alert<'_> {
             area.x + 2,
             area.y,
             text::truncate(&title, inner_w + 2),
-            Style::new().fg(tri.fg).bg(tri.bg).add_modifier(Modifier::BOLD),
+            Style::new()
+                .fg(tri.fg)
+                .bg(tri.bg)
+                .add_modifier(Modifier::BOLD),
         );
         if let Some(body) = self.body {
             let style = Style::new().fg(t.fg[1]).bg(tri.bg);

@@ -127,7 +127,10 @@ impl<'t> Builder<'t> {
 /// Build styled lines from markdown source (also used by the chat kit).
 pub fn markdown_lines(source: &str, width: usize, t: &Theme) -> Vec<Line<'static>> {
     let mut b = Builder::new(t, width);
-    let parser = Parser::new_ext(source, Options::ENABLE_STRIKETHROUGH | Options::ENABLE_TABLES);
+    let parser = Parser::new_ext(
+        source,
+        Options::ENABLE_STRIKETHROUGH | Options::ENABLE_TABLES,
+    );
     let mut code_buf = String::new();
     for event in parser {
         match event {
@@ -216,7 +219,9 @@ pub fn markdown_lines(source: &str, width: usize, t: &Theme) -> Vec<Line<'static
             }
             Event::Start(Tag::Emphasis) => b.push_style(|s| s.add_modifier(Modifier::ITALIC)),
             Event::End(TagEnd::Emphasis) => b.pop_style(),
-            Event::Start(Tag::Strong) => b.push_style(|s| s.add_modifier(Modifier::BOLD).fg(t.fg[0])),
+            Event::Start(Tag::Strong) => {
+                b.push_style(|s| s.add_modifier(Modifier::BOLD).fg(t.fg[0]))
+            }
             Event::End(TagEnd::Strong) => b.pop_style(),
             Event::Start(Tag::Strikethrough) => {
                 b.push_style(|s| s.add_modifier(Modifier::CROSSED_OUT))
@@ -276,7 +281,11 @@ pub struct Markdown<'a> {
 
 impl<'a> Markdown<'a> {
     pub fn new(source: &'a str) -> Markdown<'a> {
-        Markdown { source, scroll: 0, theme: None }
+        Markdown {
+            source,
+            scroll: 0,
+            theme: None,
+        }
     }
 
     pub fn scroll(mut self, scroll: u16) -> Self {

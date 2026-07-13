@@ -218,10 +218,26 @@ impl Theme {
                 fg: LightBlue,
                 contrast: text,
             },
-            success: SemanticTriple { base: Green, bg: raised, fg: LightGreen },
-            warning: SemanticTriple { base: Yellow, bg: raised, fg: LightYellow },
-            danger: SemanticTriple { base: Red, bg: raised, fg: LightRed },
-            info: SemanticTriple { base: Cyan, bg: raised, fg: LightCyan },
+            success: SemanticTriple {
+                base: Green,
+                bg: raised,
+                fg: LightGreen,
+            },
+            warning: SemanticTriple {
+                base: Yellow,
+                bg: raised,
+                fg: LightYellow,
+            },
+            danger: SemanticTriple {
+                base: Red,
+                bg: raised,
+                fg: LightRed,
+            },
+            info: SemanticTriple {
+                base: Cyan,
+                bg: raised,
+                fg: LightCyan,
+            },
         }
     }
 }

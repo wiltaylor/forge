@@ -16,13 +16,20 @@ pub struct SplitState {
 
 impl Default for SplitState {
     fn default() -> SplitState {
-        SplitState { ratio: 0.5, last_area: Rect::ZERO, dragging: false }
+        SplitState {
+            ratio: 0.5,
+            last_area: Rect::ZERO,
+            dragging: false,
+        }
     }
 }
 
 impl SplitState {
     pub fn new(ratio: f64) -> SplitState {
-        SplitState { ratio: ratio.clamp(0.05, 0.95), ..Default::default() }
+        SplitState {
+            ratio: ratio.clamp(0.05, 0.95),
+            ..Default::default()
+        }
     }
 
     fn nudge(&mut self, delta: f64) -> Outcome {
@@ -40,7 +47,11 @@ impl SplitState {
         if !is_press(&key) {
             return Outcome::Ignored;
         }
-        let step = if key.modifiers.contains(KeyModifiers::SHIFT) { 0.15 } else { 0.05 };
+        let step = if key.modifiers.contains(KeyModifiers::SHIFT) {
+            0.15
+        } else {
+            0.05
+        };
         match key.code {
             KeyCode::Left | KeyCode::Up => self.nudge(-step),
             KeyCode::Right | KeyCode::Down => self.nudge(step),
@@ -56,8 +67,9 @@ impl SplitState {
         }
         let divider_x = area.x + (area.width as f64 * self.ratio) as u16;
         match ev.kind {
-            MouseEventKind::Down(_) if ev.column.abs_diff(divider_x) <= 1
-                && (area.y..area.y + area.height).contains(&ev.row) =>
+            MouseEventKind::Down(_)
+                if ev.column.abs_diff(divider_x) <= 1
+                    && (area.y..area.y + area.height).contains(&ev.row) =>
             {
                 self.dragging = true;
                 Outcome::Consumed
@@ -88,7 +100,11 @@ pub struct SplitPane<'a> {
 
 impl<'a> SplitPane<'a> {
     pub fn new() -> SplitPane<'a> {
-        SplitPane { focused: false, min: 8, theme: None }
+        SplitPane {
+            focused: false,
+            min: 8,
+            theme: None,
+        }
     }
 
     /// Minimum pane width in cells.
@@ -109,7 +125,10 @@ impl<'a> SplitPane<'a> {
 
     fn divider_x(&self, area: Rect, state: &SplitState) -> u16 {
         let raw = (area.width as f64 * state.ratio) as u16;
-        raw.clamp(self.min.min(area.width), area.width.saturating_sub(self.min + 1))
+        raw.clamp(
+            self.min.min(area.width),
+            area.width.saturating_sub(self.min + 1),
+        )
     }
 
     /// The two pane rects (left, right) for the current state.
@@ -137,7 +156,11 @@ impl<'a> StatefulWidget for SplitPane<'a> {
         state.last_area = area;
         let t = self.theme.unwrap_or_else(|| default_theme());
         let dx = area.x + self.divider_x(area, state);
-        let color = if self.focused { t.accent.base } else { t.border.default };
+        let color = if self.focused {
+            t.accent.base
+        } else {
+            t.border.default
+        };
         for dy in 0..area.height {
             buf.set_string(dx, area.y + dy, "│", Style::new().fg(color));
         }

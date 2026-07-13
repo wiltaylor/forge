@@ -74,9 +74,14 @@ pub async fn login(
     };
 
     let (user, amr) = if verified {
-        (user.expect("verified implies user"), vec!["pwd".to_string()])
+        (
+            user.expect("verified implies user"),
+            vec!["pwd".to_string()],
+        )
     } else {
-        match crate::upstream::ldap::try_ldap_login(&state, body.username.trim(), &body.password).await? {
+        match crate::upstream::ldap::try_ldap_login(&state, body.username.trim(), &body.password)
+            .await?
+        {
             Some(user) => (user, vec!["ldap".to_string()]),
             None => {
                 state.login_limiter.record_failure(&limiter_key);
@@ -144,7 +149,11 @@ pub async fn login_request_info(
     Extension(state): Extension<SharedState>,
     Path(id): Path<String>,
 ) -> Result<impl IntoResponse, AppError> {
-    let request = state.db.auth_request_get(&id).await?.ok_or(AppError::NotFound)?;
+    let request = state
+        .db
+        .auth_request_get(&id)
+        .await?
+        .ok_or(AppError::NotFound)?;
     let client_name = match &request.client_id {
         Some(client_id) => state.db.client_by_id(client_id).await?.map(|c| c.name),
         None => None,
@@ -177,5 +186,7 @@ pub async fn login_providers(
         .filter(|p| p.kind != "ldap")
         .map(|p| json!({ "slug": p.slug, "display_name": p.display_name, "kind": p.kind }))
         .collect();
-    Ok(ok(json!({ "providers": providers, "dev_login": dev_login_enabled() })))
+    Ok(ok(
+        json!({ "providers": providers, "dev_login": dev_login_enabled() }),
+    ))
 }

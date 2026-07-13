@@ -12,7 +12,11 @@ pub struct FormState {
 
 impl FormState {
     pub fn new(len: usize) -> FormState {
-        FormState { active: 0, len, errors: BTreeMap::new() }
+        FormState {
+            active: 0,
+            len,
+            errors: BTreeMap::new(),
+        }
     }
 
     pub fn is_active(&self, field: usize) -> bool {

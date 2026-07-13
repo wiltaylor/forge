@@ -188,6 +188,7 @@ impl App for Gallery {
                     10 => self.date.handle_mouse(&ev, ctx),
                     12 => self.chat.handle_mouse(&ev, ctx),
                     13 => self.code.handle_mouse(&ev, ctx),
+                    14 => self.term.handle_mouse(&ev),
                     16 => self.effects.handle_mouse(&ev, ctx),
                     17 => self.blocks.handle_mouse(&ev, ctx),
                     _ => Outcome::Ignored,

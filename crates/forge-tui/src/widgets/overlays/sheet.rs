@@ -23,7 +23,12 @@ pub struct Sheet<'a> {
 
 impl<'a> Sheet<'a> {
     pub fn new(side: Side) -> Sheet<'a> {
-        Sheet { side, size: 36, title: None, theme: None }
+        Sheet {
+            side,
+            size: 36,
+            title: None,
+            theme: None,
+        }
     }
 
     /// Width (left/right) or height (bottom) of the docked panel.

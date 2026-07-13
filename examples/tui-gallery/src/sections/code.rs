@@ -37,7 +37,10 @@ pub struct CodeState {
 
 impl Default for CodeState {
     fn default() -> CodeState {
-        CodeState { code: CodeViewState::new(), diff: CodeViewState::new() }
+        CodeState {
+            code: CodeViewState::new(),
+            diff: CodeViewState::new(),
+        }
     }
 }
 
@@ -79,7 +82,10 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
     );
     let marks = [(5usize, Severity::Warning), (7usize, Severity::Danger)];
     frame.render_stateful_widget(
-        CodeView::new(SOURCE, "rs").marks(&marks).focused(f_code).theme(t),
+        CodeView::new(SOURCE, "rs")
+            .marks(&marks)
+            .focused(f_code)
+            .theme(t),
         Rect::new(cols[0].x, cols[0].y + 1, cols[0].width, cols[0].height - 1),
         &mut state.code,
     );

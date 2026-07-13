@@ -30,7 +30,11 @@ impl InputState {
     pub fn with_value(value: impl Into<String>) -> InputState {
         let value = value.into();
         let cursor = value.len();
-        InputState { value, cursor, ..Default::default() }
+        InputState {
+            value,
+            cursor,
+            ..Default::default()
+        }
     }
 
     pub fn value(&self) -> &str {

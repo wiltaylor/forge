@@ -1,6 +1,6 @@
 //! Calendar + DatePicker (cargo feature `calendar`, uses the `time` crate).
 
-use crate::event::{clicked, in_area, left_down, is_press, scroll_delta, Outcome};
+use crate::event::{clicked, in_area, is_press, left_down, scroll_delta, Outcome};
 use crate::theme::{default_theme, Theme};
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
@@ -117,10 +117,7 @@ impl CalendarState {
                 m => (y, m.previous()),
             }
         };
-        let day = self
-            .selected
-            .day()
-            .min(nm.length(ny));
+        let day = self.selected.day().min(nm.length(ny));
         if let Ok(date) = Date::from_calendar_date(ny, nm, day) {
             self.select(date)
         } else {
@@ -178,7 +175,12 @@ impl<'a> StatefulWidget for Calendar<'a> {
     type State = CalendarState;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut CalendarState) {
-        state.area = Rect::new(area.x, area.y, area.width.min(21), area.height.min(Calendar::HEIGHT));
+        state.area = Rect::new(
+            area.x,
+            area.y,
+            area.width.min(21),
+            area.height.min(Calendar::HEIGHT),
+        );
         if area.width < 21 || area.height < 3 {
             return;
         }
@@ -191,9 +193,11 @@ impl<'a> StatefulWidget for Calendar<'a> {
             hx,
             area.y,
             &header,
-            Style::new()
-                .fg(t.fg[0])
-                .add_modifier(if self.focused { Modifier::BOLD | Modifier::UNDERLINED } else { Modifier::BOLD }),
+            Style::new().fg(t.fg[0]).add_modifier(if self.focused {
+                Modifier::BOLD | Modifier::UNDERLINED
+            } else {
+                Modifier::BOLD
+            }),
         );
         // Weekday row.
         buf.set_string(
@@ -224,7 +228,10 @@ impl<'a> StatefulWidget for Calendar<'a> {
             let is_today = date == now;
             let label = format!("{day:>2}");
             let style = if is_selected {
-                Style::new().fg(t.accent.contrast).bg(t.accent.base).add_modifier(Modifier::BOLD)
+                Style::new()
+                    .fg(t.accent.contrast)
+                    .bg(t.accent.base)
+                    .add_modifier(Modifier::BOLD)
             } else if is_today {
                 Style::new().fg(t.accent.fg).add_modifier(Modifier::BOLD)
             } else {
@@ -245,7 +252,11 @@ pub struct DatePickerState {
 
 impl DatePickerState {
     pub fn new(selected: Date) -> DatePickerState {
-        DatePickerState { open: false, cal: CalendarState::new(selected), field: Rect::default() }
+        DatePickerState {
+            open: false,
+            cal: CalendarState::new(selected),
+            field: Rect::default(),
+        }
     }
 
     pub fn selected(&self) -> Date {
@@ -346,7 +357,10 @@ impl<'a> StatefulWidget for DatePicker<'a> {
             t.border.default
         };
         state.field = Rect::new(area.x, area.y, area.width, 1);
-        buf.set_style(Rect::new(area.x, area.y, area.width, 1), Style::new().bg(t.bg[2]));
+        buf.set_style(
+            Rect::new(area.x, area.y, area.width, 1),
+            Style::new().bg(t.bg[2]),
+        );
         buf.set_string(area.x, area.y, "▎", Style::new().fg(edge).bg(t.bg[2]));
         let d = state.cal.selected;
         let label = format!("{:04}-{:02}-{:02}", d.year(), u8::from(d.month()), d.day());
@@ -381,7 +395,10 @@ impl<'a> StatefulWidget for DatePicker<'a> {
                     .style(Style::new().bg(t.bg[4]));
                 let inner = block.inner(popup);
                 block.render(popup, buf);
-                Calendar::new().focused(self.focused).theme(t).render(inner, buf, &mut state.cal);
+                Calendar::new()
+                    .focused(self.focused)
+                    .theme(t)
+                    .render(inner, buf, &mut state.cal);
             }
         }
     }

@@ -34,18 +34,31 @@ fn markdown_renders_structure() {
     let lines = markdown_lines(src, 40, &t);
     let text: Vec<String> = lines
         .iter()
-        .map(|l| l.spans.iter().map(|s| s.content.as_ref()).collect::<String>())
+        .map(|l| {
+            l.spans
+                .iter()
+                .map(|s| s.content.as_ref())
+                .collect::<String>()
+        })
         .collect();
     let joined = text.join("\n");
     assert!(joined.contains("Title"));
     assert!(joined.contains("• one"));
     assert!(joined.contains("▎ quoted"));
     // Heading is bold+underlined.
-    let title_line = lines.iter().find(|l| {
-        l.spans.iter().any(|s| s.content.contains("Title"))
-    }).unwrap();
-    let style = title_line.spans.iter().find(|s| s.content.contains("Title")).unwrap().style;
-    assert!(style.add_modifier.contains(Modifier::BOLD | Modifier::UNDERLINED));
+    let title_line = lines
+        .iter()
+        .find(|l| l.spans.iter().any(|s| s.content.contains("Title")))
+        .unwrap();
+    let style = title_line
+        .spans
+        .iter()
+        .find(|s| s.content.contains("Title"))
+        .unwrap()
+        .style;
+    assert!(style
+        .add_modifier
+        .contains(Modifier::BOLD | Modifier::UNDERLINED));
 }
 
 #[test]
@@ -55,7 +68,11 @@ fn markdown_wraps_to_width() {
     let lines = markdown_lines(src, 20, &t);
     assert!(lines.len() > 2, "long paragraph must wrap");
     for l in &lines {
-        let w: usize = l.spans.iter().map(|s| forge_tui::text::width(&s.content)).sum();
+        let w: usize = l
+            .spans
+            .iter()
+            .map(|s| forge_tui::text::width(&s.content))
+            .sum();
         assert!(w <= 20, "line overflows: {w}");
     }
 }
@@ -87,7 +104,9 @@ fn chat_view_follows_tail() {
     let mut state = ChatViewState::new();
     let area = Rect::new(0, 0, 40, 6);
     let mut buf = Buffer::empty(area);
-    ChatView::new(&items).theme(&t).render(area, &mut buf, &mut state);
+    ChatView::new(&items)
+        .theme(&t)
+        .render(area, &mut buf, &mut state);
     assert!(buffer_text(&buf).contains("message number 9"));
     let _ = state.handle_key(key(KeyCode::Up));
     assert!(!state.follow);
@@ -118,7 +137,10 @@ fn code_view_highlights_and_marks() {
     let area = Rect::new(0, 0, 40, 5);
     let mut buf = Buffer::empty(area);
     let marks = [(1usize, forge_tui::theme::Severity::Warning)];
-    CodeView::new(src, "rs").marks(&marks).theme(&t).render(area, &mut buf, &mut state);
+    CodeView::new(src, "rs")
+        .marks(&marks)
+        .theme(&t)
+        .render(area, &mut buf, &mut state);
     let text = buffer_text(&buf);
     assert!(text.contains("fn main"));
     assert!(text.contains("1"), "line numbers present");
@@ -132,7 +154,10 @@ fn code_view_highlights_and_marks() {
             }
         }
     }
-    assert!(found_keyword_color, "syntax highlighting produced accent keywords");
+    assert!(
+        found_keyword_color,
+        "syntax highlighting produced accent keywords"
+    );
 }
 
 #[test]
@@ -143,7 +168,9 @@ fn diff_view_marks_adds_and_dels() {
     let mut state = CodeViewState::new();
     let area = Rect::new(0, 0, 20, 8);
     let mut buf = Buffer::empty(area);
-    DiffView::new(old, new).theme(&t).render(area, &mut buf, &mut state);
+    DiffView::new(old, new)
+        .theme(&t)
+        .render(area, &mut buf, &mut state);
     let text = buffer_text(&buf);
     assert!(text.contains("- b"));
     assert!(text.contains("+ X"));
@@ -162,13 +189,25 @@ fn flowchart_layers_and_arrows() {
     let edges = [FlowEdge::new("a", "b"), FlowEdge::new("b", "c")];
     let area = Rect::new(0, 0, 60, 8);
     let mut buf = Buffer::empty(area);
-    Flowchart::new(&nodes, &edges).theme(&t).render(area, &mut buf);
+    Flowchart::new(&nodes, &edges)
+        .theme(&t)
+        .render(area, &mut buf);
     let text = buffer_text(&buf);
     assert!(text.contains("alpha") && text.contains("beta") && text.contains("gamma"));
     assert!(text.contains("▸"), "edges end in arrowheads");
     // beta sits to the right of alpha (layered layout).
-    let alpha_x = text.lines().find(|l| l.contains("alpha")).unwrap().find("alpha").unwrap();
-    let beta_x = text.lines().find(|l| l.contains("beta")).unwrap().find("beta").unwrap();
+    let alpha_x = text
+        .lines()
+        .find(|l| l.contains("alpha"))
+        .unwrap()
+        .find("alpha")
+        .unwrap();
+    let beta_x = text
+        .lines()
+        .find(|l| l.contains("beta"))
+        .unwrap()
+        .find("beta")
+        .unwrap();
     assert!(beta_x > alpha_x);
 }
 

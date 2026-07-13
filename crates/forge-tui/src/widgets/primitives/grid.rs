@@ -19,12 +19,20 @@ pub struct Grid {
 impl Grid {
     /// A fixed number of columns.
     pub fn new(cols: u16) -> Grid {
-        Grid { cols: Some(cols.max(1)), min_col_width: 1, gap: 1 }
+        Grid {
+            cols: Some(cols.max(1)),
+            min_col_width: 1,
+            gap: 1,
+        }
     }
 
     /// As many columns as fit at `min_col_width` cells each (responsive).
     pub fn auto(min_col_width: u16) -> Grid {
-        Grid { cols: None, min_col_width: min_col_width.max(1), gap: 1 }
+        Grid {
+            cols: None,
+            min_col_width: min_col_width.max(1),
+            gap: 1,
+        }
     }
 
     pub fn gap(mut self, gap: u16) -> Self {

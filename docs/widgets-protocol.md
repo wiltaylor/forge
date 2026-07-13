@@ -99,7 +99,10 @@ streams dumb RGBA rects; the widget only blits them and forwards input.
 ```jsonc
 // first frame, exactly once
 {"type": "connect", "host": "…", "port": 5900,
- "username": "…", "password": "…"}
+ "username": "…", "password": "…",
+ "encodings": [0, 1, 2],        // rect encodings the client can decode
+ "quality": "lossless",         // "lossless" (default) | "lossy"
+ "jpeg_quality": 75}            // 1-100, lossy only; server clamps
 
 {"type": "key",   "code": "KeyA", "key": "a", "down": true}
 {"type": "mouse", "x": 10, "y": 20, "buttons": 1}
@@ -111,6 +114,12 @@ streams dumb RGBA rects; the widget only blits them and forwards input.
   `password` optional (VncAuth when the server demands it), `username`
   ignored. RDP: default port 3389, `username` **and** `password` required;
   `"DOMAIN\\user"` selects an explicit domain.
+
+  `encodings` lists the binary rect encodings (header-byte values, see below)
+  the client can decode; the server never emits an encoding that was not
+  advertised. Absent or empty = raw only, so pre-negotiation clients keep
+  working. `quality: "lossy"` additionally permits JPEG rects (encoding 2
+  must also be advertised); the default `"lossless"` never degrades pixels.
 
   **Embedding with a fixed target:** servers built on
   `forge_core::widgets::vnc::session_over` (e.g. vmlab-web, whose URL path
@@ -140,22 +149,48 @@ streams dumb RGBA rects; the widget only blits them and forwards input.
 
 ### Binary rect frame
 
-Every framebuffer update is one binary frame (`proto::encode_rect`):
+Every framebuffer update is one binary frame (`proto::RectEncoder`):
 
 | Offset | Size | Field                              |
 |-------:|-----:|------------------------------------|
 | 0      | 1    | version = `1`                      |
-| 1      | 1    | encoding = `0` (raw RGBA)          |
+| 1      | 1    | encoding (see below)               |
 | 2      | 2    | x (u16 LE)                         |
 | 4      | 2    | y (u16 LE)                         |
 | 6      | 2    | w (u16 LE)                         |
 | 8      | 2    | h (u16 LE)                         |
-| 10     | w·h·4| pixels, row-major RGBA (alpha always `0xFF`) |
+| 10     | …    | payload (to end of frame)          |
 
-The server forces the alpha byte opaque — both protocol decoders emit
-padding there (VNC RGBX, RDP bitmaps), which would otherwise blit as
-fully transparent. Clients must ignore frames with an unknown version;
-the encoding byte reserves room for per-rect compression later.
+| Encoding | Payload                                                        |
+|---------:|----------------------------------------------------------------|
+| `0` raw  | `w·h·4` bytes, row-major RGBA (alpha always `0xFF`)            |
+| `1` deflate | raw deflate (RFC 1951, no zlib wrapper) of the raw payload  |
+| `2` jpeg | baseline JPEG of the rect (lossy; opaque)                      |
+
+The server only emits encodings the client advertised in `connect`, and
+falls back to raw per rect whenever compression doesn't win (tiny rects,
+already-dense content) — a frame is never larger than its raw equivalent.
+JPEG additionally requires `quality: "lossy"`. The pixel source is
+alpha-forced opaque — both protocol decoders emit padding there (VNC RGBX,
+RDP bitmaps), which would otherwise blit as fully transparent.
+
+Rects apply strictly in frame order: later rects overwrite earlier ones, so
+clients with asynchronous decoders (e.g. `createImageBitmap` for JPEG) must
+serialize painting in arrival order. Clients must ignore frames with an
+unknown version.
+
+### Flow control
+
+Neither engine queues stale frames for a slow client:
+
+- Both engines merge dirty rects into a bounded region (over 16 rects it
+  collapses to a bounding box) and slice payloads from the **latest**
+  framebuffer state at send time — so overlapping updates coalesce instead
+  of accumulating, and a slow link converges on the current screen.
+- **VNC** flushes once per ~16 ms poll tick and only then requests the next
+  incremental update, so a slow client throttles the VNC server itself.
+- **RDP** is server-push: decoding continues while the writer drains, with
+  the backlog bounded at one framebuffer plus the merged rect list.
 
 ## Known approximations (v1)
 
@@ -169,5 +204,7 @@ the encoding byte reserves room for per-rect compression later.
 - **RDP reactivation is unsupported.** A server-initiated Deactivate-All
   (resolution renegotiation, some reconnect flows) yields
   `{"type":"error","message":"…reconnect…"}` — reconnect from the client.
-- VNC uses **Raw + DesktopSize encodings only**: correctness over bandwidth;
-  every update is a full raw RGBA rect.
+- VNC negotiates **Raw + DesktopSize RFB encodings only** on the backend ↔
+  VNC-server leg: correctness over bandwidth. The widget ↔ backend leg is
+  where the per-rect deflate/JPEG wire compression applies, so this mostly
+  matters when the VNC server is remote from the forge backend.

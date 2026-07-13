@@ -30,7 +30,10 @@ impl Db {
 
     /// Atomically consume a code: the UPDATE only wins once, so a replayed
     /// code returns `None` even under concurrent requests.
-    pub async fn auth_code_consume(&self, code_hash: &str) -> Result<Option<AuthCode>, sqlx::Error> {
+    pub async fn auth_code_consume(
+        &self,
+        code_hash: &str,
+    ) -> Result<Option<AuthCode>, sqlx::Error> {
         let ts = now();
         let res = sqlx::query(
             "UPDATE auth_codes SET consumed_at = $2
@@ -83,7 +86,10 @@ impl Db {
         Ok(id)
     }
 
-    pub async fn refresh_token_by_hash(&self, token_hash: &str) -> Result<Option<RefreshToken>, sqlx::Error> {
+    pub async fn refresh_token_by_hash(
+        &self,
+        token_hash: &str,
+    ) -> Result<Option<RefreshToken>, sqlx::Error> {
         opt_row(
             sqlx::query_as::<_, RefreshToken>("SELECT * FROM refresh_tokens WHERE token_hash = $1")
                 .bind(token_hash)
@@ -106,20 +112,24 @@ impl Db {
     }
 
     pub async fn refresh_family_revoke(&self, family_id: &str) -> Result<(), sqlx::Error> {
-        sqlx::query("UPDATE refresh_tokens SET revoked_at = $2 WHERE family_id = $1 AND revoked_at IS NULL")
-            .bind(family_id)
-            .bind(now())
-            .execute(&self.pool)
-            .await?;
+        sqlx::query(
+            "UPDATE refresh_tokens SET revoked_at = $2 WHERE family_id = $1 AND revoked_at IS NULL",
+        )
+        .bind(family_id)
+        .bind(now())
+        .execute(&self.pool)
+        .await?;
         Ok(())
     }
 
     pub async fn refresh_tokens_revoke_for_user(&self, user_id: &str) -> Result<(), sqlx::Error> {
-        sqlx::query("UPDATE refresh_tokens SET revoked_at = $2 WHERE user_id = $1 AND revoked_at IS NULL")
-            .bind(user_id)
-            .bind(now())
-            .execute(&self.pool)
-            .await?;
+        sqlx::query(
+            "UPDATE refresh_tokens SET revoked_at = $2 WHERE user_id = $1 AND revoked_at IS NULL",
+        )
+        .bind(user_id)
+        .bind(now())
+        .execute(&self.pool)
+        .await?;
         Ok(())
     }
 }

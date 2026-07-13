@@ -18,7 +18,13 @@ pub struct SliderState {
 
 impl SliderState {
     pub fn new(value: f64, min: f64, max: f64, step: f64) -> SliderState {
-        SliderState { value: value.clamp(min, max), min, max, step, track: Rect::default() }
+        SliderState {
+            value: value.clamp(min, max),
+            min,
+            max,
+            step,
+            track: Rect::default(),
+        }
     }
 
     /// Click or drag along the track to set the value (snapped to `step`).
@@ -92,7 +98,10 @@ pub struct Slider<'a> {
 
 impl<'a> Slider<'a> {
     pub fn new() -> Slider<'a> {
-        Slider { show_value: true, ..Default::default() }
+        Slider {
+            show_value: true,
+            ..Default::default()
+        }
     }
 
     pub fn label(mut self, label: &'a str) -> Self {

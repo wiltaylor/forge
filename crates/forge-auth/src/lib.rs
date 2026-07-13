@@ -52,7 +52,11 @@ pub fn spawn_sweeper(state: SharedState) {
             if let Err(e) = state.db.sweep_expired().await {
                 tracing::warn!(error = %e, "expired-row sweep failed");
             }
-            if let Err(e) = state.db.signing_keys_prune(tokens::keys::RETIRED_KEY_GRACE).await {
+            if let Err(e) = state
+                .db
+                .signing_keys_prune(tokens::keys::RETIRED_KEY_GRACE)
+                .await
+            {
                 tracing::warn!(error = %e, "signing-key prune failed");
             }
         }

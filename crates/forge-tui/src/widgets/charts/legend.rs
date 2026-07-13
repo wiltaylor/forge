@@ -15,7 +15,10 @@ pub struct Legend<'a> {
 
 impl<'a> Legend<'a> {
     pub fn new(labels: &'a [&'a str]) -> Legend<'a> {
-        Legend { labels, theme: None }
+        Legend {
+            labels,
+            theme: None,
+        }
     }
 
     pub fn theme(mut self, theme: &'a Theme) -> Self {

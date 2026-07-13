@@ -63,7 +63,10 @@ fn forge_syn_theme(t: &Theme) -> Option<SynTheme> {
         ("variable", t.fg[0], false),
     ];
     let mut theme = SynTheme {
-        settings: ThemeSettings { foreground: Some(fg), ..Default::default() },
+        settings: ThemeSettings {
+            foreground: Some(fg),
+            ..Default::default()
+        },
         ..Default::default()
     };
     for (sel, color, bold) in scopes {
@@ -225,7 +228,10 @@ impl<'a> StatefulWidget for CodeView<'a> {
                         .collect();
                     styled.push(spans);
                 }
-                None => styled.push(vec![(Style::new().fg(t.fg[1]).bg(t.bg[1]), (*line).to_owned())]),
+                None => styled.push(vec![(
+                    Style::new().fg(t.fg[1]).bg(t.bg[1]),
+                    (*line).to_owned(),
+                )]),
             }
         }
 
@@ -331,7 +337,11 @@ pub struct DiffView<'a> {
 
 impl<'a> DiffView<'a> {
     pub fn new(old: &'a str, new: &'a str) -> DiffView<'a> {
-        DiffView { old, new, theme: None }
+        DiffView {
+            old,
+            new,
+            theme: None,
+        }
     }
 
     pub fn theme(mut self, theme: &'a Theme) -> Self {

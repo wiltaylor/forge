@@ -18,7 +18,11 @@ pub struct Command<'a> {
 
 impl<'a> Command<'a> {
     pub fn new(id: &'a str, label: &'a str) -> Command<'a> {
-        Command { id, label, kbd: None }
+        Command {
+            id,
+            label,
+            kbd: None,
+        }
     }
 
     pub fn kbd(mut self, kbd: &'a str) -> Self {
@@ -150,7 +154,11 @@ pub struct Palette<'a> {
 
 impl<'a> Palette<'a> {
     pub fn new(commands: &'a [Command<'a>]) -> Palette<'a> {
-        Palette { commands, max_rows: 10, theme: None }
+        Palette {
+            commands,
+            max_rows: 10,
+            theme: None,
+        }
     }
 
     pub fn max_rows(mut self, rows: u16) -> Self {
@@ -194,14 +202,13 @@ impl<'a> StatefulWidget for Palette<'a> {
             .placeholder("Type a command…")
             .focused(true)
             .theme(t)
-            .render(Rect::new(inner.x, inner.y, inner.width, 1), buf, &mut state.input);
+            .render(
+                Rect::new(inner.x, inner.y, inner.width, 1),
+                buf,
+                &mut state.input,
+            );
 
-        let list = Rect::new(
-            inner.x,
-            inner.y + 1,
-            inner.width,
-            inner.height - 1,
-        );
+        let list = Rect::new(inner.x, inner.y + 1, inner.width, inner.height - 1);
         state.view_h = list.height as usize;
         state.list_area = list;
         if state.highlight < state.offset {
@@ -220,13 +227,18 @@ impl<'a> StatefulWidget for Palette<'a> {
         }
         for vis in 0..state.view_h {
             let fi = state.offset + vis;
-            let Some(&ci) = state.filtered.get(fi) else { break };
+            let Some(&ci) = state.filtered.get(fi) else {
+                break;
+            };
             let cmd = &self.commands[ci];
             let y = list.y + vis as u16;
             let is_cursor = fi == state.highlight;
             let mut style = Style::new().fg(t.fg[1]).bg(t.bg[4]);
             if is_cursor {
-                style = Style::new().fg(t.fg[0]).bg(t.bg[3]).add_modifier(Modifier::BOLD);
+                style = Style::new()
+                    .fg(t.fg[0])
+                    .bg(t.bg[3])
+                    .add_modifier(Modifier::BOLD);
                 buf.set_style(Rect::new(list.x, y, list.width, 1), style);
             }
             buf.set_string(
@@ -242,7 +254,9 @@ impl<'a> StatefulWidget for Palette<'a> {
                         list.x + list.width - kw - 1,
                         y,
                         kbd,
-                        Style::new().fg(t.fg[2]).bg(if is_cursor { t.bg[3] } else { t.bg[4] }),
+                        Style::new()
+                            .fg(t.fg[2])
+                            .bg(if is_cursor { t.bg[3] } else { t.bg[4] }),
                     );
                 }
             }

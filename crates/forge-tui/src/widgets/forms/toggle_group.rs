@@ -16,7 +16,10 @@ pub struct ToggleGroupState {
 
 impl ToggleGroupState {
     pub fn new(selected: usize) -> ToggleGroupState {
-        ToggleGroupState { selected, ..Default::default() }
+        ToggleGroupState {
+            selected,
+            ..Default::default()
+        }
     }
 
     /// Click a segment to select it.
@@ -25,7 +28,11 @@ impl ToggleGroupState {
             if clicked(ev, *rect) {
                 let changed = self.selected != i;
                 self.selected = i;
-                return if changed { Outcome::Changed } else { Outcome::Consumed };
+                return if changed {
+                    Outcome::Changed
+                } else {
+                    Outcome::Consumed
+                };
             }
         }
         Outcome::Ignored
@@ -69,7 +76,12 @@ pub struct ToggleGroup<'a> {
 
 impl<'a> ToggleGroup<'a> {
     pub fn new(items: &'a [&'a str]) -> ToggleGroup<'a> {
-        ToggleGroup { items, focused: false, disabled: false, theme: None }
+        ToggleGroup {
+            items,
+            focused: false,
+            disabled: false,
+            theme: None,
+        }
     }
 
     pub fn focused(mut self, focused: bool) -> Self {

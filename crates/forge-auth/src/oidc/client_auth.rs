@@ -19,7 +19,10 @@ fn urldecode(s: &str) -> String {
 }
 
 fn basic_credentials(headers: &HeaderMap) -> Option<(String, String)> {
-    let raw = headers.get(axum::http::header::AUTHORIZATION)?.to_str().ok()?;
+    let raw = headers
+        .get(axum::http::header::AUTHORIZATION)?
+        .to_str()
+        .ok()?;
     let encoded = raw.strip_prefix("Basic ")?;
     let decoded = B64.decode(encoded).ok()?;
     let text = String::from_utf8(decoded).ok()?;

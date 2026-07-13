@@ -16,11 +16,17 @@ pub struct Kbd<'a> {
 
 impl<'a> Kbd<'a> {
     pub fn new(keys: &'a str) -> Kbd<'a> {
-        Kbd { keys: Cow::Borrowed(keys), theme: None }
+        Kbd {
+            keys: Cow::Borrowed(keys),
+            theme: None,
+        }
     }
 
     pub fn combo(combo: KeyCombo) -> Kbd<'a> {
-        Kbd { keys: Cow::Owned(combo.to_string()), theme: None }
+        Kbd {
+            keys: Cow::Owned(combo.to_string()),
+            theme: None,
+        }
     }
 
     pub fn theme(mut self, theme: &'a Theme) -> Self {

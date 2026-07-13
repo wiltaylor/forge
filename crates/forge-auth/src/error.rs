@@ -68,22 +68,46 @@ pub struct OAuthError {
 
 impl OAuthError {
     pub fn invalid_request(description: impl Into<String>) -> Self {
-        Self { status: StatusCode::BAD_REQUEST, error: "invalid_request", description: description.into() }
+        Self {
+            status: StatusCode::BAD_REQUEST,
+            error: "invalid_request",
+            description: description.into(),
+        }
     }
     pub fn invalid_client(description: impl Into<String>) -> Self {
-        Self { status: StatusCode::UNAUTHORIZED, error: "invalid_client", description: description.into() }
+        Self {
+            status: StatusCode::UNAUTHORIZED,
+            error: "invalid_client",
+            description: description.into(),
+        }
     }
     pub fn invalid_grant(description: impl Into<String>) -> Self {
-        Self { status: StatusCode::BAD_REQUEST, error: "invalid_grant", description: description.into() }
+        Self {
+            status: StatusCode::BAD_REQUEST,
+            error: "invalid_grant",
+            description: description.into(),
+        }
     }
     pub fn unsupported_grant_type(description: impl Into<String>) -> Self {
-        Self { status: StatusCode::BAD_REQUEST, error: "unsupported_grant_type", description: description.into() }
+        Self {
+            status: StatusCode::BAD_REQUEST,
+            error: "unsupported_grant_type",
+            description: description.into(),
+        }
     }
     pub fn invalid_scope(description: impl Into<String>) -> Self {
-        Self { status: StatusCode::BAD_REQUEST, error: "invalid_scope", description: description.into() }
+        Self {
+            status: StatusCode::BAD_REQUEST,
+            error: "invalid_scope",
+            description: description.into(),
+        }
     }
     pub fn invalid_target(description: impl Into<String>) -> Self {
-        Self { status: StatusCode::BAD_REQUEST, error: "invalid_target", description: description.into() }
+        Self {
+            status: StatusCode::BAD_REQUEST,
+            error: "invalid_target",
+            description: description.into(),
+        }
     }
     pub fn server_error(e: impl std::fmt::Display) -> Self {
         tracing::error!(error = %e, "oauth server error");

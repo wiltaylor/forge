@@ -18,7 +18,12 @@ impl Default for FilesState {
 }
 
 impl FilesState {
-    pub fn handle_key(&mut self, focused: Option<FocusId>, key: KeyEvent, ctx: &mut Ctx) -> Outcome {
+    pub fn handle_key(
+        &mut self,
+        focused: Option<FocusId>,
+        key: KeyEvent,
+        ctx: &mut Ctx,
+    ) -> Outcome {
         if focused != Some(PICKER) {
             return Outcome::Ignored;
         }

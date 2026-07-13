@@ -67,22 +67,48 @@ impl Default for DataState {
 
 pub const TREE_ROOTS: fn() -> [TreeNode<'static>; 2] = || {
     const SERVICES: [TreeNode<'static>; 3] = [
-        TreeNode { label: "forge-server", children: &[] },
-        TreeNode { label: "forge-auth", children: &[] },
-        TreeNode { label: "gallery", children: &[] },
+        TreeNode {
+            label: "forge-server",
+            children: &[],
+        },
+        TreeNode {
+            label: "forge-auth",
+            children: &[],
+        },
+        TreeNode {
+            label: "gallery",
+            children: &[],
+        },
     ];
     const WORKERS: [TreeNode<'static>; 2] = [
-        TreeNode { label: "builder-1", children: &[] },
-        TreeNode { label: "builder-2", children: &[] },
+        TreeNode {
+            label: "builder-1",
+            children: &[],
+        },
+        TreeNode {
+            label: "builder-2",
+            children: &[],
+        },
     ];
     [
-        TreeNode { label: "services", children: &SERVICES },
-        TreeNode { label: "workers", children: &WORKERS },
+        TreeNode {
+            label: "services",
+            children: &SERVICES,
+        },
+        TreeNode {
+            label: "workers",
+            children: &WORKERS,
+        },
     ]
 };
 
 impl DataState {
-    pub fn handle_key(&mut self, focused: Option<FocusId>, key: KeyEvent, ctx: &mut Ctx) -> Outcome {
+    pub fn handle_key(
+        &mut self,
+        focused: Option<FocusId>,
+        key: KeyEvent,
+        ctx: &mut Ctx,
+    ) -> Outcome {
         let outcome = match focused {
             Some(id) if id == TABLE => {
                 let out = self.table.handle_key(key);
@@ -151,7 +177,9 @@ impl DataState {
                     x.and_then(|v| v.trim_end_matches('%').parse::<f64>().ok()),
                     y.and_then(|v| v.trim_end_matches('%').parse::<f64>().ok()),
                 ) {
-                    (Some(nx), Some(ny)) => nx.partial_cmp(&ny).unwrap_or(std::cmp::Ordering::Equal),
+                    (Some(nx), Some(ny)) => {
+                        nx.partial_cmp(&ny).unwrap_or(std::cmp::Ordering::Equal)
+                    }
                     _ => x.cmp(&y),
                 };
                 if asc {
@@ -178,7 +206,10 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
     // Top: table (left) + logs (right).
     let cols = Grid::new(2).gap(2).cells(top, 2, top.height);
     if top.height > 2 {
-        frame.render_widget(Eyebrow::new("Table — s sort · Space select").theme(t), Rect::new(cols[0].x, cols[0].y, cols[0].width, 1));
+        frame.render_widget(
+            Eyebrow::new("Table — s sort · Space select").theme(t),
+            Rect::new(cols[0].x, cols[0].y, cols[0].width, 1),
+        );
         let columns = [
             Column::new("node"),
             Column::new("state"),
@@ -196,7 +227,10 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
             &mut state.table,
         );
 
-        frame.render_widget(Eyebrow::new("Logs — f follow · ↑ scroll").theme(t), Rect::new(cols[1].x, cols[1].y, cols[1].width, 1));
+        frame.render_widget(
+            Eyebrow::new("Logs — f follow · ↑ scroll").theme(t),
+            Rect::new(cols[1].x, cols[1].y, cols[1].width, 1),
+        );
         state.logs.search = Some("node-3".into());
         frame.render_stateful_widget(
             Logs::new(&state.log_lines).focused(f_logs).theme(t),
@@ -208,14 +242,20 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
     // Bottom: tree | json | keyvalue+accordion.
     let cols = Grid::new(3).gap(2).cells(bottom, 3, bottom.height);
     if bottom.height > 2 {
-        frame.render_widget(Eyebrow::new("Tree").theme(t), Rect::new(cols[0].x, cols[0].y, cols[0].width, 1));
+        frame.render_widget(
+            Eyebrow::new("Tree").theme(t),
+            Rect::new(cols[0].x, cols[0].y, cols[0].width, 1),
+        );
         frame.render_stateful_widget(
             Tree::new(&TREE_ROOTS()).focused(f_tree).theme(t),
             Rect::new(cols[0].x, cols[0].y + 1, cols[0].width, cols[0].height - 1),
             &mut state.tree,
         );
 
-        frame.render_widget(Eyebrow::new("JsonViewer").theme(t), Rect::new(cols[1].x, cols[1].y, cols[1].width, 1));
+        frame.render_widget(
+            Eyebrow::new("JsonViewer").theme(t),
+            Rect::new(cols[1].x, cols[1].y, cols[1].width, 1),
+        );
         let value = state.json_value.clone();
         JsonViewer::new().focused(f_json).theme(t).render_value(
             &value,
@@ -224,9 +264,17 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
             &mut state.json,
         );
 
-        frame.render_widget(Eyebrow::new("KeyValue · Accordion").theme(t), Rect::new(cols[2].x, cols[2].y, cols[2].width, 1));
         frame.render_widget(
-            KeyValue::new(&[("cluster", "forge-prod"), ("region", "eu-west-1"), ("uptime", "42d")]).theme(t),
+            Eyebrow::new("KeyValue · Accordion").theme(t),
+            Rect::new(cols[2].x, cols[2].y, cols[2].width, 1),
+        );
+        frame.render_widget(
+            KeyValue::new(&[
+                ("cluster", "forge-prod"),
+                ("region", "eu-west-1"),
+                ("uptime", "42d"),
+            ])
+            .theme(t),
             Rect::new(cols[2].x, cols[2].y + 1, cols[2].width, 3),
         );
         frame.render_stateful_widget(
@@ -236,7 +284,12 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
             ])
             .focused(f_acc)
             .theme(t),
-            Rect::new(cols[2].x, cols[2].y + 5, cols[2].width, cols[2].height.saturating_sub(5)),
+            Rect::new(
+                cols[2].x,
+                cols[2].y + 5,
+                cols[2].width,
+                cols[2].height.saturating_sub(5),
+            ),
             &mut state.acc,
         );
     }

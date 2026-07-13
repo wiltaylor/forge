@@ -153,7 +153,11 @@ impl Db {
         )
     }
 
-    pub async fn role_create(&self, name: &str, description: Option<&str>) -> Result<Role, AppError> {
+    pub async fn role_create(
+        &self,
+        name: &str,
+        description: Option<&str>,
+    ) -> Result<Role, AppError> {
         if self.role_by_name(name).await?.is_some() {
             return Err(AppError::Conflict(format!("role {name:?} already exists")));
         }
@@ -164,11 +168,19 @@ impl Db {
             .bind(description)
             .execute(&self.pool)
             .await?;
-        Ok(Role { id, name: name.into(), description: description.map(Into::into) })
+        Ok(Role {
+            id,
+            name: name.into(),
+            description: description.map(Into::into),
+        })
     }
 
     /// Create-if-missing, used by bootstrap/seeding.
-    pub async fn role_ensure(&self, name: &str, description: Option<&str>) -> Result<Role, AppError> {
+    pub async fn role_ensure(
+        &self,
+        name: &str,
+        description: Option<&str>,
+    ) -> Result<Role, AppError> {
         if let Some(role) = self.role_by_name(name).await? {
             return Ok(role);
         }
@@ -194,7 +206,12 @@ impl Db {
         rows.into_iter().map(|r| r.try_get("name")).collect()
     }
 
-    pub async fn user_role_add(&self, user_id: &str, role_id: &str, source: &str) -> Result<(), sqlx::Error> {
+    pub async fn user_role_add(
+        &self,
+        user_id: &str,
+        role_id: &str,
+        source: &str,
+    ) -> Result<(), sqlx::Error> {
         sqlx::query(
             "INSERT INTO user_roles (user_id, role_id, source) VALUES ($1, $2, $3)
              ON CONFLICT (user_id, role_id) DO NOTHING",

@@ -9,7 +9,10 @@ use crate::state::SharedState;
 use crate::util::{hash_password, random_token};
 
 pub async fn run(state: &SharedState) -> Result<(), AppError> {
-    let admin_role = state.db.role_ensure("admin", Some("forge-auth administration")).await?;
+    let admin_role = state
+        .db
+        .role_ensure("admin", Some("forge-auth administration"))
+        .await?;
 
     if state.db.user_count().await? == 0 {
         let username = state.cfg.admin_user.clone();
@@ -34,8 +37,14 @@ pub async fn run(state: &SharedState) -> Result<(), AppError> {
                 display_name: Some("Administrator"),
             })
             .await?;
-        state.db.password_set(&user.id, &hash_password(&password)?).await?;
-        state.db.user_role_add(&user.id, &admin_role.id, "manual").await?;
+        state
+            .db
+            .password_set(&user.id, &hash_password(&password)?)
+            .await?;
+        state
+            .db
+            .user_role_add(&user.id, &admin_role.id, "manual")
+            .await?;
         tracing::info!(username, "bootstrap admin user created");
     }
 
@@ -90,7 +99,10 @@ async fn seed_from_file(state: &SharedState, path: &str) -> Result<(), AppError>
         toml::from_str(&raw).map_err(|e| AppError::Config(format!("bad seed file: {e}")))?;
 
     for role in &seed.roles {
-        state.db.role_ensure(&role.name, role.description.as_deref()).await?;
+        state
+            .db
+            .role_ensure(&role.name, role.description.as_deref())
+            .await?;
     }
     for provider in &seed.providers {
         let config = match &provider.config {

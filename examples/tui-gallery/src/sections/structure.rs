@@ -84,7 +84,9 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
     if let Some(r) = row(2, 1, &mut y) {
         let focused = ctx.focus.register(TABS);
         frame.render_stateful_widget(
-            Tabs::new(&["Overview", "Metrics", "Logs", "Config"]).focused(focused).theme(t),
+            Tabs::new(&["Overview", "Metrics", "Logs", "Config"])
+                .focused(focused)
+                .theme(t),
             r,
             &mut state.tabs,
         );
@@ -110,7 +112,9 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
         frame.render_widget(left_card, left);
         frame.render_widget(right_card, right);
         frame.render_widget(
-            Empty::new("←/→ resize when focused").glyph(Glyph::ChevronRight).theme(t),
+            Empty::new("←/→ resize when focused")
+                .glyph(Glyph::ChevronRight)
+                .theme(t),
             li,
         );
     }
@@ -122,10 +126,15 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
         let sr = SettingsRow::new("Auto-heal").theme(t);
         let control = sr.control_area(r);
         frame.render_widget(sr, r);
-        frame.render_widget(Badge::new("on").severity(Severity::Success).theme(t), control);
+        frame.render_widget(
+            Badge::new("on").severity(Severity::Success).theme(t),
+            control,
+        );
     }
     if let Some(r) = row(2, 1, &mut y) {
-        let sr = SettingsRow::new("Replicas").help("Rolling restarts keep quorum").theme(t);
+        let sr = SettingsRow::new("Replicas")
+            .help("Rolling restarts keep quorum")
+            .theme(t);
         let control = sr.control_area(r);
         frame.render_widget(sr, r);
         frame.render_widget(

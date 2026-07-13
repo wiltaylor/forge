@@ -44,7 +44,11 @@ pub struct Flowchart<'a> {
 
 impl<'a> Flowchart<'a> {
     pub fn new(nodes: &'a [FlowNode<'a>], edges: &'a [FlowEdge<'a>]) -> Flowchart<'a> {
-        Flowchart { nodes, edges, theme: None }
+        Flowchart {
+            nodes,
+            edges,
+            theme: None,
+        }
     }
 
     pub fn theme(mut self, theme: &'a Theme) -> Self {
@@ -153,7 +157,9 @@ impl Widget for Flowchart<'_> {
 
         // Nodes.
         for node in self.nodes {
-            let Some(rect) = rects.get(node.id) else { continue };
+            let Some(rect) = rects.get(node.id) else {
+                continue;
+            };
             let block = Block::bordered()
                 .border_style(Style::new().fg(t.border.default).bg(t.bg[1]))
                 .style(Style::new().bg(t.bg[1]));

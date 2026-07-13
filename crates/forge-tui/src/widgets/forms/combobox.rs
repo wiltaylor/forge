@@ -210,8 +210,7 @@ impl<'a> StatefulWidget for Combobox<'a> {
         if rows == 0 {
             return;
         }
-        let popup =
-            Rect::new(area.x, area.y + 1, area.width, rows + 2).intersection(buf.area);
+        let popup = Rect::new(area.x, area.y + 1, area.width, rows + 2).intersection(buf.area);
         if popup.height < 3 {
             return;
         }
@@ -230,12 +229,17 @@ impl<'a> StatefulWidget for Combobox<'a> {
         }
         for vis in 0..state.view_h {
             let fi = state.offset + vis;
-            let Some(&item_idx) = state.filtered.get(fi) else { break };
+            let Some(&item_idx) = state.filtered.get(fi) else {
+                break;
+            };
             let y = inner.y + vis as u16;
             let is_cursor = fi == state.highlight;
             let mut style = Style::new().fg(t.fg[1]).bg(t.bg[4]);
             if is_cursor {
-                style = Style::new().fg(t.fg[0]).bg(t.bg[3]).add_modifier(Modifier::BOLD);
+                style = Style::new()
+                    .fg(t.fg[0])
+                    .bg(t.bg[3])
+                    .add_modifier(Modifier::BOLD);
                 buf.set_style(Rect::new(inner.x, y, inner.width, 1), style);
             }
             buf.set_string(

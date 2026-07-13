@@ -23,19 +23,40 @@ pub enum MenuEntry<'a> {
 
 impl<'a> MenuEntry<'a> {
     pub fn item(label: &'a str) -> MenuEntry<'a> {
-        MenuEntry::Item { label, kbd: None, danger: false, disabled: false }
+        MenuEntry::Item {
+            label,
+            kbd: None,
+            danger: false,
+            disabled: false,
+        }
     }
 
     pub fn item_kbd(label: &'a str, kbd: &'a str) -> MenuEntry<'a> {
-        MenuEntry::Item { label, kbd: Some(kbd), danger: false, disabled: false }
+        MenuEntry::Item {
+            label,
+            kbd: Some(kbd),
+            danger: false,
+            disabled: false,
+        }
     }
 
     pub fn danger(label: &'a str) -> MenuEntry<'a> {
-        MenuEntry::Item { label, kbd: None, danger: true, disabled: false }
+        MenuEntry::Item {
+            label,
+            kbd: None,
+            danger: true,
+            disabled: false,
+        }
     }
 
     fn selectable(&self) -> bool {
-        matches!(self, MenuEntry::Item { disabled: false, .. })
+        matches!(
+            self,
+            MenuEntry::Item {
+                disabled: false,
+                ..
+            }
+        )
     }
 }
 
@@ -117,7 +138,11 @@ impl MenuState {
         let labels: Vec<&str> = entries
             .iter()
             .filter_map(|e| match e {
-                MenuEntry::Item { label, disabled: false, .. } => Some(*label),
+                MenuEntry::Item {
+                    label,
+                    disabled: false,
+                    ..
+                } => Some(*label),
                 _ => None,
             })
             .collect();
@@ -145,7 +170,11 @@ pub struct DropdownMenu<'a> {
 
 impl<'a> DropdownMenu<'a> {
     pub fn new(entries: &'a [MenuEntry<'a>], anchor: Rect) -> DropdownMenu<'a> {
-        DropdownMenu { entries, anchor, theme: None }
+        DropdownMenu {
+            entries,
+            anchor,
+            theme: None,
+        }
     }
 
     /// Context-menu constructor: anchor at a point (e.g. the mouse).
@@ -220,9 +249,16 @@ impl<'a> StatefulWidget for DropdownMenu<'a> {
                         Style::new().fg(t.fg[2]).bg(t.bg[4]),
                     );
                 }
-                MenuEntry::Item { label, kbd, danger, disabled } => {
+                MenuEntry::Item {
+                    label,
+                    kbd,
+                    danger,
+                    disabled,
+                } => {
                     if entry.selectable() {
-                        state.item_rects.push((Rect::new(inner.x, y, inner.width, 1), selectable_idx));
+                        state
+                            .item_rects
+                            .push((Rect::new(inner.x, y, inner.width, 1), selectable_idx));
                     }
                     let is_cursor = entry.selectable() && selectable_idx == state.highlight;
                     let mut style = Style::new()
@@ -251,7 +287,11 @@ impl<'a> StatefulWidget for DropdownMenu<'a> {
                                 inner.x + inner.width - kw - 1,
                                 y,
                                 *kbd,
-                                Style::new().fg(t.fg[2]).bg(if is_cursor { t.bg[3] } else { t.bg[4] }),
+                                Style::new().fg(t.fg[2]).bg(if is_cursor {
+                                    t.bg[3]
+                                } else {
+                                    t.bg[4]
+                                }),
                             );
                         }
                     }

@@ -44,7 +44,12 @@ impl Default for ChatState {
 }
 
 impl ChatState {
-    pub fn handle_key(&mut self, focused: Option<FocusId>, key: KeyEvent, ctx: &mut Ctx) -> Outcome {
+    pub fn handle_key(
+        &mut self,
+        focused: Option<FocusId>,
+        key: KeyEvent,
+        ctx: &mut Ctx,
+    ) -> Outcome {
         let outcome = match focused {
             Some(id) if id == VIEW => self.view.handle_key(key),
             Some(id) if id == PROMPT && !self.prompt_answered => self.prompt.handle_key(key),
@@ -62,7 +67,8 @@ impl ChatState {
             }
             Outcome::Submitted if focused == Some(PROMPT) => {
                 self.prompt_answered = true;
-                ctx.toast().success(format!("Chose: {}", PROMPT_OPTIONS[self.prompt.selected]));
+                ctx.toast()
+                    .success(format!("Chose: {}", PROMPT_OPTIONS[self.prompt.selected]));
                 Outcome::Consumed
             }
             o => o,
@@ -78,7 +84,8 @@ impl ChatState {
                 ctx.focus.focus(PROMPT);
                 if out == Outcome::Submitted {
                     self.prompt_answered = true;
-                    ctx.toast().success(format!("Chose: {}", PROMPT_OPTIONS[self.prompt.selected]));
+                    ctx.toast()
+                        .success(format!("Chose: {}", PROMPT_OPTIONS[self.prompt.selected]));
                     return Outcome::Consumed;
                 }
                 return out;
@@ -123,13 +130,18 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
     let view_h = area.height - prompt_h - composer_h;
 
     frame.render_stateful_widget(
-        ChatView::new(&state.items).frame(ctx.frame).focused(f_view).theme(t),
+        ChatView::new(&state.items)
+            .frame(ctx.frame)
+            .focused(f_view)
+            .theme(t),
         Rect::new(area.x, area.y, w, view_h),
         &mut state.view,
     );
     if !state.prompt_answered {
         frame.render_stateful_widget(
-            ChatPrompt::new("Ready to deploy?", &PROMPT_OPTIONS).focused(f_prompt).theme(t),
+            ChatPrompt::new("Ready to deploy?", &PROMPT_OPTIONS)
+                .focused(f_prompt)
+                .theme(t),
             Rect::new(area.x, area.y + view_h, w, 2),
             &mut state.prompt,
         );

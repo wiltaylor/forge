@@ -25,7 +25,13 @@ struct LdapConfig {
 }
 
 fn parse_config(provider: &UpstreamProvider) -> Result<LdapConfig, AppError> {
-    let get = |key: &str| provider.config.get(key).and_then(|v| v.as_str()).unwrap_or("");
+    let get = |key: &str| {
+        provider
+            .config
+            .get(key)
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+    };
     let required = |key: &str| -> Result<String, AppError> {
         let v = get(key);
         if v.is_empty() {
@@ -38,21 +44,37 @@ fn parse_config(provider: &UpstreamProvider) -> Result<LdapConfig, AppError> {
     };
     Ok(LdapConfig {
         url: required("url")?,
-        starttls: provider.config.get("starttls").and_then(|v| v.as_bool()).unwrap_or(false),
+        starttls: provider
+            .config
+            .get("starttls")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false),
         bind_dn: required("bind_dn")?,
         bind_password: required("bind_password")?,
         base_dn: required("base_dn")?,
         user_filter: {
             let f = get("user_filter");
-            if f.is_empty() { DEFAULT_FILTER.to_string() } else { f.to_string() }
+            if f.is_empty() {
+                DEFAULT_FILTER.to_string()
+            } else {
+                f.to_string()
+            }
         },
         email_attr: {
             let a = get("email_attr");
-            if a.is_empty() { "mail".to_string() } else { a.to_string() }
+            if a.is_empty() {
+                "mail".to_string()
+            } else {
+                a.to_string()
+            }
         },
         display_name_attr: {
             let a = get("display_name_attr");
-            if a.is_empty() { "displayName".to_string() } else { a.to_string() }
+            if a.is_empty() {
+                "displayName".to_string()
+            } else {
+                a.to_string()
+            }
         },
     })
 }
@@ -104,9 +126,15 @@ async fn bind_and_provision(
 
     let result = lookup_and_bind(&mut ldap, &config, username, password).await;
     let _ = ldap.unbind().await;
-    let Some(entry) = result? else { return Ok(None) };
+    let Some(entry) = result? else {
+        return Ok(None);
+    };
 
-    let email = entry.attrs.get(&config.email_attr).and_then(|v| v.first()).cloned();
+    let email = entry
+        .attrs
+        .get(&config.email_attr)
+        .and_then(|v| v.first())
+        .cloned();
     let display_name = entry
         .attrs
         .get(&config.display_name_attr)
@@ -155,14 +183,21 @@ async fn lookup_and_bind(
             &config.base_dn,
             Scope::Subtree,
             &filter,
-            vec!["dn", &config.email_attr, &config.display_name_attr, "memberOf"],
+            vec![
+                "dn",
+                &config.email_attr,
+                &config.display_name_attr,
+                "memberOf",
+            ],
         )
         .await
         .map_err(|e| AppError::Internal(format!("ldap search failed: {e}")))?
         .success()
         .map_err(|e| AppError::Internal(format!("ldap search rejected: {e}")))?;
 
-    let Some(first) = results.into_iter().next() else { return Ok(None) };
+    let Some(first) = results.into_iter().next() else {
+        return Ok(None);
+    };
     let entry = SearchEntry::construct(first);
 
     // The actual authentication: bind as the user.
@@ -196,5 +231,8 @@ pub async fn test(_state: &SharedState, provider: &UpstreamProvider) -> Result<S
     .await;
     let _ = ldap.unbind().await;
     outcome?;
-    Ok(format!("connected to {}, service bind + base search ok", config.url))
+    Ok(format!(
+        "connected to {}, service bind + base search ok",
+        config.url
+    ))
 }

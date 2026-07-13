@@ -16,7 +16,12 @@ pub struct BarChart<'a> {
 
 impl<'a> BarChart<'a> {
     pub fn new(data: &'a [(&'a str, u64)]) -> BarChart<'a> {
-        BarChart { data, color: None, bar_width: 7, theme: None }
+        BarChart {
+            data,
+            color: None,
+            bar_width: 7,
+            theme: None,
+        }
     }
 
     pub fn color(mut self, color: Color) -> Self {

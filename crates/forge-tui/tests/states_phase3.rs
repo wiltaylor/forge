@@ -19,11 +19,7 @@ fn shift(code: KeyCode) -> KeyEvent {
 fn table_cursor_selection_and_sort_cycle() {
     let t = Theme::dark();
     let columns = [Column::new("a"), Column::new("b")];
-    let rows: Vec<Vec<&str>> = vec![
-        vec!["r0", "x"],
-        vec!["r1", "y"],
-        vec!["r2", "z"],
-    ];
+    let rows: Vec<Vec<&str>> = vec![vec!["r0", "x"], vec!["r1", "y"], vec!["r2", "z"]];
     let mut state = TableState::new();
     let mut buf = Buffer::empty(Rect::new(0, 0, 30, 5));
     Table::new(&columns, &rows).render(Rect::new(0, 0, 30, 5), &mut buf, &mut state);
@@ -54,9 +50,14 @@ fn logs_follow_pins_to_tail() {
     let mut state = LogsState::new();
     let area = Rect::new(0, 0, 30, 5);
     let mut buf = Buffer::empty(area);
-    Logs::new(&lines).theme(&t).render(area, &mut buf, &mut state);
+    Logs::new(&lines)
+        .theme(&t)
+        .render(area, &mut buf, &mut state);
     let bottom_row: String = (0..30u16).map(|x| buf[(x, 4)].symbol()).collect();
-    assert!(bottom_row.contains("line 29"), "follow should pin tail: {bottom_row}");
+    assert!(
+        bottom_row.contains("line 29"),
+        "follow should pin tail: {bottom_row}"
+    );
 
     // Scrolling up unpins; f re-pins.
     assert_eq!(state.handle_key(key(KeyCode::Up)), Outcome::Consumed);
@@ -68,13 +69,22 @@ fn logs_follow_pins_to_tail() {
 #[test]
 fn tree_expand_collapse_and_parent_jump() {
     const KIDS: [TreeNode<'static>; 2] = [
-        TreeNode { label: "a", children: &[] },
-        TreeNode { label: "b", children: &[] },
+        TreeNode {
+            label: "a",
+            children: &[],
+        },
+        TreeNode {
+            label: "b",
+            children: &[],
+        },
     ];
     let roots = [TreeNode::branch("root", &KIDS), TreeNode::leaf("sibling")];
     let mut state = TreeState::new();
     // Expand root.
-    assert_eq!(state.handle_key(key(KeyCode::Right), &roots), Outcome::Changed);
+    assert_eq!(
+        state.handle_key(key(KeyCode::Right), &roots),
+        Outcome::Changed
+    );
     assert!(state.is_expanded(&[0]));
     // Step into first child, then jump back to parent.
     let _ = state.handle_key(key(KeyCode::Right), &roots);
@@ -82,7 +92,10 @@ fn tree_expand_collapse_and_parent_jump() {
     let _ = state.handle_key(key(KeyCode::Left), &roots);
     assert_eq!(state.cursor, 0);
     // Collapse.
-    assert_eq!(state.handle_key(key(KeyCode::Left), &roots), Outcome::Changed);
+    assert_eq!(
+        state.handle_key(key(KeyCode::Left), &roots),
+        Outcome::Changed
+    );
     assert!(!state.is_expanded(&[0]));
     assert_eq!(state.cursor_path(&roots), Some(vec![0]));
 }
@@ -93,29 +106,23 @@ fn json_viewer_paths_and_expansion() {
     let mut state = JsonViewerState::new();
     let t = Theme::dark();
     let mut buf = Buffer::empty(Rect::new(0, 0, 40, 8));
-    JsonViewer::new().theme(&t).render_value(
-        &value,
-        Rect::new(0, 0, 40, 8),
-        &mut buf,
-        &mut state,
-    );
+    JsonViewer::new()
+        .theme(&t)
+        .render_value(&value, Rect::new(0, 0, 40, 8), &mut buf, &mut state);
     assert_eq!(state.cursor_path(), "$");
     let _ = state.handle_key(key(KeyCode::Down), &value);
     // Expand $.a and verify the array children appear.
-    assert_eq!(state.handle_key(key(KeyCode::Right), &value), Outcome::Changed);
-    JsonViewer::new().theme(&t).render_value(
-        &value,
-        Rect::new(0, 0, 40, 8),
-        &mut buf,
-        &mut state,
+    assert_eq!(
+        state.handle_key(key(KeyCode::Right), &value),
+        Outcome::Changed
     );
+    JsonViewer::new()
+        .theme(&t)
+        .render_value(&value, Rect::new(0, 0, 40, 8), &mut buf, &mut state);
     let _ = state.handle_key(key(KeyCode::Down), &value);
-    JsonViewer::new().theme(&t).render_value(
-        &value,
-        Rect::new(0, 0, 40, 8),
-        &mut buf,
-        &mut state,
-    );
+    JsonViewer::new()
+        .theme(&t)
+        .render_value(&value, Rect::new(0, 0, 40, 8), &mut buf, &mut state);
     assert_eq!(state.cursor_path(), "$.a[0]");
 }
 
@@ -130,7 +137,9 @@ fn kanban_moves_are_requested_not_applied() {
     let t = Theme::dark();
     let mut state = KanbanState::new();
     let mut buf = Buffer::empty(Rect::new(0, 0, 40, 10));
-    Kanban::new(&cols).theme(&t).render(Rect::new(0, 0, 40, 10), &mut buf, &mut state);
+    Kanban::new(&cols)
+        .theme(&t)
+        .render(Rect::new(0, 0, 40, 10), &mut buf, &mut state);
 
     assert_eq!(state.handle_key(shift(KeyCode::Right)), Outcome::Changed);
     let mv = state.take_move().expect("move requested");
@@ -147,7 +156,11 @@ fn block_grid_wraps_and_clips() {
     let grid = BlockGrid::new(2).gap(1);
     let rects = grid.split(
         Rect::new(0, 0, 21, 10),
-        &[BlockSpec::new(1, 4), BlockSpec::new(1, 4), BlockSpec::new(2, 3)],
+        &[
+            BlockSpec::new(1, 4),
+            BlockSpec::new(1, 4),
+            BlockSpec::new(2, 3),
+        ],
     );
     assert_eq!(rects.len(), 3);
     assert_eq!(rects[0].y, rects[1].y);
@@ -205,12 +218,18 @@ fn accordion_is_exclusive() {
     let items = [("one", "body1"), ("two", "body2")];
     let mut state = AccordionState::new();
     let mut buf = Buffer::empty(Rect::new(0, 0, 30, 8));
-    Accordion::new(&items).theme(&t).render(Rect::new(0, 0, 30, 8), &mut buf, &mut state);
+    Accordion::new(&items)
+        .theme(&t)
+        .render(Rect::new(0, 0, 30, 8), &mut buf, &mut state);
     let _ = state.handle_key(key(KeyCode::Enter));
     assert_eq!(state.open, Some(0));
     let _ = state.handle_key(key(KeyCode::Down));
     let _ = state.handle_key(key(KeyCode::Enter));
-    assert_eq!(state.open, Some(1), "opening another panel closes the first");
+    assert_eq!(
+        state.open,
+        Some(1),
+        "opening another panel closes the first"
+    );
     let _ = state.handle_key(key(KeyCode::Enter));
     assert_eq!(state.open, None, "re-toggling closes");
 }

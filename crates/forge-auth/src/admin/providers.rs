@@ -66,16 +66,26 @@ pub async fn upsert(
     Json(body): Json<ProviderBody>,
 ) -> Result<impl IntoResponse, AppError> {
     let slug = body.slug.trim().to_lowercase();
-    if slug.is_empty() || !slug.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_') {
-        return Err(AppError::BadRequest("slug must be alphanumeric with - or _".into()));
+    if slug.is_empty()
+        || !slug
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+    {
+        return Err(AppError::BadRequest(
+            "slug must be alphanumeric with - or _".into(),
+        ));
     }
     if !KINDS.contains(&body.kind.as_str()) {
-        return Err(AppError::BadRequest(format!("kind must be one of {KINDS:?}")));
+        return Err(AppError::BadRequest(format!(
+            "kind must be one of {KINDS:?}"
+        )));
     }
     // Preserve stored secrets when the UI round-trips the `__secret__` mask.
     let mut config = body.config.clone();
     if let Some(existing) = state.db.provider_by_slug(&slug).await? {
-        if let (Some(new_cfg), Some(old_cfg)) = (config.as_object_mut(), existing.config.as_object()) {
+        if let (Some(new_cfg), Some(old_cfg)) =
+            (config.as_object_mut(), existing.config.as_object())
+        {
             for key in ["client_secret", "bind_password"] {
                 if new_cfg.get(key).and_then(|v| v.as_str()) == Some("__secret__") {
                     if let Some(old) = old_cfg.get(key) {
@@ -107,7 +117,10 @@ pub async fn upsert(
                 .ok_or_else(|| AppError::BadRequest(format!("unknown role {:?}", m.role)))?;
             resolved.push((m.external_group.clone(), role.id));
         }
-        state.db.group_mappings_replace(&provider.id, &resolved).await?;
+        state
+            .db
+            .group_mappings_replace(&provider.id, &resolved)
+            .await?;
     }
     Ok(ok(provider_json(&provider)))
 }
@@ -117,7 +130,11 @@ pub async fn get(
     Extension(state): Extension<SharedState>,
     Path(id): Path<String>,
 ) -> Result<impl IntoResponse, AppError> {
-    let provider = state.db.provider_by_id(&id).await?.ok_or(AppError::NotFound)?;
+    let provider = state
+        .db
+        .provider_by_id(&id)
+        .await?
+        .ok_or(AppError::NotFound)?;
     let mappings = state.db.group_mappings_for_provider(&id).await?;
     // Round-trip role *names* — that's what the upsert body takes.
     let roles = state.db.roles_list().await?;
@@ -152,7 +169,11 @@ pub async fn test(
     Extension(state): Extension<SharedState>,
     Path(id): Path<String>,
 ) -> Result<impl IntoResponse, AppError> {
-    let provider = state.db.provider_by_id(&id).await?.ok_or(AppError::NotFound)?;
+    let provider = state
+        .db
+        .provider_by_id(&id)
+        .await?
+        .ok_or(AppError::NotFound)?;
     let result = crate::upstream::test_provider(&state, &provider).await;
     match result {
         Ok(detail) => Ok(ok(json!({ "ok": true, "detail": detail }))),

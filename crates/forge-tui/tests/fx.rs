@@ -25,10 +25,7 @@ fn fx(motion: Motion) -> Fx {
 fn draw_with(terminal: &mut Terminal<TestBackend>, fx: &mut Fx, theme: &Theme) {
     terminal
         .draw(|f| {
-            f.render_widget(
-                Paragraph::new("XXXXXXXXXX\nXXXXXXXXXX\nXXXXXXXXXX"),
-                RECT,
-            );
+            f.render_widget(Paragraph::new("XXXXXXXXXX\nXXXXXXXXXX\nXXXXXXXXXX"), RECT);
             let area = f.area();
             fx.draw(f, area, theme);
         })

@@ -32,7 +32,10 @@ pub async fn create(
     if name.is_empty() {
         return Err(AppError::BadRequest("role name is required".into()));
     }
-    Ok(ok(state.db.role_create(name, body.description.as_deref()).await?))
+    Ok(ok(state
+        .db
+        .role_create(name, body.description.as_deref())
+        .await?))
 }
 
 pub async fn delete(

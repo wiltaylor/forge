@@ -1,9 +1,13 @@
 //! VNC viewer session engine.
 //!
 //! The backend speaks RFB to the target and streams decoded RGBA rect frames
-//! ([`super::proto::encode_rect`]); JSON text frames carry control
+//! ([`super::proto::RectEncoder`]); JSON text frames carry control
 //! ([`DesktopClientMsg`] / [`DesktopServerMsg`]). Only the Raw encoding is
-//! negotiated (plus DesktopSize), so every update arrives as one RGBA rect.
+//! negotiated on the RFB side (plus DesktopSize); wire-side compression is
+//! negotiated per session in the `connect` frame. Decoded updates accumulate
+//! in a latest-state [`Framebuffer`] + merged [`DirtyRegion`] and flush once
+//! per poll tick, before the next incremental refresh request — so a slow
+//! client throttles refreshes instead of growing a stale frame queue.
 //! Transport-agnostic: drive it with any [`WidgetStream`].
 
 use std::sync::Arc;
@@ -15,8 +19,9 @@ use vnc::{
     ClientKeyEvent, ClientMouseEvent, PixelFormat, VncClient, VncConnector, VncEvent, X11Event,
 };
 
+use super::coalesce::{DirtyRegion, Framebuffer, Rect};
 use super::keymap::keysym;
-use super::proto::{encode_rect, DesktopClientMsg, DesktopServerMsg};
+use super::proto::{DesktopClientMsg, DesktopServerMsg, RectEncoder};
 use super::{DesktopConfig, StreamClosed, WidgetMsg, WidgetStream};
 
 /// How long to wait for the TCP connect + RFB handshake.
@@ -28,7 +33,7 @@ const POLL_INTERVAL: Duration = Duration::from_millis(16);
 /// Run one VNC session over `stream`. The first frame must be a valid
 /// `connect` message naming the target host.
 pub async fn session<S: WidgetStream>(mut stream: S, config: Arc<DesktopConfig>) {
-    let Some((host, port, password)) = recv_connect(&mut stream).await else {
+    let Some((host, port, password, encoder)) = recv_connect(&mut stream).await else {
         return;
     };
     let Some(host) = host else {
@@ -48,11 +53,15 @@ pub async fn session<S: WidgetStream>(mut stream: S, config: Arc<DesktopConfig>)
         Ok(Ok(client)) => client,
         Ok(Err(message)) => return fail(&mut stream, message).await,
         Err(_) => {
-            return fail(&mut stream, format!("vnc connect to {host}:{port} timed out")).await
+            return fail(
+                &mut stream,
+                format!("vnc connect to {host}:{port} timed out"),
+            )
+            .await
         }
     };
 
-    run(&mut stream, &client).await;
+    run(&mut stream, &client, encoder).await;
     let _ = client.close().await;
     let _ = stream.send(WidgetMsg::Close).await;
 }
@@ -66,29 +75,29 @@ where
     S: WidgetStream,
     T: AsyncRead + AsyncWrite + Unpin + Send + Sync + 'static,
 {
-    let Some((_host, _port, frame_password)) = recv_connect(&mut stream).await else {
+    let Some((_host, _port, frame_password, encoder)) = recv_connect(&mut stream).await else {
         return;
     };
     let password = password.or(frame_password).unwrap_or_default();
 
-    let client = match tokio::time::timeout(CONNECT_TIMEOUT, handshake(transport, password)).await
-    {
+    let client = match tokio::time::timeout(CONNECT_TIMEOUT, handshake(transport, password)).await {
         Ok(Ok(client)) => client,
         Ok(Err(message)) => return fail(&mut stream, message).await,
         Err(_) => return fail(&mut stream, "vnc handshake timed out").await,
     };
 
-    run(&mut stream, &client).await;
+    run(&mut stream, &client, encoder).await;
     let _ = client.close().await;
     let _ = stream.send(WidgetMsg::Close).await;
 }
 
 /// Wait for the opening `connect` frame and return its
-/// `(host, port, password)`. `None` = the peer closed, or the first frame was
-/// invalid (the error frame + close have already been sent).
+/// `(host, port, password)` plus the negotiated [`RectEncoder`]. `None` = the
+/// peer closed, or the first frame was invalid (the error frame + close have
+/// already been sent).
 async fn recv_connect<S: WidgetStream>(
     stream: &mut S,
-) -> Option<(Option<String>, Option<u16>, Option<String>)> {
+) -> Option<(Option<String>, Option<u16>, Option<String>, RectEncoder)> {
     let msg = stream.recv().await?;
     match msg {
         WidgetMsg::Text(text) => match serde_json::from_str::<DesktopClientMsg>(&text) {
@@ -98,7 +107,13 @@ async fn recv_connect<S: WidgetStream>(
                 password,
                 // RFB VncAuth has no username.
                 username: _,
-            }) => Some((host, port, password)),
+                encodings,
+                quality,
+                jpeg_quality,
+            }) => {
+                let encoder = RectEncoder::from_connect(&encodings, quality, jpeg_quality);
+                Some((host, port, password, encoder))
+            }
             _ => {
                 fail(stream, "first frame must be a connect message").await;
                 None
@@ -138,10 +153,13 @@ where
         .map_err(|e| format!("vnc handshake failed: {e}"))
 }
 
-/// Pump the session: client input → X11 events, decoded VNC events → rect
-/// frames. `ready` is sent on the first SetResolution from the handshake.
-async fn run<S: WidgetStream>(stream: &mut S, client: &VncClient) {
+/// Pump the session: client input → X11 events, decoded VNC events → the
+/// latest-state framebuffer, flushed as merged dirty rects once per tick.
+/// `ready` is sent on the first SetResolution from the handshake.
+async fn run<S: WidgetStream>(stream: &mut S, client: &VncClient, mut encoder: RectEncoder) {
     let mut ready_sent = false;
+    let mut fb: Option<Framebuffer> = None;
+    let mut dirty = DirtyRegion::default();
     // Last pointer state; wheel/CAD synthesize events at this position.
     let (mut px, mut py, mut pmask) = (0u16, 0u16, 0u8);
     let mut tick = tokio::time::interval(POLL_INTERVAL);
@@ -171,7 +189,7 @@ async fn run<S: WidgetStream>(stream: &mut S, client: &VncClient) {
                 loop {
                     match client.poll_event().await {
                         Ok(Some(ev)) => {
-                            if !handle_event(stream, ev, &mut ready_sent).await {
+                            if !handle_event(stream, ev, &mut ready_sent, &mut fb, &mut dirty).await {
                                 return;
                             }
                         }
@@ -182,7 +200,20 @@ async fn run<S: WidgetStream>(stream: &mut S, client: &VncClient) {
                         }
                     }
                 }
-                // Keep an incremental update request outstanding.
+                // Flush the merged dirty rects from the latest framebuffer
+                // state (updates that landed on top of each other coalesce
+                // into these slices).
+                if let Some(fb) = &fb {
+                    for r in dirty.take() {
+                        let frame = encoder.encode(r.x, r.y, r.w, r.h, &fb.slice(r));
+                        if stream.send(WidgetMsg::Binary(frame)).await.is_err() {
+                            return;
+                        }
+                    }
+                }
+                // Keep an incremental update request outstanding — issued
+                // only after the flush, so a slow client delays refreshes and
+                // the VNC server coalesces upstream instead of flooding us.
                 if client.input(X11Event::Refresh).await.is_err() {
                     let _ = send_ctrl(stream, &DesktopServerMsg::Closed).await;
                     return;
@@ -244,14 +275,20 @@ async fn forward_input(
     }
 }
 
-/// Forward one decoded VNC event to the client. `false` = stop the session.
+/// Absorb one decoded VNC event: control frames go out inline (they must
+/// never be overtaken by stale rects), framebuffer updates accumulate for the
+/// tick's flush. `false` = stop the session.
 async fn handle_event<S: WidgetStream>(
     stream: &mut S,
     ev: VncEvent,
     ready_sent: &mut bool,
+    fb: &mut Option<Framebuffer>,
+    dirty: &mut DirtyRegion,
 ) -> bool {
     match ev {
         VncEvent::SetResolution(screen) => {
+            *fb = Some(Framebuffer::new(screen.width, screen.height));
+            dirty.clear();
             let msg = if *ready_sent {
                 DesktopServerMsg::Resize {
                     width: screen.width,
@@ -267,8 +304,20 @@ async fn handle_event<S: WidgetStream>(
             send_ctrl(stream, &msg).await.is_ok()
         }
         VncEvent::RawImage(rect, data) => {
-            let frame = encode_rect(rect.x, rect.y, rect.width, rect.height, &data);
-            stream.send(WidgetMsg::Binary(frame)).await.is_ok()
+            let r = Rect {
+                x: rect.x,
+                y: rect.y,
+                w: rect.width,
+                h: rect.height,
+            };
+            if fb.as_mut().is_some_and(|fb| fb.blit(r, &data)) {
+                dirty.add(r);
+            } else {
+                // Defensive: an update before SetResolution or out of bounds
+                // shouldn't happen; drop it rather than tear the session down.
+                tracing::debug!(?r, "dropping out-of-bounds vnc update");
+            }
+            true
         }
         VncEvent::Error(message) => {
             let _ = send_ctrl(stream, &DesktopServerMsg::Error { message }).await;
@@ -397,6 +446,17 @@ mod tests {
             Some("first frame must be a connect message")
         );
         assert_eq!(stream.sent.last(), Some(&WidgetMsg::Close));
+    }
+
+    #[tokio::test]
+    async fn session_over_accepts_a_negotiating_connect_frame() {
+        let mut stream = MockStream::new([WidgetMsg::Text(
+            r#"{"type":"connect","encodings":[0,1,2],"quality":"lossy","jpeg_quality":60}"#.into(),
+        )]);
+        session_over(&mut stream, dead_transport(), None).await;
+        // Negotiation fields parse; the failure comes from the dead transport.
+        let message = stream.error_message().expect("handshake error frame");
+        assert!(message.starts_with("vnc handshake failed"), "{message}");
     }
 
     #[tokio::test]

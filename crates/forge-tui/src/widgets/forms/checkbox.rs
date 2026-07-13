@@ -15,7 +15,10 @@ pub struct CheckboxState {
 
 impl CheckboxState {
     pub fn new(checked: bool) -> CheckboxState {
-        CheckboxState { checked, area: Rect::default() }
+        CheckboxState {
+            checked,
+            area: Rect::default(),
+        }
     }
 
     /// Click anywhere on the control toggles it.
@@ -53,7 +56,12 @@ pub struct Checkbox<'a> {
 
 impl<'a> Checkbox<'a> {
     pub fn new(label: &'a str) -> Checkbox<'a> {
-        Checkbox { label, focused: false, disabled: false, theme: None }
+        Checkbox {
+            label,
+            focused: false,
+            disabled: false,
+            theme: None,
+        }
     }
 
     pub fn focused(mut self, focused: bool) -> Self {
@@ -88,7 +96,11 @@ impl<'a> StatefulWidget for Checkbox<'a> {
         } else {
             t.fg[2]
         });
-        let mark_color = if self.disabled { t.fg[3] } else { t.accent.base };
+        let mark_color = if self.disabled {
+            t.fg[3]
+        } else {
+            t.accent.base
+        };
         buf.set_string(area.x, area.y, "[", bracket);
         buf.set_string(
             area.x + 1,
