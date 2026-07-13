@@ -23,5 +23,9 @@
 }
 .fterm-key:hover:not(:disabled) { background: var(--bg-3); color: var(--fg-0); }
 .fterm-key:disabled { color: var(--fg-3); cursor: default; }
-.fterm-body { flex: 1; min-height: 0; padding: var(--sp-2); }
-.fterm-body .xterm { height: 100%; }
+.fterm-body { flex: 1; min-height: 0; }
+/* Inset lives on .xterm itself: the fit addon subtracts the terminal
+   element's own padding but treats the parent's full computed height as
+   available, so parent padding makes it overshoot by a row (clipped at
+   the bottom of the pane). */
+.fterm-body .xterm { height: 100%; box-sizing: border-box; padding: var(--sp-2); }
