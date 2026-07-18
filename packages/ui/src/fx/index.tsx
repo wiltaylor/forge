@@ -166,7 +166,10 @@ async function explode(el: HTMLElement, opts?: FxOptions): Promise<void> {
   });
 }
 
-async function recreate(el: HTMLElement, opts?: FxOptions & { holdMs?: number }): Promise<void> {
+async function recreate(
+  el: HTMLElement,
+  opts?: FxOptions & { holdMs?: number; reappear?: 'converge' | 'fade' },
+): Promise<void> {
   const prep = prepare(el, opts);
   if (!prep) return;
   if (prep.tier === 'off') {
@@ -182,6 +185,23 @@ async function recreate(el: HTMLElement, opts?: FxOptions & { holdMs?: number })
   const pixels = await raster(el, prep.budget, opts);
   const restore = hide(el);
   const burstDur = ((opts?.duration ?? 650) / 1000) * prep.scale;
+  if (opts?.reappear === 'fade') {
+    // Skip the converge: burst only, then the element itself fades back.
+    // The engine's hold phase would re-light the already-faded burst
+    // particles at 0.6 alpha, so the hold lives out here instead.
+    await engine().spawn({
+      el,
+      raster: pixels,
+      phases: [{ kind: 'burst', dur: burstDur }],
+      gravity: opts?.gravity ?? 900,
+      spread: opts?.spread ?? 1,
+      size: sizeFor(pixels, opts),
+    });
+    await wait((opts?.holdMs ?? 150) * prep.scale);
+    restore();
+    await fade(el, 0, 1);
+    return;
+  }
   await engine().spawn({
     el,
     raster: pixels,
@@ -264,7 +284,8 @@ async function burst(el: HTMLElement, opts?: FxOptions & { particles?: number })
 export const fx = {
   /** Element shatters and stays hidden (still in the DOM). */
   explode,
-  /** Explode → hold → particles converge back → element restored. */
+  /** Explode → hold → particles converge back → element restored.
+      `reappear: 'fade'` swaps the converge for a plain fade-in. */
   recreate,
   /** Particles converge inward as the element appears. */
   materialize,
