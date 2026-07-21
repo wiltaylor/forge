@@ -53,8 +53,21 @@ impl<'a> Modal<'a> {
 
     /// The centered panel rect within `area`.
     pub fn panel(&self, area: Rect) -> Rect {
-        let w = self.width.min(area.width.saturating_sub(2)).max(1);
-        let h = self.height.min(area.height.saturating_sub(1)).max(1);
+        if area.width == 0 || area.height == 0 {
+            return Rect::new(area.x, area.y, 0, 0);
+        }
+        // `.max(1)` guarantees a visible panel, but must never exceed the area
+        // or the centering below would underflow on a tiny terminal.
+        let w = self
+            .width
+            .min(area.width.saturating_sub(2))
+            .max(1)
+            .min(area.width);
+        let h = self
+            .height
+            .min(area.height.saturating_sub(1))
+            .max(1)
+            .min(area.height);
         Rect::new(
             area.x + (area.width - w) / 2,
             area.y + (area.height - h) / 2,
@@ -103,5 +116,24 @@ impl Widget for Modal<'_> {
         let panel = self.panel(area);
         Clear.render(panel, buf);
         self.block(t).render(panel, buf);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn panel_never_overflows_on_tiny_or_zero_area() {
+        // A requested panel larger than the area must clamp, not underflow.
+        let modal = Modal::new().size(78, 20);
+        for (w, h) in [(0, 0), (1, 1), (2, 2), (5, 3), (80, 24)] {
+            let area = Rect::new(0, 0, w, h);
+            let panel = modal.panel(area);
+            assert!(panel.width <= w, "panel width {} > area {}", panel.width, w);
+            assert!(panel.height <= h, "panel height {} > area {}", panel.height, h);
+            assert!(panel.right() <= area.right());
+            assert!(panel.bottom() <= area.bottom());
+        }
     }
 }
