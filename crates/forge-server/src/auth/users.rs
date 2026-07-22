@@ -54,13 +54,22 @@ impl AuthUser {
 
 /// Parse the `FORGE_AUTH_USERS` format.
 pub fn parse_users(raw: &str) -> Result<Vec<AuthUser>, ForgeError> {
-    let mut users = Vec::new();
+    let mut users: Vec<AuthUser> = Vec::new();
     for entry in raw.split(',') {
         let entry = entry.trim();
         if entry.is_empty() {
             continue;
         }
         let Some((name, secret)) = entry.split_once(':') else {
+            // Argon2 PHC hashes contain commas in their params
+            // (`$argon2id$v=19$m=19456,t=2,p=1$…`), so a colon-less fragment
+            // is the continuation of the previous entry's secret, not a new
+            // user (user names always precede a colon).
+            if let Some(last) = users.last_mut() {
+                last.secret.push(',');
+                last.secret.push_str(entry);
+                continue;
+            }
             return Err(ForgeError::Config(format!(
                 "FORGE_AUTH_USERS entry {entry:?} has no colon (expected user:secret)"
             )));
@@ -92,6 +101,18 @@ mod tests {
     #[test]
     fn missing_colon_errors() {
         assert!(parse_users("admin").is_err());
+    }
+
+    #[test]
+    fn phc_hash_commas_stay_in_the_secret() {
+        // forge-hash output: real PHC hashes carry commas in their params.
+        let hash = "$argon2id$v=19$m=19456,t=2,p=1$c29tZXNhbHQ$YWJjZGVmZ2g";
+        let users = parse_users(&format!("overseer:{hash},admin:pw")).unwrap();
+        assert_eq!(users.len(), 2);
+        assert_eq!(users[0].secret, hash);
+        assert!(users[0].is_hashed());
+        assert_eq!(users[1].name, "admin");
+        assert_eq!(users[1].secret, "pw");
     }
 
     #[test]
