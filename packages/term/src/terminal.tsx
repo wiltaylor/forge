@@ -53,7 +53,7 @@ export interface TerminalProps {
   style?: JSX.CSSProperties;
 }
 
-export function Terminal(props: TerminalProps) {
+export function Terminal(props: TerminalProps): JSX.Element {
   let host!: HTMLDivElement;
   let term: XTerm | undefined;
   let fit: FitAddon | undefined;

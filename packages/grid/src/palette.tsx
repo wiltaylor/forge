@@ -13,7 +13,7 @@
    Imports only solid-js — no coupling to @forge/ui. */
 
 import { Show, createContext, createSignal, useContext } from 'solid-js';
-import type { Accessor, JSX } from 'solid-js';
+import type { Accessor, Context, JSX } from 'solid-js';
 import { Portal } from 'solid-js/web';
 
 /** Block blueprint carried by a palette drag; w/h in grid units. Extra fields
@@ -37,16 +37,16 @@ export interface GridDndValue {
   setDrag: (d: PaletteDragState | null) => void;
 }
 
-export const GridDndContext = createContext<GridDndValue>();
+export const GridDndContext: Context<GridDndValue | undefined> = createContext<GridDndValue>();
 
-export function GridDndProvider(props: { children: JSX.Element }) {
+export function GridDndProvider(props: { children: JSX.Element }): JSX.Element {
   const [drag, setDrag] = createSignal<PaletteDragState | null>(null);
   return (
     <GridDndContext.Provider value={{ drag, setDrag }}>{props.children}</GridDndContext.Provider>
   );
 }
 
-export function GridPalette(props: { class?: string; children: JSX.Element }) {
+export function GridPalette(props: { class?: string; children: JSX.Element }): JSX.Element {
   return <div class={`fpalette ${props.class ?? ''}`}>{props.children}</div>;
 }
 
@@ -55,7 +55,7 @@ export function GridPalette(props: { class?: string; children: JSX.Element }) {
 const GHOST_CELL = 48;
 const GHOST_GAP = 8;
 
-export function PaletteItem(props: { template: PaletteTemplate; children?: JSX.Element }) {
+export function PaletteItem(props: { template: PaletteTemplate; children?: JSX.Element }): JSX.Element {
   const dnd = useContext(GridDndContext);
   const [ghost, setGhost] = createSignal<{ x: number; y: number } | null>(null);
   let start: { x: number; y: number } | null = null;

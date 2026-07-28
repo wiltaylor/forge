@@ -22,7 +22,7 @@ export interface ChatMessageProps {
   resolveLink?: LinkResolver;
 }
 
-export function ChatMessage(props: ChatMessageProps) {
+export function ChatMessage(props: ChatMessageProps): JSX.Element {
   const blocks = (): ChatBlock[] =>
     props.message.blocks ??
     (props.message.text !== undefined ? [{ kind: 'text', text: props.message.text }] : []);

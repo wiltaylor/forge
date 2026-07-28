@@ -4,6 +4,7 @@
    ops rebuild the edited block object each keystroke and <For> would remount
    the row, destroying the focused textarea. */
 import { Index, Show, createSignal } from 'solid-js';
+import type { JSX } from 'solid-js';
 import { BlocksContext } from './context';
 import type { EditorCtx, EmojiPopState, FocusState, SlashState } from './context';
 import { toggleTodo } from './blockops';
@@ -25,7 +26,7 @@ export interface BlockEditorProps {
   class?: string;
 }
 
-export function BlockEditor(props: BlockEditorProps) {
+export function BlockEditor(props: BlockEditorProps): JSX.Element {
   const [focus, setFocus] = createSignal<FocusState | null>(null);
   const [slash, setSlash] = createSignal<SlashState | null>(null);
   const [emojiPop, setEmojiPop] = createSignal<EmojiPopState | null>(null);
@@ -124,7 +125,7 @@ export function BlockEditor(props: BlockEditorProps) {
 }
 
 /** A sibling list of editable rows — also hosts each column's blocks. */
-export function EditableBlockList(props: { blocks: Block[]; placeholder?: string }) {
+export function EditableBlockList(props: { blocks: Block[]; placeholder?: string }): JSX.Element {
   const numbers = () => listNumbers(props.blocks);
   const showPlaceholder = () =>
     props.placeholder !== undefined &&

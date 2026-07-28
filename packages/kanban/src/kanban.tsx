@@ -81,7 +81,7 @@ const XSvg = () => (
   </svg>
 );
 
-export function KanbanBoard(props: KanbanBoardProps) {
+export function KanbanBoard(props: KanbanBoardProps): JSX.Element {
   let root!: HTMLDivElement;
   let drag: DragState | null = null; // plain variable, not reactive (per-frame)
   let raf = 0;

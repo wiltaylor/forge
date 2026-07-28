@@ -113,7 +113,7 @@ export function layoutFlow(nodes: FlowNode[], edges: FlowEdge[]): FlowLayout {
   };
 }
 
-export function Flowchart(props: FlowchartProps) {
+export function Flowchart(props: FlowchartProps): JSX.Element {
   const layout = createMemo(() => layoutFlow(props.nodes ?? [], props.edges ?? []));
   const anchor = (id: string, side: 'in' | 'out'): Point | null => {
     const p = layout().pos.get(id);

@@ -19,7 +19,7 @@ export interface InlineMdProps {
 type Inline = MdInline | { t: 'fnref'; id: string };
 
 /** One text block's inline content. `\n` renders as a soft break. */
-export function InlineMd(props: InlineMdProps) {
+export function InlineMd(props: InlineMdProps): JSX.Element {
   const nodes = createMemo(() => {
     const out: MdInline[] = [];
     props.md.split('\n').forEach((line, i) => {

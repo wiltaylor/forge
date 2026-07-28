@@ -10,7 +10,7 @@ export interface ToastProps {
   children?: JSX.Element;
 }
 
-export function Toast(props: ToastProps) {
+export function Toast(props: ToastProps): JSX.Element {
   const merged = mergeProps({ tone: 'info' as const }, props);
   return (
     <div class={`ftoast ftoast-${merged.tone}`}>
@@ -30,7 +30,7 @@ export interface AlertProps {
   children?: JSX.Element;
 }
 
-export function Alert(props: AlertProps) {
+export function Alert(props: AlertProps): JSX.Element {
   const merged = mergeProps({ tone: 'info' as const }, props);
   return (
     <div class={`falert falert-${merged.tone}`} role="alert">
@@ -57,7 +57,7 @@ export interface ProgressProps {
   showValue?: boolean;
 }
 
-export function Progress(props: ProgressProps) {
+export function Progress(props: ProgressProps): JSX.Element {
   const merged = mergeProps({ tone: 'accent' as const, value: 0 }, props);
   return (
     <div class="fprogress" classList={{ 'is-indeterminate': !!merged.indeterminate }}>
@@ -87,7 +87,7 @@ export interface SpinnerProps {
   label?: string;
 }
 
-export function Spinner(props: SpinnerProps) {
+export function Spinner(props: SpinnerProps): JSX.Element {
   const merged = mergeProps({ size: 16, label: 'Loading' }, props);
   return (
     <svg class="fspinner" width={merged.size} height={merged.size} viewBox="0 0 24 24"

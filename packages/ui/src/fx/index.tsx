@@ -281,7 +281,23 @@ async function burst(el: HTMLElement, opts?: FxOptions & { particles?: number })
 
 /** The shared FX system. All calls resolve when the effect finishes (or
     immediately when disabled) — callers never branch on capability. */
-export const fx = {
+export interface Fx {
+  /** Element shatters and stays hidden (still in the DOM). */
+  explode(el: HTMLElement, opts?: FxOptions): Promise<void>;
+  /** Explode → hold → particles converge back → element restored.
+      `reappear: 'fade'` swaps the converge for a plain fade-in. */
+  recreate(
+    el: HTMLElement,
+    opts?: FxOptions & { holdMs?: number; reappear?: 'converge' | 'fade' },
+  ): Promise<void>;
+  /** Particles converge inward as the element appears. */
+  materialize(el: HTMLElement, opts?: FxOptions): Promise<void>;
+  /** Celebratory confetti from the element; the element is untouched. */
+  burst(el: HTMLElement, opts?: FxOptions & { particles?: number }): Promise<void>;
+  config(cfg: { mode?: FxMode; maxParticles?: number }): void;
+}
+
+export const fx: Fx = {
   /** Element shatters and stays hidden (still in the DOM). */
   explode,
   /** Explode → hold → particles converge back → element restored.

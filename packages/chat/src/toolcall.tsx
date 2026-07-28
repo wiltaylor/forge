@@ -10,7 +10,7 @@ export interface ChatToolCallProps {
   tool: ChatToolCallData;
 }
 
-export function ChatToolCall(props: ChatToolCallProps) {
+export function ChatToolCall(props: ChatToolCallProps): JSX.Element {
   const [open, setOpen] = createSignal(!!props.tool.defaultOpen);
   const hasBody = () =>
     props.tool.args !== undefined || props.tool.result !== undefined || !!props.tool.children?.length;

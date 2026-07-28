@@ -12,7 +12,7 @@ import type { JSX } from 'solid-js';
  */
 const OverlayMountContext = createContext<Node | undefined>(undefined);
 
-export function OverlayMountProvider(props: { mount: Node; children: JSX.Element }) {
+export function OverlayMountProvider(props: { mount: Node; children: JSX.Element }): JSX.Element {
   return (
     <OverlayMountContext.Provider value={props.mount}>
       {props.children}

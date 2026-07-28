@@ -14,7 +14,7 @@ export interface CalendarProps {
   max?: string;
 }
 
-export function Calendar(props: CalendarProps) {
+export function Calendar(props: CalendarProps): JSX.Element {
   const initial = () => {
     const v = props.value ? new Date(`${props.value}T00:00:00`) : new Date();
     return { y: v.getFullYear(), m: v.getMonth() };
@@ -75,7 +75,7 @@ export interface DatePickerProps extends CalendarProps {
   disabled?: boolean;
 }
 
-export function DatePicker(props: DatePickerProps) {
+export function DatePicker(props: DatePickerProps): JSX.Element {
   const [open, setOpen] = createSignal(false);
   let root!: HTMLDivElement;
   useDismiss(open, () => setOpen(false), () => root);

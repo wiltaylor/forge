@@ -221,7 +221,15 @@ export const DATA_TYPES = [
   'tree',
   'timeline',
   'chapter_header',
-] as const satisfies readonly BlockType[];
+] as const;
+
+/* `as const satisfies readonly BlockType[]` would say this in one line, but
+   isolatedDeclarations cannot emit a `satisfies` on a const assertion. Same
+   check, kept as a standalone type-level assertion: this line fails to compile
+   if any entry above stops being a BlockType. */
+type _DataTypesAreBlockTypes = (typeof DATA_TYPES)[number] extends BlockType ? true : never;
+const _dataTypesCheck: _DataTypesAreBlockTypes = true;
+void _dataTypesCheck;
 
 export type DataBlock = Extract<Block, { type: (typeof DATA_TYPES)[number] }>;
 

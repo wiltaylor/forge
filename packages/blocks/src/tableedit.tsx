@@ -2,6 +2,7 @@
    strings, with a small row/column toolbar. Unfocused tables render through
    StaticBlock. */
 import { For, createSignal, onMount } from 'solid-js';
+import type { JSX } from 'solid-js';
 import { Button } from '@forge/ui';
 import {
   tableInsertCol, tableInsertRow, tableRemoveCol, tableRemoveRow, tableSetCell,
@@ -17,7 +18,7 @@ export interface TableEditProps {
   initialCell?: { row: number; col: number };
 }
 
-export function TableEdit(props: TableEditProps) {
+export function TableEdit(props: TableEditProps): JSX.Element {
   const ctx = useBlocks();
   const id = () => props.block().id;
   /** Last focused cell — the row/col the toolbar acts on. */

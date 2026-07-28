@@ -5,7 +5,7 @@ import { ChevronDown } from './internal/icons';
 /* ---------------- Table ---------------------------------------------------- */
 /* Markup-only: pass thead/tbody as children. The wrap div gives wide tables
    horizontal scroll at <=768px. */
-export function Table(props: JSX.HTMLAttributes<HTMLTableElement>) {
+export function Table(props: JSX.HTMLAttributes<HTMLTableElement>): JSX.Element {
   const [local, rest] = splitProps(props, ['children']);
   return (
     <div class="ftable-wrap">
@@ -15,7 +15,7 @@ export function Table(props: JSX.HTMLAttributes<HTMLTableElement>) {
 }
 
 /* ---------------- Logs ----------------------------------------------------- */
-export function Logs(props: JSX.HTMLAttributes<HTMLDivElement>) {
+export function Logs(props: JSX.HTMLAttributes<HTMLDivElement>): JSX.Element {
   const [local, rest] = splitProps(props, ['children']);
   return <div class="flogs" {...rest}>{local.children}</div>;
 }
@@ -26,7 +26,7 @@ export interface LogLineProps {
   children?: JSX.Element;
 }
 
-export function LogLine(props: LogLineProps) {
+export function LogLine(props: LogLineProps): JSX.Element {
   const merged = mergeProps({ level: 'info' }, props);
   return (
     <div class="flog-line">
@@ -45,7 +45,7 @@ export interface CollapsibleProps {
   children?: JSX.Element;
 }
 
-export function Collapsible(props: CollapsibleProps) {
+export function Collapsible(props: CollapsibleProps): JSX.Element {
   const [open, setOpen] = createSignal(!!props.defaultOpen);
   const toggle = () => { setOpen((o) => !o); props.onToggle?.(open()); };
   return (
@@ -74,7 +74,7 @@ export interface AccordionProps {
   defaultOpen?: string;
 }
 
-export function Accordion(props: AccordionProps) {
+export function Accordion(props: AccordionProps): JSX.Element {
   const [openId, setOpenId] = createSignal<string | null>(props.defaultOpen ?? null);
   return (
     <div class="facc">

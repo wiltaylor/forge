@@ -29,7 +29,7 @@ export interface ThemeProviderProps {
  * through CSS custom properties, a global apply also recolors remote
  * components mounted in shadow roots.
  */
-export function ThemeProvider(props: ThemeProviderProps) {
+export function ThemeProvider(props: ThemeProviderProps): JSX.Element {
   const [theme, setTheme] = createSignal<ThemeInput>(props.theme ?? 'dark');
   createEffect(() => { if (props.theme !== undefined) setTheme(() => props.theme!); });
 

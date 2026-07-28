@@ -18,7 +18,7 @@ export interface MarkdownProps {
   class?: string;
 }
 
-export function Markdown(props: MarkdownProps) {
+export function Markdown(props: MarkdownProps): JSX.Element {
   const merged = mergeProps({ linkTarget: '_blank' as const }, props);
   const blocks = createMemo(() => parseMarkdown(merged.text));
   return (

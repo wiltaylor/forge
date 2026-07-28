@@ -22,7 +22,7 @@ export interface ChatComposerProps {
   autofocus?: boolean;
 }
 
-export function ChatComposer(props: ChatComposerProps) {
+export function ChatComposer(props: ChatComposerProps): JSX.Element {
   const merged = mergeProps({ placeholder: 'Message', sendLabel: 'Send', maxRows: 8 }, props);
   const [inner, setInner] = createSignal('');
   const value = () => merged.value ?? inner();

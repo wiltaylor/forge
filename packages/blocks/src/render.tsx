@@ -32,7 +32,7 @@ export interface BlockRendererProps extends RenderCtx {
 }
 
 /** Read-only renderer for a whole document. */
-export function BlockRenderer(props: BlockRendererProps) {
+export function BlockRenderer(props: BlockRendererProps): JSX.Element {
   return (
     <div class={`fbk ${props.class ?? ''}`}>
       <BlockList blocks={props.document.blocks} ctx={props} />
@@ -40,7 +40,7 @@ export function BlockRenderer(props: BlockRendererProps) {
   );
 }
 
-export function BlockList(props: { blocks: Block[]; ctx: RenderCtx }) {
+export function BlockList(props: { blocks: Block[]; ctx: RenderCtx }): JSX.Element {
   const numbers = createMemo(() => listNumbers(props.blocks));
   return (
     <For each={props.blocks}>

@@ -21,7 +21,7 @@ export interface ModalProps {
   children?: JSX.Element;
 }
 
-export function Modal(props: ModalProps) {
+export function Modal(props: ModalProps): JSX.Element {
   const mount = useOverlayMount();
   createEffect(() => {
     if (!props.open) return;
@@ -61,7 +61,7 @@ export interface SheetProps {
   children?: JSX.Element;
 }
 
-export function Sheet(props: SheetProps) {
+export function Sheet(props: SheetProps): JSX.Element {
   const mount = useOverlayMount();
   createEffect(() => {
     if (!props.open) return;
@@ -99,7 +99,7 @@ export interface TooltipProps {
   children?: JSX.Element;
 }
 
-export function Tooltip(props: TooltipProps) {
+export function Tooltip(props: TooltipProps): JSX.Element {
   const merged = mergeProps({ side: 'top' as const }, props);
   return (
     <span class="ftip" data-tip={merged.label} data-side={merged.side}>
@@ -119,7 +119,7 @@ export interface PopoverProps {
   children?: JSX.Element;
 }
 
-export function Popover(props: PopoverProps) {
+export function Popover(props: PopoverProps): JSX.Element {
   const merged = mergeProps({ variant: 'secondary' as const, size: 'md' as const, align: 'start' as const }, props);
   const [open, setOpen] = createSignal(false);
   let root!: HTMLDivElement;
@@ -151,7 +151,7 @@ export interface DropdownMenuProps {
   align?: 'start' | 'end';
 }
 
-export function DropdownMenu(props: DropdownMenuProps) {
+export function DropdownMenu(props: DropdownMenuProps): JSX.Element {
   const merged = mergeProps({ variant: 'secondary' as const, size: 'md' as const, align: 'start' as const }, props);
   const [open, setOpen] = createSignal(false);
   const [activeIdx, setActiveIdx] = createSignal(-1);
@@ -210,7 +210,7 @@ export interface ContextMenuProps {
   children?: JSX.Element;
 }
 
-export function ContextMenu(props: ContextMenuProps) {
+export function ContextMenu(props: ContextMenuProps): JSX.Element {
   const [pos, setPos] = createSignal<{ x: number; y: number } | null>(null);
   const [activeIdx, setActiveIdx] = createSignal(-1);
   let root!: HTMLDivElement;
@@ -250,7 +250,7 @@ export interface CommandProps {
   placeholder?: string;
 }
 
-export function Command(props: CommandProps) {
+export function Command(props: CommandProps): JSX.Element {
   const mount = useOverlayMount();
   const [query, setQuery] = createSignal('');
   const [activeIdx, setActiveIdx] = createSignal(0);

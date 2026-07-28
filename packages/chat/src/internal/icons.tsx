@@ -1,28 +1,30 @@
 /* Private inline SVGs — chrome icons that keep @forge/chat usable without an
    icon library. Consumer-provided icons come in via `icon` props. */
 
-export const ChevronRightSvg = () => (
+import type { JSX } from 'solid-js';
+
+export const ChevronRightSvg = (): JSX.Element => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
        stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
     <path d="M9 6l6 6-6 6" />
   </svg>
 );
 
-export const ArrowDownSvg = () => (
+export const ArrowDownSvg = (): JSX.Element => (
   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
        stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
     <line x1="12" y1="4" x2="12" y2="20" /><path d="M6 14l6 6 6-6" />
   </svg>
 );
 
-export const SendSvg = () => (
+export const SendSvg = (): JSX.Element => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
        stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
     <path d="M21 3L10 14" /><path d="M21 3l-7 18-4-7-7-4 18-7z" />
   </svg>
 );
 
-export const FileSvg = () => (
+export const FileSvg = (): JSX.Element => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
        stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
     <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
@@ -30,7 +32,7 @@ export const FileSvg = () => (
   </svg>
 );
 
-export const GlobeSvg = () => (
+export const GlobeSvg = (): JSX.Element => (
   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
        stroke-width="1.5" stroke-linecap="round" aria-hidden="true">
     <circle cx="12" cy="12" r="9" />

@@ -1,4 +1,5 @@
 import { Show, createResource } from 'solid-js';
+import type { JSX } from 'solid-js';
 import { Skeleton } from '@forge/ui';
 import type { LinkMeta, LinkResolver } from './types';
 import { GlobeSvg } from './internal/icons';
@@ -13,7 +14,7 @@ export interface LinkCardProps {
   resolve?: LinkResolver;
 }
 
-export function LinkCard(props: LinkCardProps) {
+export function LinkCard(props: LinkCardProps): JSX.Element {
   const [fetched] = createResource(
     () => (!props.meta && props.resolve ? props.url : null),
     (url) => {

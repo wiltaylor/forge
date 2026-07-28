@@ -77,7 +77,7 @@ export interface PieChartProps {
   showValues?: boolean;
 }
 
-export function PieChart(props: PieChartProps) {
+export function PieChart(props: PieChartProps): JSX.Element {
   const merged = mergeProps({ size: 180, legend: true, showValues: true }, props);
   const total = () => merged.data.reduce((s, d) => s + d.value, 0);
   const slices = () => {
@@ -155,7 +155,7 @@ export interface LineChartProps {
   xLabels?: JSX.Element[];
 }
 
-export function LineChart(props: LineChartProps) {
+export function LineChart(props: LineChartProps): JSX.Element {
   const merged = mergeProps({ height: 220, legend: true, yTicks: 4 }, props);
   const [ref, w] = useMeasure();
 
@@ -241,7 +241,7 @@ export interface BarChartProps {
   stacked?: boolean;
 }
 
-export function BarChart(props: BarChartProps) {
+export function BarChart(props: BarChartProps): JSX.Element {
   const merged = mergeProps({ height: 220, yTicks: 4 }, props);
   const [ref, w] = useMeasure();
   const series = (): BarSeries[] => merged.series ?? [{ label: '', data: merged.data!, tone: undefined }];
@@ -350,7 +350,7 @@ export interface GanttChartProps {
   today?: GanttDate | false;
 }
 
-export function GanttChart(props: GanttChartProps) {
+export function GanttChart(props: GanttChartProps): JSX.Element {
   const merged = mergeProps({ labelWidth: 140, rowH: 28 }, props);
   const [ref, w] = useMeasure();
 
@@ -438,7 +438,7 @@ export interface SparklineProps {
   tone?: ChartTone;
 }
 
-export function Sparkline(props: SparklineProps) {
+export function Sparkline(props: SparklineProps): JSX.Element {
   const merged = mergeProps({ width: 96, height: 28 }, props);
   const pts = () => {
     const min = Math.min(...merged.points), max = Math.max(...merged.points);

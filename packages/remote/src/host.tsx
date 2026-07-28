@@ -1,4 +1,5 @@
 import { createEffect, onCleanup, onMount } from 'solid-js';
+import type { JSX } from 'solid-js';
 import type { RemoteComponentMeta, RemoteManifest } from './types';
 
 export interface LoadRemoteOptions {
@@ -83,7 +84,7 @@ export interface RemoteProps {
  * Mount a loaded remote custom element from Solid. Props cross the boundary
  * as plain values (no signals); events come back as CustomEvents.
  */
-export function Remote(props: RemoteProps) {
+export function Remote(props: RemoteProps): JSX.Element {
   let holder!: HTMLDivElement;
   let el: HTMLElement | undefined;
 

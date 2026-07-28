@@ -60,7 +60,7 @@ interface DragState {
   active: boolean;
 }
 
-export function BlockGrid(props: BlockGridProps) {
+export function BlockGrid(props: BlockGridProps): JSX.Element {
   let root!: HTMLDivElement;
   let drag: DragState | null = null; // plain variable, not reactive (per-frame)
 

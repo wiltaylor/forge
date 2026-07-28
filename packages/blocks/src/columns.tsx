@@ -2,6 +2,7 @@
    ratio grips (pointer-capture, the grid palette pattern) and per-column
    add/remove controls. */
 import { For, Show } from 'solid-js';
+import type { JSX } from 'solid-js';
 import { addColumn, removeColumn, setColumnRatios } from './ops';
 import { useBlocks } from './context';
 import { EditableBlockList } from './editor';
@@ -9,7 +10,7 @@ import type { Block } from './types';
 
 type ColumnsBlock = Extract<Block, { type: 'columns' }>;
 
-export function ColumnsEdit(props: { block: () => ColumnsBlock }) {
+export function ColumnsEdit(props: { block: () => ColumnsBlock }): JSX.Element {
   const ctx = useBlocks();
   const id = () => props.block().id;
   let root!: HTMLDivElement;

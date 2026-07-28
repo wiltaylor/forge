@@ -11,7 +11,7 @@ export const ENC_RAW = 0;
 export const ENC_DEFLATE = 1;
 export const ENC_JPEG = 2;
 /** Advertised in the `connect` frame, as wire header-byte values. */
-export const SUPPORTED_ENCODINGS = [ENC_RAW, ENC_DEFLATE, ENC_JPEG];
+export const SUPPORTED_ENCODINGS: number[] = [ENC_RAW, ENC_DEFLATE, ENC_JPEG];
 
 const HEADER_LEN = 10;
 

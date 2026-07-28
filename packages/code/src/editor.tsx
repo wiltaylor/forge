@@ -36,7 +36,7 @@ export interface CodeEditorProps {
   style?: JSX.CSSProperties;
 }
 
-export function CodeEditor(props: CodeEditorProps) {
+export function CodeEditor(props: CodeEditorProps): JSX.Element {
   let host!: HTMLDivElement;
   let view: EditorView | undefined;
   const lang = new Compartment(), editable = new Compartment(), wrapping = new Compartment();

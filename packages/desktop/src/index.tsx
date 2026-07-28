@@ -6,6 +6,7 @@
    Exports: VncViewer, RdpViewer (thin port-defaulted wrappers), DesktopViewer
    (+ DesktopApi ref). */
 import { mergeProps } from 'solid-js';
+import type { JSX } from 'solid-js';
 import { DesktopViewer } from './viewer';
 import type { DesktopViewerProps } from './viewer';
 
@@ -13,10 +14,10 @@ export { DesktopViewer } from './viewer';
 export type { DesktopApi, DesktopViewerProps, DesktopStatus } from './viewer';
 export type { WidgetTransport } from './transport';
 
-export function VncViewer(props: DesktopViewerProps) {
+export function VncViewer(props: DesktopViewerProps): JSX.Element {
   return <DesktopViewer {...mergeProps({ port: 5900 }, props)} />;
 }
 
-export function RdpViewer(props: DesktopViewerProps) {
+export function RdpViewer(props: DesktopViewerProps): JSX.Element {
   return <DesktopViewer {...mergeProps({ port: 3389 }, props)} />;
 }

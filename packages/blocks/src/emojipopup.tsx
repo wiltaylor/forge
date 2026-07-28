@@ -2,11 +2,12 @@
    `:shortcode:` text — storage stays shortcode-canonical; rendering resolves
    to unicode. */
 import { For, Show, createMemo } from 'solid-js';
+import type { JSX } from 'solid-js';
 import { searchEmoji } from './emoji';
 import { updateBlock, findBlock } from './ops';
 import { useBlocks } from './context';
 
-export function EmojiPopup(props: { blockId: string }) {
+export function EmojiPopup(props: { blockId: string }): JSX.Element {
   const ctx = useBlocks();
   const state = () => ctx.emojiPop();
   const hits = createMemo(() => {

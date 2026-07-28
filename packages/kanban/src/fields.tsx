@@ -9,6 +9,7 @@
    fix is portal-based popovers in @forge/ui (overlay-mount), not here. */
 
 import { For, Match, Show, Switch } from 'solid-js';
+import type { JSX } from 'solid-js';
 import { Badge, Checkbox, DatePicker, Input, Select, Slider, Textarea, Toggle } from '@forge/ui';
 import type { KanbanCard, KanbanField } from './board';
 
@@ -18,7 +19,7 @@ export interface CardFieldsProps {
   onCardChange?: (cardId: string, data: Record<string, unknown>) => void;
 }
 
-export function CardFields(props: CardFieldsProps) {
+export function CardFields(props: CardFieldsProps): JSX.Element {
   const value = (key: string) => props.card.data[key];
   const set = (key: string) => (v: unknown) =>
     props.onCardChange?.(props.card.id, { ...props.card.data, [key]: v });

@@ -2,7 +2,7 @@
    Kept in its own module so blockrow/columns/editor can import it without
    cycles at module-init time. */
 import { createContext, useContext } from 'solid-js';
-import type { Accessor } from 'solid-js';
+import type { Accessor, Context } from 'solid-js';
 import type { BlockDef, BlockDocument } from './types';
 import type { RenderCtx } from './render';
 
@@ -44,7 +44,7 @@ export interface EditorCtx {
   placeholder: () => string;
 }
 
-export const BlocksContext = createContext<EditorCtx>();
+export const BlocksContext: Context<EditorCtx | undefined> = createContext<EditorCtx>();
 
 export function useBlocks(): EditorCtx {
   const ctx = useContext(BlocksContext);

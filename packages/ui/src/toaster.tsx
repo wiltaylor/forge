@@ -92,7 +92,7 @@ export function dismissToast(id: number): void {
 }
 
 /** The shared global toaster — mount once at the app root. */
-export function Toaster() {
+export function Toaster(): JSX.Element {
   return <ToastList store={globalStore()} />;
 }
 

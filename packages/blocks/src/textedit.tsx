@@ -3,6 +3,7 @@
    block navigation, shortcuts, slash + emoji popups). Autosize uses the CSS
    grid-replica trick (.fbk-grow::after mirrors the value) — no JS resize. */
 import { Show, createEffect } from 'solid-js';
+import type { JSX } from 'solid-js';
 import { detectShortcut } from './line';
 import {
   mergeWithPrevious, moveBlock, nextEditable, prevEditable,
@@ -23,7 +24,7 @@ export interface TextBlockEditProps {
   placeholder?: string;
 }
 
-export function TextBlockEdit(props: TextBlockEditProps) {
+export function TextBlockEdit(props: TextBlockEditProps): JSX.Element {
   const ctx = useBlocks();
   let ta!: HTMLTextAreaElement;
   let grow!: HTMLDivElement;

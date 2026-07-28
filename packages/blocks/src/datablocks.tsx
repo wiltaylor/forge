@@ -26,7 +26,7 @@ const inline = (ctx: DataCtx, md: string) => (
 
 /* ---------------- media ---------------- */
 
-export function ImageView(props: { block: Kind<'image'> }) {
+export function ImageView(props: { block: Kind<'image'> }): JSX.Element {
   return (
     <figure class="fbk-img">
       <img
@@ -52,7 +52,7 @@ export function videoEmbed(src: string): string | null {
   return null;
 }
 
-export function VideoView(props: { block: Kind<'video'> }) {
+export function VideoView(props: { block: Kind<'video'> }): JSX.Element {
   const [playing, setPlaying] = createSignal(false);
   const embed = () => videoEmbed(props.block.src);
   const size = () => ({
@@ -96,7 +96,7 @@ export function VideoView(props: { block: Kind<'video'> }) {
   );
 }
 
-export function MathView(props: { block: Kind<'math'>; ctx: DataCtx }) {
+export function MathView(props: { block: Kind<'math'>; ctx: DataCtx }): JSX.Element {
   return (
     <div class="fbk-math">
       <Show when={props.ctx.renderMath} fallback={<code>{props.block.tex}</code>}>
@@ -129,7 +129,7 @@ function ChartFrame(props: { title?: string; xLabel?: string; yLabel?: string; c
   );
 }
 
-export function BarChartView(props: { block: Kind<'bar_chart'> }) {
+export function BarChartView(props: { block: Kind<'bar_chart'> }): JSX.Element {
   const series = () =>
     props.block.series.map((s) => ({
       label: s.name,
@@ -142,7 +142,7 @@ export function BarChartView(props: { block: Kind<'bar_chart'> }) {
   );
 }
 
-export function LineChartView(props: { block: Kind<'line_chart'> }) {
+export function LineChartView(props: { block: Kind<'line_chart'> }): JSX.Element {
   const series = () =>
     props.block.series.map((s) => ({
       label: s.name,
@@ -166,7 +166,7 @@ export function LineChartView(props: { block: Kind<'line_chart'> }) {
   );
 }
 
-export function PieChartView(props: { block: Kind<'pie_chart'> }) {
+export function PieChartView(props: { block: Kind<'pie_chart'> }): JSX.Element {
   return (
     <ChartFrame title={props.block.title}>
       <PieChart data={props.block.slices.map((s) => ({ label: s.label, value: s.value }))} />
@@ -176,7 +176,7 @@ export function PieChartView(props: { block: Kind<'pie_chart'> }) {
 
 /* ---------------- diagrams ---------------- */
 
-export function DiagramView(props: { block: Kind<'diagram'> }) {
+export function DiagramView(props: { block: Kind<'diagram'> }): JSX.Element {
   const nodes = (): FlowNode[] =>
     props.block.nodes.map((n) => ({
       id: n.id,
@@ -192,7 +192,7 @@ export function DiagramView(props: { block: Kind<'diagram'> }) {
   );
 }
 
-export function StateDiagramView(props: { block: Kind<'state_diagram'> }) {
+export function StateDiagramView(props: { block: Kind<'state_diagram'> }): JSX.Element {
   const nodes = (): FlowNode[] =>
     props.block.states.map((s) => ({
       id: s.id,
@@ -214,7 +214,7 @@ export function StateDiagramView(props: { block: Kind<'state_diagram'> }) {
 
 const SEQ = { colW: 170, headH: 30, rowH: 30, pad: 8 };
 
-export function SequenceDiagramView(props: { block: Kind<'sequence_diagram'> }) {
+export function SequenceDiagramView(props: { block: Kind<'sequence_diagram'> }): JSX.Element {
   const cols = createMemo(() => new Map(props.block.participants.map((p, i) => [p.id, i])));
   const x = (id: string) => (cols().get(id) ?? 0) * SEQ.colW + SEQ.colW / 2;
   const noteRows = createMemo(() => {
@@ -317,7 +317,7 @@ export function SequenceDiagramView(props: { block: Kind<'sequence_diagram'> }) 
 
 /* ---------------- structure ---------------- */
 
-export function NodeTableView(props: { block: Kind<'node_table'>; ctx: DataCtx }) {
+export function NodeTableView(props: { block: Kind<'node_table'>; ctx: DataCtx }): JSX.Element {
   return (
     <div class="fbk-ntable">
       <Show when={props.block.title}>
@@ -335,7 +335,7 @@ export function NodeTableView(props: { block: Kind<'node_table'>; ctx: DataCtx }
   );
 }
 
-export function TreeView(props: { block: Kind<'tree'> }) {
+export function TreeView(props: { block: Kind<'tree'> }): JSX.Element {
   return (
     <div class="fbk-tree">
       <TreeRows nodes={props.block.nodes} prefix="" />
@@ -367,7 +367,7 @@ function TreeRows(props: { nodes: TreeNode[]; prefix: string }) {
   );
 }
 
-export function TimelineView(props: { block: Kind<'timeline'> }) {
+export function TimelineView(props: { block: Kind<'timeline'> }): JSX.Element {
   const items = createMemo(() =>
     [...props.block.items].sort((a, b) => Date.parse(a.on) - Date.parse(b.on)),
   );
@@ -407,7 +407,7 @@ export function TimelineView(props: { block: Kind<'timeline'> }) {
   );
 }
 
-export function ChapterHeaderView(props: { block: Kind<'chapter_header'>; ctx: DataCtx }) {
+export function ChapterHeaderView(props: { block: Kind<'chapter_header'>; ctx: DataCtx }): JSX.Element {
   const meta = () =>
     [props.block.reading_time, props.block.updated, props.block.version].filter(Boolean);
   return (
@@ -425,7 +425,7 @@ export function ChapterHeaderView(props: { block: Kind<'chapter_header'>; ctx: D
   );
 }
 
-export function FootnoteView(props: { block: Kind<'footnote'>; ctx: DataCtx }) {
+export function FootnoteView(props: { block: Kind<'footnote'>; ctx: DataCtx }): JSX.Element {
   return (
     <div class="fbk-footnote" id={`fn-${props.block.label}`}>
       <sup class="fbk-footnote-label">[{props.block.label}]</sup>{' '}

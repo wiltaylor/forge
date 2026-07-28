@@ -1,6 +1,7 @@
 /* The '/' block palette: a small anchored .fpop list (not the full-screen
    Command palette). Query = the text typed after '/' in the block itself. */
 import { For, Show, createMemo } from 'solid-js';
+import type { JSX } from 'solid-js';
 import { findBlock, replaceBlock, insertAfter, wrapInColumns } from './ops';
 import { useBlocks } from './context';
 import type { EditorCtx } from './context';
@@ -103,7 +104,7 @@ export function applySlashItem(ctx: EditorCtx, blockId: string, item: SlashItem)
 }
 
 /** The anchored popup itself; rendered inside the focused block's row. */
-export function SlashMenu(props: { blockId: string }) {
+export function SlashMenu(props: { blockId: string }): JSX.Element {
   const ctx = useBlocks();
   const state = () => ctx.slash();
   const items = createMemo(() => slashItems(ctx, props.blockId));

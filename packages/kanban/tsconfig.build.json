@@ -7,6 +7,12 @@
 // every input under rootDir. Here they resolve through node_modules to the
 // sibling's built dist/index.d.ts instead — turbo's `dependsOn: ["^build"]`
 // guarantees it exists.
+//
+// `isolatedDeclarations` forces every export to state its own type instead of
+// letting tsc infer one. Without it, emit has to *name* inferred types, and a
+// type reached through pnpm's virtual store has no portable path — TS2883,
+// which only shows up when a consumer installs this package as a git dep and
+// never in this workspace. The flag turns that into a local compile error.
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
@@ -14,7 +20,8 @@
     "emitDeclarationOnly": true,
     "outDir": "dist",
     "rootDir": "src",
-    "paths": {}
+    "paths": {},
+    "isolatedDeclarations": true
   },
   "include": ["src"]
 }

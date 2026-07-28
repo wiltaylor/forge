@@ -15,7 +15,7 @@ export interface AppShellProps {
   children?: JSX.Element;
 }
 
-export function AppShell(props: AppShellProps) {
+export function AppShell(props: AppShellProps): JSX.Element {
   const [navOpen, setNavOpen] = createSignal(false);
   const close = () => setNavOpen(false);
   return (
@@ -34,7 +34,7 @@ export function AppShell(props: AppShellProps) {
   );
 }
 
-export function NavSection(props: { children?: JSX.Element }) {
+export function NavSection(props: { children?: JSX.Element }): JSX.Element {
   return <div class="fsidebar-section">{props.children}</div>;
 }
 
@@ -44,7 +44,7 @@ export interface NavLinkProps extends JSX.AnchorHTMLAttributes<HTMLAnchorElement
   count?: number | string;
 }
 
-export function NavLink(props: NavLinkProps) {
+export function NavLink(props: NavLinkProps): JSX.Element {
   const [local, rest] = splitProps(props, ['icon', 'active', 'count', 'children']);
   return (
     <a classList={{ 'is-active': !!local.active }} {...rest}>
@@ -59,7 +59,7 @@ export function NavLink(props: NavLinkProps) {
   );
 }
 
-export function Crumbs(props: { items: JSX.Element[] }) {
+export function Crumbs(props: { items: JSX.Element[] }): JSX.Element {
   return (
     <div class="ftopbar-crumbs">
       <Index each={props.items}>
@@ -83,7 +83,7 @@ export interface PageHeadProps {
   actions?: JSX.Element;
 }
 
-export function PageHead(props: PageHeadProps) {
+export function PageHead(props: PageHeadProps): JSX.Element {
   return (
     <div class="page-head">
       <div>
@@ -113,7 +113,7 @@ export interface TabsProps {
   onChange?: (id: string) => void;
 }
 
-export function Tabs(props: TabsProps) {
+export function Tabs(props: TabsProps): JSX.Element {
   return (
     <div class="ftabs" role="tablist">
       <For each={props.tabs}>
@@ -140,7 +140,7 @@ export interface PaginationProps {
   onChange?: (page: number) => void;
 }
 
-export function Pagination(props: PaginationProps) {
+export function Pagination(props: PaginationProps): JSX.Element {
   const window_ = (): (number | '…')[] => {
     const { page, pages } = props;
     if (pages <= 7) return Array.from({ length: pages }, (_, i) => i + 1);
@@ -189,7 +189,7 @@ export interface SplitPaneProps {
   style?: JSX.CSSProperties;
 }
 
-export function SplitPane(props: SplitPaneProps) {
+export function SplitPane(props: SplitPaneProps): JSX.Element {
   const merged = mergeProps({ initial: 280, min: 160 }, props);
   const [size, setSize] = createSignal(merged.initial);
   const [dragging, setDragging] = createSignal(false);
@@ -235,7 +235,7 @@ export function SplitPane(props: SplitPaneProps) {
 }
 
 /* ---------------- Settings ------------------------------------------------- */
-export function SettingsLayout(props: { nav?: JSX.Element; children?: JSX.Element }) {
+export function SettingsLayout(props: { nav?: JSX.Element; children?: JSX.Element }): JSX.Element {
   return (
     <div class="settings-layout">
       <nav class="settings-nav">{props.nav}</nav>
@@ -244,7 +244,7 @@ export function SettingsLayout(props: { nav?: JSX.Element; children?: JSX.Elemen
   );
 }
 
-export function SettingsSection(props: { title: JSX.Element; sub?: JSX.Element; children?: JSX.Element }) {
+export function SettingsSection(props: { title: JSX.Element; sub?: JSX.Element; children?: JSX.Element }): JSX.Element {
   return (
     <section class="settings-section">
       <h2>{props.title}</h2>
@@ -256,6 +256,6 @@ export function SettingsSection(props: { title: JSX.Element; sub?: JSX.Element; 
   );
 }
 
-export function SettingsRow(props: { children?: JSX.Element }) {
+export function SettingsRow(props: { children?: JSX.Element }): JSX.Element {
   return <div class="settings-row">{props.children}</div>;
 }

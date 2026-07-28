@@ -73,7 +73,7 @@ export interface CodeMenuProps {
 }
 
 /* Forge context menu rendered at the pointer (uses round-4 .fmenu classes). */
-export function CodeMenu(props: CodeMenuProps) {
+export function CodeMenu(props: CodeMenuProps): JSX.Element {
   createEffect(() => {
     if (!props.pos()) return;
     const close = () => props.setPos(null);

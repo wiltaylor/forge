@@ -27,7 +27,7 @@ export interface BlockRowProps {
   placeholder?: string;
 }
 
-export function BlockRow(props: BlockRowProps) {
+export function BlockRow(props: BlockRowProps): JSX.Element {
   const ctx = useBlocks();
   const id = () => props.block().id;
   const focused = () => ctx.focus()?.id === id();

@@ -13,7 +13,7 @@ export interface InputProps extends JSX.InputHTMLAttributes<HTMLInputElement> {
   help?: JSX.Element;
 }
 
-export function Input(props: InputProps) {
+export function Input(props: InputProps): JSX.Element {
   const [local, rest] = splitProps(props, ['icon', 'error', 'label', 'help']);
   return (
     <label class="ffield">
@@ -40,7 +40,7 @@ export interface TextareaProps extends JSX.TextareaHTMLAttributes<HTMLTextAreaEl
   help?: JSX.Element;
 }
 
-export function Textarea(props: TextareaProps) {
+export function Textarea(props: TextareaProps): JSX.Element {
   const [local, rest] = splitProps(props, ['label', 'help', 'error']);
   return (
     <label class="ffield">
@@ -65,7 +65,7 @@ export interface CheckboxProps extends Omit<JSX.InputHTMLAttributes<HTMLInputEle
   children?: JSX.Element;
 }
 
-export function Checkbox(props: CheckboxProps) {
+export function Checkbox(props: CheckboxProps): JSX.Element {
   const [local, rest] = splitProps(props, ['checked', 'onChange', 'indeterminate', 'children']);
   let input: HTMLInputElement | undefined;
   createEffect(() => { if (input) input.indeterminate = !!local.indeterminate; });
@@ -88,7 +88,7 @@ export interface ToggleProps extends Omit<JSX.InputHTMLAttributes<HTMLInputEleme
   children?: JSX.Element;
 }
 
-export function Toggle(props: ToggleProps) {
+export function Toggle(props: ToggleProps): JSX.Element {
   const [local, rest] = splitProps(props, ['checked', 'onChange', 'children']);
   return (
     <label class="ftoggle">
@@ -110,7 +110,7 @@ export interface RadioProps<T = string> extends Omit<JSX.InputHTMLAttributes<HTM
   children?: JSX.Element;
 }
 
-export function Radio<T = string>(props: RadioProps<T>) {
+export function Radio<T = string>(props: RadioProps<T>): JSX.Element {
   const [local, rest] = splitProps(props, ['value', 'checked', 'onChange', 'children']);
   return (
     <label class="fradio">
@@ -133,7 +133,7 @@ export interface RadioGroupProps<T = string> {
   row?: boolean;
 }
 
-export function RadioGroup<T = string>(props: RadioGroupProps<T>) {
+export function RadioGroup<T = string>(props: RadioGroupProps<T>): JSX.Element {
   const merged = mergeProps({ name: createUniqueId() }, props);
   return (
     <div class="ffield">
@@ -165,7 +165,7 @@ export interface SelectProps<T = string> extends Omit<JSX.ButtonHTMLAttributes<H
   error?: boolean;
 }
 
-export function Select<T = string>(props: SelectProps<T>) {
+export function Select<T = string>(props: SelectProps<T>): JSX.Element {
   const [local, rest] = splitProps(props,
     ['options', 'value', 'onChange', 'placeholder', 'label', 'help', 'error', 'children']);
   const [open, setOpen] = createSignal(false);
@@ -259,7 +259,7 @@ export interface ListBoxProps<T = string> {
   label?: JSX.Element;
 }
 
-export function ListBox<T = string>(props: ListBoxProps<T> & Omit<JSX.HTMLAttributes<HTMLDivElement>, 'onChange'>) {
+export function ListBox<T = string>(props: ListBoxProps<T> & Omit<JSX.HTMLAttributes<HTMLDivElement>, 'onChange'>): JSX.Element {
   const [local, rest] = splitProps(props,
     ['options', 'value', 'values', 'onChange', 'multiple', 'label']);
   const [activeIdx, setActiveIdx] = createSignal(-1);
@@ -320,7 +320,7 @@ export interface SliderProps extends Omit<JSX.InputHTMLAttributes<HTMLInputEleme
   showValue?: boolean;
 }
 
-export function Slider(props: SliderProps) {
+export function Slider(props: SliderProps): JSX.Element {
   const merged = mergeProps({ min: 0, max: 100, step: 1 }, props);
   const [local, rest] = splitProps(merged, ['value', 'onChange', 'label', 'showValue', 'min', 'max', 'step']);
   const pct = () => ((local.value - local.min) / (local.max - local.min)) * 100;
@@ -348,7 +348,7 @@ export interface ToggleGroupProps<T = string> {
   onChange?: (value: T) => void;
 }
 
-export function ToggleGroup<T = string>(props: ToggleGroupProps<T>) {
+export function ToggleGroup<T = string>(props: ToggleGroupProps<T>): JSX.Element {
   return (
     <div class="fseg" role="radiogroup">
       <For each={props.options}>
@@ -381,7 +381,7 @@ export interface ComboboxProps<T = string> {
   emptyText?: string;
 }
 
-export function Combobox<T = string>(props: ComboboxProps<T>) {
+export function Combobox<T = string>(props: ComboboxProps<T>): JSX.Element {
   const [open, setOpen] = createSignal(false);
   const [query, setQuery] = createSignal<string | null>(null);  // null = show selected label
   const [activeIdx, setActiveIdx] = createSignal(-1);

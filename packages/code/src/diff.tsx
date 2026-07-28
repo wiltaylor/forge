@@ -30,7 +30,7 @@ export interface DiffEditorProps {
   style?: JSX.CSSProperties;
 }
 
-export function DiffEditor(props: DiffEditorProps) {
+export function DiffEditor(props: DiffEditorProps): JSX.Element {
   let host!: HTMLDivElement;
   let mv: MergeView | null = null;
   let uview: EditorView | null = null;

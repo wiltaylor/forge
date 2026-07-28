@@ -12,7 +12,7 @@ export interface IconProps {
   [prop: string]: unknown;
 }
 
-export function Icon(props: IconProps) {
+export function Icon(props: IconProps): JSX.Element {
   const merged = mergeProps({ size: 16 }, props);
   const [local, rest] = splitProps(merged, ['of', 'size']);
   return <Dynamic component={local.of} size={local.size} strokeWidth={1.5} aria-hidden="true" {...rest} />;
@@ -25,7 +25,7 @@ export interface ButtonProps extends JSX.ButtonHTMLAttributes<HTMLButtonElement>
   icon?: IconComponent;
 }
 
-export function Button(props: ButtonProps) {
+export function Button(props: ButtonProps): JSX.Element {
   const merged = mergeProps({ variant: 'secondary' as const, size: 'md' as const }, props);
   const [local, rest] = splitProps(merged, ['variant', 'size', 'icon', 'children', 'class']);
   return (
@@ -47,7 +47,7 @@ export interface IconButtonProps extends JSX.ButtonHTMLAttributes<HTMLButtonElem
   label: string;
 }
 
-export function IconButton(props: IconButtonProps) {
+export function IconButton(props: IconButtonProps): JSX.Element {
   const [local, rest] = splitProps(props, ['icon', 'label']);
   return (
     <button class="ftopbar-icon-btn" aria-label={local.label} title={local.label} {...rest}>
@@ -63,7 +63,7 @@ export interface BadgeProps {
   children?: JSX.Element;
 }
 
-export function Badge(props: BadgeProps) {
+export function Badge(props: BadgeProps): JSX.Element {
   const merged = mergeProps({ tone: 'neutral' as const }, props);
   return (
     <span class={`fbadge fbadge-${merged.tone}`}>
@@ -84,7 +84,7 @@ export interface CardProps {
   children?: JSX.Element;
 }
 
-export function Card(props: CardProps) {
+export function Card(props: CardProps): JSX.Element {
   const merged = mergeProps({ padded: true }, props);
   return (
     <section class={`fcard ${merged.class ?? ''}`}>
@@ -107,7 +107,7 @@ export interface StatProps {
   tone?: Tone;
 }
 
-export function Stat(props: StatProps) {
+export function Stat(props: StatProps): JSX.Element {
   return (
     <div class="fstat">
       <div class="eyebrow">{props.label}</div>
@@ -120,17 +120,17 @@ export function Stat(props: StatProps) {
 }
 
 /* ---------------- Kbd ------------------------------------------------------ */
-export function Kbd(props: { children?: JSX.Element }) {
+export function Kbd(props: { children?: JSX.Element }): JSX.Element {
   return <kbd class="fkbd">{props.children}</kbd>;
 }
 
 /* ---------------- Status dot ---------------------------------------------- */
-export function StatusDot(props: { tone: StatusTone }) {
+export function StatusDot(props: { tone: StatusTone }): JSX.Element {
   return <span class={`fdot fdot-${props.tone}`} />;
 }
 
 /* ---------------- Separator ------------------------------------------------- */
-export function Separator(props: { vertical?: boolean }) {
+export function Separator(props: { vertical?: boolean }): JSX.Element {
   return <div class="fsep" classList={{ 'is-vertical': !!props.vertical }} role="separator" />;
 }
 
@@ -141,7 +141,7 @@ export interface SkeletonProps extends Omit<JSX.HTMLAttributes<HTMLDivElement>, 
   style?: JSX.CSSProperties;
 }
 
-export function Skeleton(props: SkeletonProps) {
+export function Skeleton(props: SkeletonProps): JSX.Element {
   const [local, rest] = splitProps(props, ['width', 'height', 'style']);
   return (
     <div class="fskel" aria-hidden="true"
@@ -157,7 +157,7 @@ export interface AvatarProps {
   status?: StatusTone;
 }
 
-export function Avatar(props: AvatarProps) {
+export function Avatar(props: AvatarProps): JSX.Element {
   const merged = mergeProps({ size: 'md' as const }, props);
   const initials = () => (merged.name ?? '')
     .split(/\s+/).slice(0, 2).map((w) => w[0] ?? '').join('').toUpperCase();
@@ -175,7 +175,7 @@ export function Avatar(props: AvatarProps) {
 }
 
 /* ---------------- Eyebrow / Empty / Grid ------------------------------------ */
-export function Eyebrow(props: { children?: JSX.Element }) {
+export function Eyebrow(props: { children?: JSX.Element }): JSX.Element {
   return <div class="eyebrow">{props.children}</div>;
 }
 
@@ -185,7 +185,7 @@ export interface EmptyProps {
   children?: JSX.Element;
 }
 
-export function Empty(props: EmptyProps) {
+export function Empty(props: EmptyProps): JSX.Element {
   return (
     <div class="empty">
       <h3>{props.title}</h3>
@@ -197,7 +197,7 @@ export function Empty(props: EmptyProps) {
   );
 }
 
-export function Grid(props: JSX.HTMLAttributes<HTMLDivElement>) {
+export function Grid(props: JSX.HTMLAttributes<HTMLDivElement>): JSX.Element {
   const [local, rest] = splitProps(props, ['children']);
   return <div class="fgrid" {...rest}>{local.children}</div>;
 }

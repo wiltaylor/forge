@@ -55,7 +55,7 @@ type Entry =
 const NEAR_BOTTOM = 48;
 const NEAR_TOP = 64;
 
-export function ChatView(props: ChatViewProps) {
+export function ChatView(props: ChatViewProps): JSX.Element {
   const merged = mergeProps(
     { variant: 'direct' as const, groupWindow: 5, dayDividers: true, showTimes: true, markdown: true },
     props,
@@ -272,7 +272,7 @@ export function ChatView(props: ChatViewProps) {
 }
 
 /* ---------------- ChatDivider -------------------------------------------------- */
-export function ChatDivider(props: { label: JSX.Element }) {
+export function ChatDivider(props: { label: JSX.Element }): JSX.Element {
   return (
     <div class="fchat-divider">
       <span>{props.label}</span>
@@ -281,7 +281,7 @@ export function ChatDivider(props: { label: JSX.Element }) {
 }
 
 /* ---------------- ChatTyping ---------------------------------------------------- */
-export function ChatTyping(props: { names: string[] }) {
+export function ChatTyping(props: { names: string[] }): JSX.Element {
   const text = () => {
     const n = props.names;
     if (n.length === 1) return `${n[0]} is typing`;

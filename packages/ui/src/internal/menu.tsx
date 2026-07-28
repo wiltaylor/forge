@@ -1,4 +1,5 @@
 import { For, Show } from 'solid-js';
+import type { JSX } from 'solid-js';
 import type { Accessor, Setter } from 'solid-js';
 import { Icon } from '../primitives';
 import type { MenuItem } from '../types';
@@ -11,7 +12,7 @@ export interface MenuListProps {
 }
 
 /** Shared menu body for DropdownMenu / ContextMenu. */
-export function MenuList(props: MenuListProps) {
+export function MenuList(props: MenuListProps): JSX.Element {
   return (
     <For each={props.items}>
       {(item, i) => (

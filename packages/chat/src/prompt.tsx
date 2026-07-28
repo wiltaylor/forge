@@ -1,4 +1,5 @@
 import { For, Match, Show, Switch, createSignal, createUniqueId } from 'solid-js';
+import type { JSX } from 'solid-js';
 import { Button, Checkbox, Radio, Select } from '@forge/ui';
 import type { Option } from '@forge/ui';
 import type { ChatPromptControl, ChatPromptData } from './types';
@@ -9,7 +10,7 @@ export interface ChatPromptProps {
   prompt: ChatPromptData;
 }
 
-export function ChatPrompt(props: ChatPromptProps) {
+export function ChatPrompt(props: ChatPromptProps): JSX.Element {
   const [choice, setChoice] = createSignal<string | undefined>(undefined);
   const [choices, setChoices] = createSignal<string[]>([]);
   const name = createUniqueId();

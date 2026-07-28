@@ -100,7 +100,7 @@ interface PendingConn {
 }
 
 /* ---------------- NodeGraph ------------------------------------------------- */
-export function NodeGraph(props: NodeGraphProps) {
+export function NodeGraph(props: NodeGraphProps): JSX.Element {
   let root!: HTMLDivElement;
   let drag: { id: string; dx: number; dy: number } | null = null;  // plain variable, not reactive (per-frame)
   const [pending, setPending] = createSignal<PendingConn | null>(null);  // {from, type, x, y}

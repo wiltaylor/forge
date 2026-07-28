@@ -3,12 +3,13 @@
    Parse-on-commit — invalid JSON keeps the draft and shows an error without
    ever clobbering the block. */
 import { Show, createEffect, createSignal, on } from 'solid-js';
+import type { JSX } from 'solid-js';
 import { CodeEditor } from '@forge/code';
 import { useBlocks } from './context';
 import { replaceBlock } from './ops';
 import type { Block, DataBlock } from './types';
 
-export function JsonBlockEdit(props: { block: () => DataBlock }) {
+export function JsonBlockEdit(props: { block: () => DataBlock }): JSX.Element {
   const ctx = useBlocks();
   const id = () => props.block().id;
   const source = () => {

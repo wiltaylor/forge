@@ -53,7 +53,7 @@ export interface DesktopViewerProps {
   style?: JSX.CSSProperties;
 }
 
-export function DesktopViewer(props: DesktopViewerProps) {
+export function DesktopViewer(props: DesktopViewerProps): JSX.Element {
   let canvas!: HTMLCanvasElement;
   let ctx: CanvasRenderingContext2D | null = null;
   let ws: WidgetTransport | undefined;
