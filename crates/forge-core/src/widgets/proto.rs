@@ -525,7 +525,10 @@ mod tests {
 
             // The payload is a decodable JPEG of the right size, close to the
             // source (quality clamped from 200 to 100).
-            let mut decoder = zune_jpeg::JpegDecoder::new(&frame[RECT_HEADER_LEN..]);
+            // zune-jpeg 0.5 reads through ZByteReaderTrait rather than a raw
+            // slice; std::io::Cursor satisfies it via the BufRead + Seek impl.
+            let mut decoder =
+                zune_jpeg::JpegDecoder::new(std::io::Cursor::new(&frame[RECT_HEADER_LEN..]));
             let pixels = decoder.decode().expect("valid jpeg payload");
             let (jw, jh) = decoder.dimensions().expect("decoded dimensions");
             assert_eq!((jw as u16, jh as u16), (W, H));

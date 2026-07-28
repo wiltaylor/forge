@@ -34,7 +34,7 @@ ironrdp-tokio = { version = "0.9", optional = true }
 ironrdp-tls = { version = "0.2", features = ["rustls"], optional = true }
 # Per-rect wire compression for the desktop widgets (vnc/rdp features).
 flate2 = { version = "1", optional = true }
-jpeg-encoder = { version = "0.6", optional = true }
+jpeg-encoder = { version = "0.7", optional = true }
 
 [dev-dependencies]
 tempfile = "3"
@@ -42,4 +42,4 @@ tempfile = "3"
 tokio = { version = "1", features = ["io-util"] }
 # Decode-side verification of the deflate/JPEG rect encodings.
 flate2 = "1"
-zune-jpeg = "0.4"
+zune-jpeg = "0.5"

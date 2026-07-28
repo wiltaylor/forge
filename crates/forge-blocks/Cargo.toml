@@ -13,7 +13,7 @@ unicode-segmentation = "1"
 unicode-width = "0.2"
 
 # Inline markdown parsing for renderers — see [features]
-pulldown-cmark = { version = "0.12", optional = true, default-features = false }
+pulldown-cmark = { version = "0.13", optional = true, default-features = false }
 
 [features]
 default = ["md"]

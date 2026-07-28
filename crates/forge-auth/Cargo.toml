@@ -15,25 +15,38 @@ dev-login = []
 [dependencies]
 forge-server = { workspace = true }
 axum = { version = "0.8", features = ["macros"] }
-axum-extra = { version = "0.10", features = ["cookie"] }
+axum-extra = { version = "0.12", features = ["cookie"] }
 tokio = { version = "1", features = ["full"] }
-sqlx = { version = "0.8", features = ["runtime-tokio", "tls-rustls", "any", "sqlite", "postgres", "migrate"] }
-jsonwebtoken = "9"
+sqlx = { version = "0.9", features = ["runtime-tokio", "tls-rustls", "any", "sqlite", "postgres", "migrate"] }
+# 11 ships no crypto backend by default (only `use_pem`); rust_crypto keeps the
+# RS256 path on the same rsa/sha2 stack this crate already uses, instead of
+# pulling aws-lc-rs and its C/asm build into the image.
+jsonwebtoken = { version = "11", features = ["rust_crypto"] }
 rsa = { version = "0.9", features = ["pem"] }
+# Held at 0.10, not 0.11: argon2 0.5 is still on the digest-0.10 stack, and a
+# second sha2 in the tree buys nothing. Revisit when argon2 0.6 ships.
 sha2 = "0.10"
 argon2 = { version = "0.5", features = ["std"] }
+# Held at 0.8, not 0.10: rsa 0.9 requires rand_core ^0.6, and tokens/keys.rs
+# feeds rand::rngs::OsRng straight into RsaPrivateKey::new. Unblocks when
+# rsa 0.10 leaves rc.
 rand = "0.8"
 openidconnect = "4"
 oauth2 = "5"
-ldap3 = { version = "0.11", default-features = false, features = ["tls-rustls"] }
+# 0.12 split the rustls provider out of `tls-rustls`; pick ring explicitly to
+# match sqlx (whose `tls-rustls` resolves to tls-rustls-ring).
+ldap3 = { version = "0.12", default-features = false, features = ["tls-rustls-ring"] }
+# Held at 0.12, not 0.13: oauth2 5 / openidconnect 4 implement AsyncHttpClient
+# for reqwest 0.12's Client, and upstream/{oidc,github}.rs hand one straight to
+# discover_async / request_async. Unblocks when they support reqwest 0.13.
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 rust-embed = "8"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-toml = "0.8"
+toml = "1"
 uuid = { version = "1", features = ["v4"] }
 url = "2"
-base64 = "0.22"
+base64 = "0.23"
 hex = "0.4"
 thiserror = "2"
 tracing = "0.1"
