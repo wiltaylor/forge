@@ -246,10 +246,10 @@ impl TermState {
     }
 
     /// First call sends `start` with the measured grid; later calls debounce
-    /// grid changes into `parser.set_size` + a `resize` frame.
+    /// grid changes into `parser.screen_mut().set_size` + a `resize` frame.
     fn sync_grid(&mut self, ctx: &egui::Context, cols: u16, rows: u16, now: f64) {
         if !self.started {
-            self.parser.set_size(rows, cols);
+            self.parser.screen_mut().set_size(rows, cols);
             self.grid = (cols, rows);
             let start = TermClientMsg::Start {
                 mode: self.spec.mode,
@@ -273,7 +273,7 @@ impl TermState {
             Some((target, since)) if target == (cols, rows) => {
                 let elapsed = now - since;
                 if elapsed >= RESIZE_DEBOUNCE {
-                    self.parser.set_size(rows, cols);
+                    self.parser.screen_mut().set_size(rows, cols);
                     self.grid = (cols, rows);
                     self.pending_resize = None;
                     self.send_ctrl(&TermClientMsg::Resize { cols, rows });

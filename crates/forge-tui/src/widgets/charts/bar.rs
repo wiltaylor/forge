@@ -53,7 +53,7 @@ impl Widget for BarChart<'_> {
             .map(|(label, value)| {
                 Bar::default()
                     .value(*value)
-                    .label((*label).into())
+                    .label(*label)
                     .style(Style::new().fg(color))
                     .value_style(Style::new().fg(t.bg[0]).bg(color))
             })

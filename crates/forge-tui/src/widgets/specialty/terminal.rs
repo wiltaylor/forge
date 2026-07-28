@@ -135,7 +135,8 @@ impl TerminalState {
     pub fn resize(&mut self, rows: u16, cols: u16) {
         if (rows, cols) != self.size && rows > 0 && cols > 0 {
             self.size = (rows, cols);
-            self.parser.set_size(rows, cols);
+            // vt100 0.16 dropped Parser::set_size (it only forwarded here).
+            self.parser.screen_mut().set_size(rows, cols);
             let _ = self._master.resize(PtySize {
                 rows,
                 cols,

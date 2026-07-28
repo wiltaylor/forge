@@ -9,5 +9,5 @@ publish = false
 [dependencies]
 forge-blocks = { workspace = true }
 forge-tui = { workspace = true, features = ["full"] }
-ratatui = "0.29"
+ratatui = "0.30"
 serde_json = "1"
