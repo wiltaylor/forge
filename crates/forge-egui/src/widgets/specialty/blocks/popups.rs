@@ -115,6 +115,28 @@ pub(super) fn slash_choices(
             }),
         ),
     ];
+    // Data kinds share the cross-kit starter payloads so a fresh block
+    // renders something immediately.
+    for (type_name, label) in [
+        ("image", "Image"),
+        ("video", "Video"),
+        ("math", "Math"),
+        ("bar_chart", "Bar chart"),
+        ("line_chart", "Line chart"),
+        ("pie_chart", "Pie chart"),
+        ("diagram", "Diagram"),
+        ("sequence_diagram", "Sequence diagram"),
+        ("state_diagram", "State diagram"),
+        ("node_table", "Node table"),
+        ("tree", "Tree"),
+        ("timeline", "Timeline"),
+        ("chapter_header", "Chapter header"),
+        ("footnote", "Footnote"),
+    ] {
+        if let Some(kind) = forge_blocks::starter_kind(type_name) {
+            all.push((label.to_owned(), SlashChoice::Kind(kind)));
+        }
+    }
     if !in_column {
         all.push(("2 columns".into(), SlashChoice::Columns(2)));
         all.push(("3 columns".into(), SlashChoice::Columns(3)));

@@ -26,7 +26,8 @@ fn read_only_renders_sample_document() {
     });
     harness.run();
     // Inline markdown renders without the source markers, emoji resolved.
-    let _ = harness.get_by_label_contains("Forge Blocks");
+    // (Two "Forge Blocks" nodes exist now: the chapter header + the h1.)
+    let _ = harness.get_by_label_contains("Forge Blocks 🚀");
     let _ = harness.get_by_label("Blocks all the way down.");
     // Admonition, column cells, and custom placeholder show. (Table cells
     // are painted galleys — not part of the accessibility tree.)
@@ -195,4 +196,43 @@ fn emoji_font_is_installed_and_renders() {
             "full-Noto-Emoji glyphs missing from the monospace chain"
         );
     });
+}
+
+#[test]
+fn data_block_renders_and_opens_json_editor() {
+    use forge_egui::forge_blocks::{starter_kind, Block};
+    let doc = Document::from_blocks(vec![Block::new(BlockKind::ChapterHeader {
+        title: "The Chapter".into(),
+        kicker: Some("Kicker".into()),
+        reading_time: None,
+        updated: None,
+        version: None,
+    })]);
+    let state = RefCell::new(BlockEditorState::new(doc));
+    let mut harness = themed_harness(|ui| {
+        let mut s = state.borrow_mut();
+        let _ = BlockEditor::new(&mut s).show(ui);
+    });
+    harness.run();
+    // Display mode renders the fields as labels (kicker uppercased).
+    let _ = harness.get_by_label("KICKER");
+
+    // Clicking the display opens the JSON source editor seeded with the
+    // kind's tagged JSON; the document itself is untouched until commit.
+    harness.get_by_label("The Chapter").click();
+    harness.run();
+    harness.run();
+    let node = harness.get_by_role(egui::accesskit::Role::MultilineTextInput);
+    let value = node.value().unwrap_or_default();
+    assert!(
+        value.contains("\"type\": \"chapter_header\"") && value.contains("The Chapter"),
+        "JSON draft should carry the tagged fields, got: {value}"
+    );
+    drop(harness);
+    assert!(matches!(
+        state.borrow().doc.blocks[0].kind,
+        BlockKind::ChapterHeader { .. }
+    ));
+    // Starter payloads exist for every data kind the palette offers.
+    assert!(starter_kind("pie_chart").is_some());
 }

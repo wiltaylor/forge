@@ -282,3 +282,72 @@ fn read_only_scrolls_but_never_edits() {
     assert_eq!(state.handle_key(key(KeyCode::Char('x'))), Outcome::Ignored);
     assert_eq!(*state.doc(), before);
 }
+
+/* ---------------- data blocks (wdoc kinds) ------------------------------- */
+
+/// One of each data-kind starter payload, rendered read-only.
+#[test]
+fn data_blocks_snapshot() {
+    let kinds = [
+        "image",
+        "video",
+        "math",
+        "bar_chart",
+        "pie_chart",
+        "diagram",
+        "sequence_diagram",
+        "state_diagram",
+        "node_table",
+        "tree",
+        "timeline",
+        "chapter_header",
+        "footnote",
+    ];
+    let blocks = kinds
+        .iter()
+        .map(|k| Block::new(forge_blocks::starter_kind(k).unwrap()))
+        .collect();
+    let mut state = BlockEditorState::new(doc(blocks));
+    let buf = render(&mut state, 80, 78, true);
+    insta::assert_snapshot!(buffer_text(&buf));
+}
+
+/// Entering a data block opens its JSON source; Esc with valid JSON commits,
+/// invalid JSON shows the error and a second Esc discards.
+#[test]
+fn data_block_json_editing() {
+    let mut state = BlockEditorState::new(doc(vec![Block::new(
+        forge_blocks::starter_kind("pie_chart").unwrap(),
+    )]));
+    assert!(state.edit(Address::Root(0), 0));
+    assert!(state.is_editing());
+
+    // Valid commit: type nothing, Esc writes the same kind back.
+    assert_eq!(state.handle_key(key(KeyCode::Esc)), Outcome::Changed);
+    assert!(!state.is_editing());
+    assert!(matches!(
+        state.doc().blocks[0].kind,
+        BlockKind::PieChart { .. }
+    ));
+
+    // Invalid source: first Esc keeps the editor open (error shown), a
+    // second Esc without edits discards; the block is untouched.
+    assert!(state.edit(Address::Root(0), 0));
+    type_str(&mut state, "garbage");
+    assert_eq!(state.handle_key(key(KeyCode::Esc)), Outcome::Consumed);
+    assert!(state.is_editing());
+    assert_eq!(state.handle_key(key(KeyCode::Esc)), Outcome::Consumed);
+    assert!(!state.is_editing());
+    assert!(matches!(
+        state.doc().blocks[0].kind,
+        BlockKind::PieChart { .. }
+    ));
+
+    // Editing after the error resets the double-Esc discard.
+    assert!(state.edit(Address::Root(0), 0));
+    type_str(&mut state, "x");
+    let _ = state.handle_key(key(KeyCode::Esc)); // error
+    type_str(&mut state, "y"); // dirty again
+    assert_eq!(state.handle_key(key(KeyCode::Esc)), Outcome::Consumed);
+    assert!(state.is_editing()); // still open — new error, not a discard
+}

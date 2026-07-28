@@ -365,7 +365,7 @@ pub fn table_remove_col(doc: &mut Document, addr: Address, at: usize) -> bool {
 /// pull the caret back by `prefix_len`.
 ///
 /// `# `..`#### `, `- `/`* `, `1. `/`1) `, `- [ ] `/`- [x] `/`[] `, `> `,
-/// ```` ```lang ````, `---`, `:::info` (and the other tones).
+/// ```` ```lang ````, `---`, `$$`, `:::info` (and the other tones).
 pub fn line_start_shortcut(text: &str) -> Option<Shortcut> {
     // Todo items first: their prefix contains the bullet prefix.
     for (p, checked) in [("- [ ] ", false), ("- [x] ", true), ("[] ", false)] {
@@ -441,6 +441,12 @@ pub fn line_start_shortcut(text: &str) -> Option<Shortcut> {
         return Some(Shortcut {
             kind: BlockKind::Divider,
             prefix_len: 3,
+        });
+    }
+    if text == "$$" {
+        return Some(Shortcut {
+            kind: BlockKind::Math { tex: String::new() },
+            prefix_len: 2,
         });
     }
     if let Some(rest) = text.strip_prefix(":::") {

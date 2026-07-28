@@ -29,6 +29,20 @@ const BUILTINS: { label: string; hint?: string; type: BlockType; patch?: object 
   { label: 'Code', hint: '```', type: 'code' },
   { label: 'Table', type: 'table' },
   { label: 'Callout', hint: ':::', type: 'admonition' },
+  { label: 'Image', hint: '![]', type: 'image' },
+  { label: 'Video', hint: 'embed', type: 'video' },
+  { label: 'Math', hint: '$$', type: 'math' },
+  { label: 'Bar chart', type: 'bar_chart' },
+  { label: 'Line chart', type: 'line_chart' },
+  { label: 'Pie chart', type: 'pie_chart' },
+  { label: 'Diagram', hint: 'flow', type: 'diagram' },
+  { label: 'Sequence diagram', type: 'sequence_diagram' },
+  { label: 'State diagram', type: 'state_diagram' },
+  { label: 'Node table', type: 'node_table' },
+  { label: 'Tree', type: 'tree' },
+  { label: 'Timeline', type: 'timeline' },
+  { label: 'Chapter header', type: 'chapter_header' },
+  { label: 'Footnote', hint: '[^]', type: 'footnote' },
 ];
 
 /** The filtered item list for the block's current query. */

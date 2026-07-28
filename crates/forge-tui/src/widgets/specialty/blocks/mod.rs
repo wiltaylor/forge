@@ -17,6 +17,7 @@
 
 mod popups;
 mod render;
+mod visuals;
 mod wrap_edit;
 
 use std::collections::HashMap;
@@ -83,6 +84,14 @@ pub(crate) enum Editing {
     Code(TextareaState),
     /// One table cell; committed into the table on every edit.
     Cell(WrapEdit),
+    /// A data block's fields as raw JSON source (parse-on-commit: Esc
+    /// validates; invalid source stays in the buffer with the error shown,
+    /// and a second Esc without further edits discards).
+    Data {
+        ts: TextareaState,
+        err: Option<String>,
+        dirty_since_err: bool,
+    },
 }
 
 pub(crate) fn tone_severity(tone: Tone) -> Severity {
@@ -300,6 +309,15 @@ impl BlockEditorState {
                 self.editing = Editing::None;
                 registered
             }
+            kind if kind.is_data() => {
+                let src = serde_json::to_string_pretty(kind).unwrap_or_default();
+                self.editing = Editing::Data {
+                    ts: TextareaState::with_value(&src),
+                    err: None,
+                    dirty_since_err: false,
+                };
+                true
+            }
             kind if kind.is_text() => {
                 let md = kind.md().unwrap_or_default().to_string();
                 self.editing = Editing::Text(WrapEdit::new(md, caret));
@@ -329,6 +347,16 @@ impl BlockEditorState {
                 ts.insert_str(s);
                 self.sync_source();
                 Outcome::Changed
+            }
+            // JSON drafts never write through; they commit on Esc.
+            Editing::Data {
+                ts,
+                dirty_since_err,
+                ..
+            } => {
+                ts.insert_str(s);
+                *dirty_since_err = true;
+                Outcome::Consumed
             }
             Editing::None => Outcome::Ignored,
         }
@@ -360,6 +388,7 @@ impl BlockEditorState {
             Editing::Text(_) => self.text_key(key),
             Editing::Code(_) => self.code_key(key),
             Editing::Cell(_) => self.cell_key(key),
+            Editing::Data { .. } => self.data_key(key),
             Editing::None => self.select_key(key),
         }
     }
@@ -569,6 +598,8 @@ impl BlockEditorState {
                     }
                 }
             }
+            // JSON drafts only reach the document through the Esc commit.
+            Editing::Data { .. } => {}
             Editing::None => {}
         }
     }
@@ -920,6 +951,68 @@ impl BlockEditorState {
                 self.editing = Editing::None;
                 Outcome::Consumed
             }
+            other => other,
+        }
+    }
+
+    /* ---------------- data (JSON source) editing ------------------------ */
+
+    /// Keys while a data block's JSON source is open. Deliberately modal:
+    /// no boundary-row hop out of the buffer, so a half-edited invalid
+    /// draft can't be committed (or abandoned) by arrowing away — Esc is
+    /// the one exit and it validates.
+    fn data_key(&mut self, key: KeyEvent) -> Outcome {
+        let Some(addr) = self.focus else {
+            return Outcome::Ignored;
+        };
+        let alt = key.modifiers.contains(KeyModifiers::ALT);
+        if alt && matches!(key.code, KeyCode::Up | KeyCode::Down) {
+            let dir = if key.code == KeyCode::Up { -1 } else { 1 };
+            return match move_block(&mut self.doc, addr, dir) {
+                Some(a) => {
+                    self.focus = Some(a);
+                    Outcome::Changed
+                }
+                None => Outcome::Consumed,
+            };
+        }
+        let Editing::Data {
+            ts,
+            err,
+            dirty_since_err,
+        } = &mut self.editing
+        else {
+            return Outcome::Ignored;
+        };
+        if key.code == KeyCode::Esc {
+            let src = ts.value();
+            return match serde_json::from_str::<BlockKind>(&src) {
+                Ok(kind) => {
+                    if let Some(b) = self.doc.block_mut(addr) {
+                        b.kind = kind;
+                    }
+                    self.editing = Editing::None;
+                    Outcome::Changed
+                }
+                Err(e) => {
+                    if err.is_some() && !*dirty_since_err {
+                        // Second Esc with no edits since the error: discard.
+                        self.editing = Editing::None;
+                        Outcome::Consumed
+                    } else {
+                        *err = Some(e.to_string());
+                        *dirty_since_err = false;
+                        Outcome::Consumed
+                    }
+                }
+            };
+        }
+        match ts.handle_key(key) {
+            Outcome::Changed => {
+                *dirty_since_err = true;
+                Outcome::Consumed
+            }
+            Outcome::Ignored => Outcome::Ignored,
             other => other,
         }
     }
@@ -1281,6 +1374,10 @@ impl BlockEditorState {
                 Outcome::Consumed
             }
             BlockKind::Code { .. } => {
+                self.enter_block(hit.addr);
+                Outcome::Consumed
+            }
+            kind if kind.is_data() => {
                 self.enter_block(hit.addr);
                 Outcome::Consumed
             }

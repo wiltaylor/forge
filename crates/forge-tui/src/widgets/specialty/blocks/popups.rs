@@ -50,6 +50,20 @@ pub(super) const BUILTINS: &[(&str, &str)] = &[
     ("code", "Code"),
     ("table", "Table"),
     ("callout", "Callout"),
+    ("image", "Image"),
+    ("video", "Video"),
+    ("math", "Math"),
+    ("bar_chart", "Bar chart"),
+    ("line_chart", "Line chart"),
+    ("pie_chart", "Pie chart"),
+    ("diagram", "Diagram"),
+    ("sequence_diagram", "Sequence diagram"),
+    ("state_diagram", "State diagram"),
+    ("node_table", "Node table"),
+    ("tree", "Tree"),
+    ("timeline", "Timeline"),
+    ("chapter_header", "Chapter header"),
+    ("footnote", "Footnote"),
     ("col2", "2 columns"),
     ("col3", "3 columns"),
 ];
@@ -96,7 +110,9 @@ pub(super) fn builtin_kind(id: &str) -> Option<BlockKind> {
             title: String::new(),
             md: String::new(),
         },
-        _ => return None,
+        // Data kinds share the cross-kit starter payloads so a fresh block
+        // renders something immediately.
+        other => return forge_blocks::starter_kind(other),
     };
     Some(kind)
 }

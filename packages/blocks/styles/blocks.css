@@ -200,3 +200,138 @@
 .fbk-col .fbk-gutter { padding-right: 2px; }
 
 .fbk-custom { position: relative; }
+
+/* ---------------- Data blocks (wdoc kinds) ---------------------------------- */
+.fbk-img { margin: 8px 0; }
+.fbk-img img { max-width: 100%; height: auto; border-radius: var(--radius-md, 6px); display: block; }
+.fbk-img figcaption { color: var(--fg-2); font-size: 12px; padding-top: 4px; }
+
+.fbk-video {
+  position: relative; margin: 8px 0; background: var(--bg-2);
+  border-radius: var(--radius-md, 6px); overflow: hidden; max-width: 720px;
+}
+.fbk-video iframe, .fbk-video video { width: 100%; height: 100%; border: 0; display: block; }
+.fbk-video-facade {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; width: 100%; height: 100%; border: 0; cursor: pointer;
+  background-color: var(--bg-2); background-size: cover; background-position: center;
+  color: var(--fg-0);
+}
+.fbk-video-play {
+  display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%;
+  background: color-mix(in srgb, var(--bg-0) 70%, transparent);
+  font-size: 18px; padding-left: 4px;
+}
+.fbk-video-title { font-size: 13px; color: var(--fg-1); text-shadow: 0 1px 2px var(--bg-0); }
+
+.fbk-math {
+  margin: 8px 0; padding: 10px 12px; background: var(--bg-1);
+  border-radius: var(--radius-md, 6px); overflow-x: auto; text-align: center;
+}
+.fbk-math code { font-family: var(--font-mono); color: var(--fg-1); background: none; }
+.fbk-mathedit { padding: 0; }
+.fbk-mathsource {
+  width: 100%; padding: 10px 12px; border: 0; background: var(--bg-1); resize: none;
+  font-family: var(--font-mono); font-size: 13px; color: var(--fg-0); outline: none;
+  border-radius: var(--radius-md, 6px);
+}
+
+.fbk-chart { margin: 8px 0; }
+.fbk-chart-title { color: var(--fg-1); font-size: 13px; font-weight: 600; padding-bottom: 4px; }
+.fbk-chart-axes { display: flex; gap: 16px; color: var(--fg-2); font-size: 12px; padding-top: 2px; }
+.fbk-chart-points { display: flex; flex-wrap: wrap; gap: 10px; color: var(--fg-2); font-size: 12px; padding-top: 4px; }
+
+.fbk-diagram { margin: 8px 0; overflow-x: auto; }
+.fbk-diagram .fflow-node.tone-decision { border-radius: 2px; border-style: dashed; }
+.fbk-diagram .fflow-node.tone-terminator,
+.fbk-diagram .fflow-node.tone-initial,
+.fbk-diagram .fflow-node.tone-final { border-radius: 999px; }
+.fbk-diagram .fflow-node.tone-final { border-width: 2px; }
+
+.fbk-seq { margin: 8px 0; overflow-x: auto; }
+.fbk-seq-lifeline { stroke: var(--border-default); stroke-dasharray: 2 3; }
+.fbk-seq-head { fill: var(--bg-2); stroke: var(--border-default); }
+.fbk-seq-head.is-actor { fill: var(--bg-3); }
+.fbk-seq-head.is-external { stroke-dasharray: 3 2; }
+.fbk-seq-name { fill: var(--fg-0); font-size: 12px; font-weight: 600; }
+.fbk-seq-msg { stroke: var(--fg-2); stroke-width: 1.5; }
+.fbk-seq-msg.is-dashed { stroke-dasharray: 4 3; }
+.fbk-seq-arrow { fill: var(--fg-2); }
+.fbk-seq-label { fill: var(--fg-1); font-size: 11px; }
+.fbk-seq-note { fill: var(--fg-2); font-size: 11px; font-style: italic; }
+
+.fbk-ntable {
+  margin: 8px 0; max-width: 360px; border: 1px solid var(--border-default);
+  border-radius: var(--radius-md, 6px); overflow: hidden;
+}
+.fbk-ntable-title {
+  padding: 6px 10px; background: var(--bg-2); font-weight: 600; font-size: 13px;
+  border-bottom: 1px solid var(--border-default);
+}
+.fbk-ntable-row {
+  display: flex; align-items: center; gap: 8px; padding: 5px 10px; font-size: 13px;
+}
+.fbk-ntable-row + .fbk-ntable-row { border-top: 1px solid var(--border-muted, var(--border-default)); }
+.fbk-ntable-port { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex: none; }
+
+.fbk-tree { margin: 8px 0; font-family: var(--font-mono); font-size: 13px; }
+.fbk-tree-row { white-space: pre; line-height: 1.7; color: var(--fg-1); }
+.fbk-tree-guides { color: var(--fg-3); }
+.fbk-tree-icon { color: var(--fg-2); }
+
+.fbk-timeline { margin: 8px 0; }
+.fbk-timeline-title { font-weight: 600; font-size: 13px; padding-bottom: 6px; }
+.fbk-timeline-phases { display: flex; flex-wrap: wrap; gap: 6px; padding-bottom: 8px; }
+.fbk-timeline-phase {
+  background: var(--bg-2); border-radius: 999px; padding: 2px 10px; font-size: 12px;
+  color: var(--fg-1);
+}
+.fbk-timeline-range { color: var(--fg-3); }
+.fbk-timeline-items { position: relative; padding-left: 6px; }
+.fbk-timeline-item {
+  position: relative; display: flex; align-items: baseline; gap: 8px;
+  padding: 0 0 12px 16px;
+}
+.fbk-timeline-item::before {
+  content: ''; position: absolute; left: 3px; top: 10px; bottom: -2px;
+  width: 1px; background: var(--border-default);
+}
+.fbk-timeline-item:last-child::before { display: none; }
+.fbk-timeline-dot {
+  position: absolute; left: 0; top: 4px; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--accent);
+}
+.fbk-timeline-label { font-size: 13px; color: var(--fg-0); }
+.fbk-timeline-date { font-size: 12px; color: var(--fg-2); }
+.fbk-timeline.is-horizontal .fbk-timeline-items { display: flex; gap: 20px; padding-left: 0; }
+.fbk-timeline.is-horizontal .fbk-timeline-item { padding: 14px 0 0 0; }
+.fbk-timeline.is-horizontal .fbk-timeline-item::before {
+  left: 10px; right: -20px; top: 3px; bottom: auto; width: auto; height: 1px;
+}
+
+.fbk-chapter { margin: 4px 0 12px; }
+.fbk-chapter-kicker {
+  margin: 0; color: var(--accent); font-size: 12px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.08em;
+}
+.fbk-chapter-title { margin: 2px 0 4px; font-size: 26px; font-weight: 700; line-height: 1.2; }
+.fbk-chapter-meta { margin: 0; color: var(--fg-2); font-size: 12px; }
+
+.fbk-footnote { font-size: 13px; color: var(--fg-1); padding: 2px 0; }
+.fbk-footnote-label { color: var(--accent); font-weight: 600; }
+.fbk-fnedit { display: flex; align-items: baseline; gap: 6px; }
+.fbk-fnlabel { color: var(--accent); font-size: 13px; font-weight: 600; white-space: nowrap; }
+.fbk-fninput {
+  border: 0; border-bottom: 1px dashed var(--border-strong); background: none;
+  color: var(--accent); font: inherit; outline: none; padding: 0; width: auto;
+}
+.fbk-fnedit > :last-child { flex: 1; }
+
+.fbk-jsonedit .fbk-codehead { justify-content: space-between; align-items: center; gap: 8px; }
+.fbk-jsonkind {
+  font-family: var(--font-mono); font-size: 11px; color: var(--fg-2);
+  background: var(--bg-2); border-radius: 4px; padding: 1px 6px;
+}
+.fbk-jsonerr { color: var(--danger); font-size: 12px; }
+.fbk-fnref a { color: var(--accent); text-decoration: none; font-weight: 600; }
+.fbk-fnref a:hover { text-decoration: underline; }

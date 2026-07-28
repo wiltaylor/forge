@@ -11,6 +11,9 @@ use ratatui::style::Style;
 use ratatui::widgets::{Block, Widget};
 use std::collections::HashMap;
 
+const GAP: u16 = 6;
+const NODE_H: u16 = 3;
+
 #[derive(Clone, Copy, Debug)]
 pub struct FlowNode<'a> {
     pub id: &'a str,
@@ -27,11 +30,22 @@ impl<'a> FlowNode<'a> {
 pub struct FlowEdge<'a> {
     pub from: &'a str,
     pub to: &'a str,
+    pub label: Option<&'a str>,
 }
 
 impl<'a> FlowEdge<'a> {
     pub fn new(from: &'a str, to: &'a str) -> FlowEdge<'a> {
-        FlowEdge { from, to }
+        FlowEdge {
+            from,
+            to,
+            label: None,
+        }
+    }
+
+    /// Label painted along the edge's horizontal run.
+    pub fn label(mut self, label: &'a str) -> Self {
+        self.label = Some(label);
+        self
     }
 }
 
@@ -54,6 +68,19 @@ impl<'a> Flowchart<'a> {
     pub fn theme(mut self, theme: &'a Theme) -> Self {
         self.theme = Some(theme);
         self
+    }
+
+    /// Rows the chart needs: the tallest layer column at one node per
+    /// `NODE_H + 1` rows (for block-editor measurement passes).
+    pub fn required_height(&self) -> u16 {
+        let layers = self.layers();
+        let n_layers = layers.values().max().copied().unwrap_or(0) + 1;
+        let mut counts = vec![0u16; n_layers];
+        for node in self.nodes {
+            counts[layers[node.id]] += 1;
+        }
+        let tallest = counts.iter().max().copied().unwrap_or(1).max(1);
+        tallest * (NODE_H + 1) - 1
     }
 
     /// Longest-path layering (cycles break arbitrarily by capping passes).
@@ -102,8 +129,15 @@ impl Widget for Flowchart<'_> {
                     .unwrap_or(6)
             })
             .collect();
-        const GAP: u16 = 6;
-        const NODE_H: u16 = 3;
+        // Column gap grows to fit the widest edge label.
+        let gap = self
+            .edges
+            .iter()
+            .filter_map(|e| e.label)
+            .map(|l| text::width(l) as u16 + 4)
+            .max()
+            .unwrap_or(0)
+            .max(GAP);
 
         // Place nodes; remember rects by id.
         let mut rects: HashMap<&str, Rect> = HashMap::new();
@@ -117,7 +151,7 @@ impl Widget for Flowchart<'_> {
                 }
                 y += NODE_H + 1;
             }
-            x += col_w[li] + GAP;
+            x += col_w[li] + gap;
         }
 
         // Edges first (nodes overpaint their borders cleanly).
@@ -152,6 +186,22 @@ impl Widget for Flowchart<'_> {
             }
             if x1 > area.x {
                 buf.set_string(x1 - 1, y1, "▸", Style::new().fg(t.accent.base));
+            }
+            if let Some(label) = e.label {
+                // Center the label across the horizontal channel (same-row
+                // edges get the full span; elbowed ones the second run).
+                let (lo, hi) = if y0 == y1 { (x0, x1) } else { (mid, x1) };
+                let avail = hi.saturating_sub(1).saturating_sub(lo + 1) as usize;
+                if avail >= 2 {
+                    let lw = text::width(label).min(avail) as u16;
+                    let start = lo + 1 + (avail as u16 - lw) / 2;
+                    buf.set_string(
+                        start,
+                        y1,
+                        text::truncate(label, avail),
+                        Style::new().fg(t.fg[2]),
+                    );
+                }
             }
         }
 

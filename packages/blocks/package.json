@@ -23,7 +23,9 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@forge/charts": "workspace:^",
     "@forge/code": "workspace:^",
+    "@forge/graph": "workspace:^",
     "@forge/ui": "workspace:^"
   },
   "peerDependencies": {

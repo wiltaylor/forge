@@ -125,12 +125,18 @@ importers:
       '@forge/blocks':
         specifier: workspace:^
         version: link:../../packages/blocks
+      '@forge/charts':
+        specifier: workspace:^
+        version: link:../../packages/charts
       '@forge/code':
         specifier: workspace:^
         version: link:../../packages/code
       '@forge/desktop':
         specifier: workspace:^
         version: link:../../packages/desktop
+      '@forge/graph':
+        specifier: workspace:^
+        version: link:../../packages/graph
       '@forge/tauri':
         specifier: workspace:^
         version: link:../../packages/tauri
@@ -162,9 +168,15 @@ importers:
 
   packages/blocks:
     dependencies:
+      '@forge/charts':
+        specifier: workspace:^
+        version: link:../charts
       '@forge/code':
         specifier: workspace:^
         version: link:../code
+      '@forge/graph':
+        specifier: workspace:^
+        version: link:../graph
       '@forge/ui':
         specifier: workspace:^
         version: link:../ui

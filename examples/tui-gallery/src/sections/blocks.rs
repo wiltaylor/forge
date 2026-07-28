@@ -121,7 +121,7 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
         Rect::new(area.x, area.y, area.width, area.height - 1),
         &mut state.editor,
     );
-    let help = "Enter edit · Esc select · / palette on empty · :emoji · Tab indent · Alt+↑/↓ move · c columns · Ctrl+T tone";
+    let help = "Enter edit · Esc select (commits JSON; double-Esc discards) · / palette on empty · :emoji · Tab indent · Alt+↑/↓ move · c columns · Ctrl+T tone";
     frame.render_widget(
         Line::from(Span::styled(
             forge_tui::text::truncate(help, area.width as usize).into_owned(),

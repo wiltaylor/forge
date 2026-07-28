@@ -3,8 +3,39 @@
    blocks travel as ```block:<kind> JSON fences. Mirrors forge-blocks
    convert.rs so all platforms exchange the same markdown. */
 import type { Block, BlockDocument } from './types';
-import { DOC_VERSION, createBlock, newId } from './types';
+import { DATA_TYPES, DOC_VERSION, createBlock, newId } from './types';
 import { blockToMarkdown, toneFromTag } from './line';
+
+/** Builtin types that may travel as ```forge:<type> fences. */
+const FENCE_TYPES = new Set<string>([...DATA_TYPES, 'footnote']);
+
+/** Rebuild a builtin block from a ```forge:<type> fence body; on any
+    parse/shape failure degrade to a code block so content is never lost. */
+function parseForgeFence(typeName: string, body: string): Block {
+  const fallback: Block = { id: newId(), type: 'code', lang: `forge:${typeName}`, code: body };
+  if (!FENCE_TYPES.has(typeName)) return fallback;
+  try {
+    const fields: unknown = JSON.parse(body);
+    if (!fields || typeof fields !== 'object' || Array.isArray(fields)) return fallback;
+    return { ...(fields as object), id: newId(), type: typeName } as Block;
+  } catch {
+    return fallback;
+  }
+}
+
+/** A line that is exactly one `![alt](src)` image reference. */
+function imageLine(l: string): Block | null {
+  const m = /^!\[([^\]]*)\]\(([^()]*)\)$/.exec(l);
+  if (!m) return null;
+  return { id: newId(), type: 'image', src: m[2]!, alt: m[1]! };
+}
+
+/** A `[^label]: body` footnote definition line. */
+function footnoteLine(l: string): Block | null {
+  const m = /^\[\^([^\]\s]+)\]: (.*)$/.exec(l);
+  if (!m) return null;
+  return { id: newId(), type: 'footnote', label: m[1]!, md: m[2]! };
+}
 
 export function toMarkdown(doc: BlockDocument): string {
   const out: string[] = [];
@@ -75,7 +106,9 @@ export function fromMarkdown(text: string): BlockDocument {
       i++;
       while (i < lines.length && !lines[i]!.trimStart().startsWith('```')) body.push(lines[i++]!);
       i++; // closing fence
-      if (info.startsWith('block:')) {
+      if (info.startsWith('forge:')) {
+        blocks.push(parseForgeFence(info.slice(6), body.join('\n')));
+      } else if (info.startsWith('block:')) {
         let data: unknown = null;
         try {
           data = JSON.parse(body.join('\n'));
@@ -86,6 +119,30 @@ export function fromMarkdown(text: string): BlockDocument {
       } else {
         blocks.push({ id: newId(), type: 'code', lang: info, code: body.join('\n') });
       }
+      continue;
+    }
+
+    // Math ($$ … $$).
+    if (trimmed === '$$') {
+      const body: string[] = [];
+      i++;
+      while (i < lines.length && lines[i]!.trim() !== '$$') body.push(lines[i++]!);
+      i++; // closing $$
+      blocks.push({ id: newId(), type: 'math', tex: body.join('\n') });
+      continue;
+    }
+
+    const img = imageLine(trimmed);
+    if (img) {
+      blocks.push(img);
+      i++;
+      continue;
+    }
+
+    const fn = footnoteLine(trimmed);
+    if (fn) {
+      blocks.push(fn);
+      i++;
       continue;
     }
 
@@ -160,7 +217,10 @@ export function fromMarkdown(text: string): BlockDocument {
         t.startsWith('|') ||
         heading(t) ||
         listItem(l) ||
-        /^(?:-{3,}|\*{3,}|_{3,})\s*$/.test(t)
+        /^(?:-{3,}|\*{3,}|_{3,})\s*$/.test(t) ||
+        t === '$$' ||
+        imageLine(t) ||
+        footnoteLine(t)
       )
         break;
       para.push(l.trimEnd());

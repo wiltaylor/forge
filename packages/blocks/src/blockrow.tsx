@@ -17,8 +17,9 @@ import { SlashMenu } from './slash';
 import { TableEdit } from './tableedit';
 import { ColumnsEdit } from './columns';
 import { TextBlockEdit } from './textedit';
-import type { AdmonitionTone, Block, TextBlock } from './types';
-import { createBlock, isTextBlock } from './types';
+import { JsonBlockEdit } from './jsonedit';
+import type { AdmonitionTone, Block, DataBlock, TextBlock } from './types';
+import { createBlock, isDataBlock, isTextBlock } from './types';
 
 export interface BlockRowProps {
   block: () => Block;
@@ -138,13 +139,34 @@ export function BlockRow(props: BlockRowProps) {
       </div>
       <div class="fbk-body">
         <Switch fallback={staticView()}>
-          <Match when={isTextBlock(props.block()) && props.block().type !== 'admonition'}>
+          <Match
+            when={
+              isTextBlock(props.block()) &&
+              props.block().type !== 'admonition' &&
+              props.block().type !== 'footnote'
+            }
+          >
             <Show when={focused()} fallback={staticView()}>
               <TextBlockEdit
                 block={props.block as () => TextBlock}
                 num={props.num}
                 placeholder={props.placeholder}
               />
+            </Show>
+          </Match>
+          <Match when={props.block().type === 'footnote'}>
+            <Show when={focused()} fallback={staticView()}>
+              <FootnoteEdit block={props.block as () => FootnoteBlock} />
+            </Show>
+          </Match>
+          <Match when={props.block().type === 'math'}>
+            <Show when={focused()} fallback={staticView()}>
+              <MathEdit block={props.block as () => MathBlock} />
+            </Show>
+          </Match>
+          <Match when={isDataBlock(props.block())}>
+            <Show when={focused()} fallback={staticView()}>
+              <JsonBlockEdit block={props.block as () => DataBlock} />
             </Show>
           </Match>
           <Match when={props.block().type === 'admonition'}>
@@ -194,6 +216,8 @@ type CodeBlock = Extract<Block, { type: 'code' }>;
 type TableBlock = Extract<Block, { type: 'table' }>;
 type ColumnsBlock = Extract<Block, { type: 'columns' }>;
 type CustomBlock = Extract<Block, { type: 'custom' }>;
+type FootnoteBlock = Extract<Block, { type: 'footnote' }>;
+type MathBlock = Extract<Block, { type: 'math' }>;
 
 const TONES: { value: AdmonitionTone; label: string }[] = [
   { value: 'info', label: 'Info' },
@@ -257,6 +281,55 @@ function CodeBlockEdit(props: { block: () => CodeBlock }) {
         language={codeLanguage(props.block().lang)}
         lineNumbers={false}
         height="auto"
+      />
+    </div>
+  );
+}
+
+/** Footnote: a label input beside the shared text editor (mirrors
+    AdmonitionEdit's header + body shape). */
+function FootnoteEdit(props: { block: () => FootnoteBlock }) {
+  const ctx = useBlocks();
+  const id = () => props.block().id;
+  return (
+    <div class="fbk-fnedit">
+      <span class="fbk-fnlabel">
+        [^
+        <input
+          class="fbk-fninput"
+          size={Math.max(4, props.block().label.length)}
+          value={props.block().label}
+          onInput={(e) =>
+            ctx.dispatch(updateBlock(ctx.doc(), id(), { label: e.currentTarget.value }))
+          }
+        />
+        ]
+      </span>
+      <TextBlockEdit block={props.block} />
+    </div>
+  );
+}
+
+/** Math edits its LaTeX as plain text (not JSON). */
+function MathEdit(props: { block: () => MathBlock }) {
+  const ctx = useBlocks();
+  const id = () => props.block().id;
+  return (
+    <div class="fbk-math fbk-mathedit">
+      <textarea
+        class="fbk-mathsource"
+        rows={Math.max(1, props.block().tex.split('\n').length)}
+        value={props.block().tex}
+        placeholder="\LaTeX"
+        onInput={(e) => ctx.dispatch(updateBlock(ctx.doc(), id(), { tex: e.currentTarget.value }))}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') {
+            e.preventDefault();
+            e.currentTarget.blur();
+            ctx.blur();
+          }
+        }}
+        ref={(el) => queueMicrotask(() => el.focus())}
       />
     </div>
   );

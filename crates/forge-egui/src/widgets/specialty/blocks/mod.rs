@@ -17,6 +17,7 @@
 //! ```
 
 mod chrome;
+mod data;
 mod inline;
 mod kinds;
 mod popups;
@@ -114,6 +115,15 @@ pub struct BlockEditorState {
     emoji_dismissed: Option<String>,
     caret: CaretCache,
     changed: bool,
+    /// The focused data block's fields as pretty JSON (parse-on-commit —
+    /// only the Esc commit writes it back into the document).
+    json_draft: String,
+    json_err: Option<String>,
+    json_dirty_since_err: bool,
+    pending_json: Option<Address>,
+    /// Decoded image textures per `src` (`None` caches decode failures).
+    #[cfg(feature = "images")]
+    img_cache: std::collections::HashMap<String, Option<egui::TextureHandle>>,
 }
 
 impl BlockEditorState {
@@ -134,6 +144,12 @@ impl BlockEditorState {
             emoji_dismissed: None,
             caret: CaretCache::default(),
             changed: false,
+            json_draft: String::new(),
+            json_err: None,
+            json_dirty_since_err: false,
+            pending_json: None,
+            #[cfg(feature = "images")]
+            img_cache: std::collections::HashMap::new(),
         }
     }
 
@@ -365,6 +381,9 @@ fn dispatch_kind(
         BlockKind::Custom { .. } => kinds::custom_block(ui, ecx, st, doc, addr, id),
         // Columns are handled at the root level, never as a row.
         BlockKind::Columns { .. } => {}
+        BlockKind::Footnote { .. } => text::text_row(ui, ecx, st, doc, addr, id),
+        kind if kind.is_data() => data::data_block(ui, ecx, st, doc, addr, id),
+        _ => {}
     }
 }
 
@@ -603,6 +622,17 @@ fn focus_block(st: &mut BlockEditorState, doc: &Document, addr: Address, hint: C
             st.editing = true;
             st.cell = Some((0, 0));
             st.pending_cell = Some((0, 0));
+        }
+        Some(k) if k.is_data() => {
+            st.focus = Some(addr);
+            st.editing = true;
+            st.json_draft = serde_json::to_string_pretty(k).unwrap_or_default();
+            st.json_err = None;
+            st.json_dirty_since_err = false;
+            st.pending_json = Some(addr);
+            st.slash = None;
+            st.cell = None;
+            st.pending_focus = None;
         }
         Some(_) => select_block(st, addr),
         None => {}

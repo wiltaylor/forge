@@ -13,7 +13,7 @@ const TONES: AdmonitionTone[] = ['info', 'success', 'warning', 'danger'];
 
 /** Detect a markdown shortcut typed at the start of a paragraph:
     `# `..`#### `, `- `/`* `, `1. `/`1) `, `- [ ] `/`- [x] `/`[] `, `> `,
-    ``` ```lang ```, `---`, `:::info` (and the other tones). */
+    ``` ```lang ```, `---`, `$$`, `:::info` (and the other tones). */
 export function detectShortcut(text: string): ShortcutHit | null {
   for (const [p, checked] of [['- [ ] ', false], ['- [x] ', true], ['[] ', false]] as const) {
     if (text.startsWith(p))
@@ -51,6 +51,7 @@ export function detectShortcut(text: string): ShortcutHit | null {
   if (text.startsWith('```') && /^[a-z0-9]*$/i.test(text.slice(3)))
     return { block: { type: 'code', lang: text.slice(3), code: '' }, prefixLen: text.length };
   if (text === '---') return { block: { type: 'divider' }, prefixLen: 3 };
+  if (text === '$$') return { block: { type: 'math', tex: '' }, prefixLen: 2 };
   if (text.startsWith(':::')) {
     const tone = text.slice(3) as AdmonitionTone;
     if (TONES.includes(tone))
@@ -126,5 +127,21 @@ export function blockToMarkdown(b: Block, ctx: { num: number }): string {
         .join('\n\n');
     case 'custom':
       return `\`\`\`block:${b.kind}\n${JSON.stringify(b.data, null, 2)}\n\`\`\``;
+    // Natural-markdown forms where the fields allow, else forge fences.
+    case 'image':
+      return b.width == null && b.height == null ? `![${b.alt}](${b.src})` : forgeFence(b);
+    case 'math':
+      return `$$\n${b.tex}\n$$`;
+    case 'footnote':
+      return b.md.includes('\n') ? forgeFence(b) : `[^${b.label}]: ${b.md}`;
+    default:
+      return forgeFence(b);
   }
+}
+
+/** A data block as a ```forge:<type> fence holding its JSON fields (without
+    `id`/`type`) — the generic export for kinds with no markdown equivalent. */
+function forgeFence(b: Block): string {
+  const { id: _id, type, ...fields } = b;
+  return `\`\`\`forge:${type}\n${JSON.stringify(fields, null, 2)}\n\`\`\``;
 }

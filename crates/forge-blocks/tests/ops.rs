@@ -300,3 +300,49 @@ fn markdown_roundtrip() {
     assert_eq!(adm.0, Tone::Warning);
     assert_eq!(adm.1, "Careful");
 }
+
+#[test]
+fn data_block_markdown_forms() {
+    // Data kinds travel as ```forge:<type> fences and round-trip field-for-field.
+    let d = doc(vec![
+        Block::new(starter_kind("bar_chart").unwrap()),
+        Block::new(starter_kind("diagram").unwrap()),
+        Block::new(starter_kind("timeline").unwrap()),
+    ]);
+    let text = to_markdown(&d);
+    assert!(text.contains("```forge:bar_chart"));
+    let back = from_markdown(&text);
+    for (a, b) in d.blocks.iter().zip(back.blocks.iter()) {
+        assert_eq!(a.kind, b.kind);
+    }
+
+    // Natural-markdown forms.
+    let back = from_markdown("![alt text](pic.png)\n\n$$\ne = mc^2\n$$\n\n[^n1]: the note\n");
+    assert!(
+        matches!(&back.blocks[0].kind, BlockKind::Image { src, alt, width: None, height: None }
+            if src == "pic.png" && alt == "alt text")
+    );
+    assert!(matches!(&back.blocks[1].kind, BlockKind::Math { tex } if tex == "e = mc^2"));
+    assert!(
+        matches!(&back.blocks[2].kind, BlockKind::Footnote { label, md }
+            if label == "n1" && md == "the note")
+    );
+
+    // An image with explicit dimensions must NOT flatten to ![alt](src).
+    let d = doc(vec![Block::new(BlockKind::Image {
+        src: "a.png".into(),
+        alt: "A".into(),
+        width: Some(640.0),
+        height: None,
+    })]);
+    let text = to_markdown(&d);
+    assert!(text.contains("```forge:image"));
+    assert_eq!(from_markdown(&text).blocks[0].kind, d.blocks[0].kind);
+
+    // Malformed fence payloads degrade to a code block — content is never lost.
+    let back = from_markdown("```forge:bar_chart\n{ not json\n```\n");
+    assert!(
+        matches!(&back.blocks[0].kind, BlockKind::Code { lang, code }
+            if lang == "forge:bar_chart" && code.contains("not json"))
+    );
+}

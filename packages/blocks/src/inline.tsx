@@ -14,6 +14,10 @@ export interface InlineMdProps {
   linkTarget?: '_blank' | '_self';
 }
 
+/** Extended inline node: MdInline plus footnote references (`[^id]`),
+    which link to the matching footnote block's `#fn-<id>` anchor. */
+type Inline = MdInline | { t: 'fnref'; id: string };
+
 /** One text block's inline content. `\n` renders as a soft break. */
 export function InlineMd(props: InlineMdProps) {
   const nodes = createMemo(() => {
@@ -22,9 +26,37 @@ export function InlineMd(props: InlineMdProps) {
       if (i) out.push({ t: 'br' });
       out.push(...parseInline(line));
     });
-    return withEmoji(out, props.emoji);
+    return withFootnoteRefs(withEmoji(out, props.emoji));
   });
   return renderInlines(nodes(), props.linkTarget ?? '_blank');
+}
+
+const FNREF = /\[\^([^\]\s]+)\]/g;
+
+/** Split `[^id]` occurrences out of text nodes (never code spans). */
+function withFootnoteRefs(nodes: MdInline[]): Inline[] {
+  return nodes.flatMap((n): Inline[] => {
+    switch (n.t) {
+      case 'text': {
+        const out: Inline[] = [];
+        let last = 0;
+        for (const m of n.text.matchAll(FNREF)) {
+          if (m.index! > last) out.push({ t: 'text', text: n.text.slice(last, m.index) });
+          out.push({ t: 'fnref', id: m[1]! });
+          last = m.index! + m[0].length;
+        }
+        if (last < n.text.length) out.push({ t: 'text', text: n.text.slice(last) });
+        return out.length ? out : [n];
+      }
+      case 'strong':
+      case 'em':
+      case 'strike':
+      case 'link':
+        return [{ ...n, children: withFootnoteRefs(n.children) as MdInline[] }];
+      default:
+        return [n];
+    }
+  });
 }
 
 function withEmoji(nodes: MdInline[], extra?: Record<string, string>): MdInline[] {
@@ -44,14 +76,22 @@ function withEmoji(nodes: MdInline[], extra?: Record<string, string>): MdInline[
   });
 }
 
-function renderInlines(nodes: MdInline[], target: '_blank' | '_self'): JSX.Element {
+function renderInlines(nodes: Inline[], target: '_blank' | '_self'): JSX.Element {
   return <For each={nodes}>{(n) => renderInline(n, target)}</For>;
 }
 
-function renderInline(n: MdInline, target: '_blank' | '_self'): JSX.Element {
+function renderInline(n: Inline, target: '_blank' | '_self'): JSX.Element {
   switch (n.t) {
     case 'text':
       return n.text;
+    case 'fnref':
+      return (
+        <sup class="fbk-fnref">
+          <a href={`#fn-${n.id}`} target="_self">
+            [{n.id}]
+          </a>
+        </sup>
+      );
     case 'br':
       return <br />;
     case 'code':

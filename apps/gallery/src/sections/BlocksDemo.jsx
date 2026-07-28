@@ -7,6 +7,15 @@ import { BlockEditor, fromMarkdown, toMarkdown, newId } from '@forge/blocks';
 const SAMPLE = {
   version: 1,
   blocks: [
+    {
+      id: newId(),
+      type: 'chapter_header',
+      title: 'Forge Blocks',
+      kicker: 'Design system',
+      reading_time: '4 min',
+      updated: '2026-07-18',
+      version: 'v1',
+    },
     { id: newId(), type: 'heading', level: 1, md: 'Forge Blocks :rocket:' },
     {
       id: newId(),
@@ -58,6 +67,141 @@ const SAMPLE = {
       ],
     },
     { id: newId(), type: 'custom', kind: 'stat', data: { label: 'Requests', value: '1.2k', delta: 4.2 } },
+    { id: newId(), type: 'heading', level: 2, md: 'Media' },
+    {
+      id: newId(),
+      type: 'image',
+      src: 'https://picsum.photos/seed/forge/640/360',
+      alt: 'A random landscape',
+      width: 640,
+      height: 360,
+    },
+    { id: newId(), type: 'video', src: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', title: 'Launch demo' },
+    { id: newId(), type: 'math', tex: '\\frac{1}{N}\\sum_{i=1}^{N} (y_i - \\hat{y}_i)^2' },
+    { id: newId(), type: 'heading', level: 2, md: 'Charts' },
+    {
+      id: newId(),
+      type: 'bar_chart',
+      title: 'Quarterly revenue ($k)',
+      categories: ['Q1', 'Q2', 'Q3', 'Q4'],
+      series: [
+        { name: 'North', values: [42, 55, 61, 78] },
+        { name: 'South', values: [30, 48, 52, 66] },
+      ],
+      y_min: 0,
+      y_max: 100,
+    },
+    {
+      id: newId(),
+      type: 'line_chart',
+      title: 'Latency p95 (ms)',
+      categories: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+      series: [
+        { name: 'api', values: [120, 132, 101, 134, 90] },
+        { name: 'web', values: [220, 182, 191, 234, 150] },
+      ],
+    },
+    {
+      id: newId(),
+      type: 'pie_chart',
+      title: 'Traffic by source',
+      slices: [
+        { label: 'Search', value: 46 },
+        { label: 'Direct', value: 32 },
+        { label: 'Referral', value: 14 },
+        { label: 'Social', value: 8 },
+      ],
+    },
+    { id: newId(), type: 'heading', level: 2, md: 'Diagrams' },
+    {
+      id: newId(),
+      type: 'diagram',
+      nodes: [
+        { id: 'start', kind: 'terminator', text: 'Start' },
+        { id: 'build', kind: 'process', text: 'Build' },
+        { id: 'ok', kind: 'decision', text: 'Tests pass?' },
+        { id: 'ship', kind: 'terminator', text: 'Ship' },
+      ],
+      edges: [
+        { from: 'start', to: 'build' },
+        { from: 'build', to: 'ok' },
+        { from: 'ok', to: 'ship', label: 'yes' },
+        { from: 'ok', to: 'build', label: 'no' },
+      ],
+    },
+    {
+      id: newId(),
+      type: 'sequence_diagram',
+      participants: [
+        { id: 'cli', name: 'Client' },
+        { id: 'api', name: 'API' },
+        { id: 'db', name: 'DB' },
+      ],
+      messages: [
+        { from: 'cli', to: 'api', text: 'POST /login' },
+        { from: 'api', to: 'db', text: 'SELECT user', kind: 'sync' },
+        { from: 'db', to: 'api', text: 'row', kind: 'reply' },
+        { from: 'api', to: 'cli', text: '200 + token', kind: 'reply' },
+      ],
+    },
+    {
+      id: newId(),
+      type: 'state_diagram',
+      states: [
+        { id: 'idle', name: 'Idle', initial: true },
+        { id: 'running', name: 'Running' },
+        { id: 'done', name: 'Done', final: true },
+      ],
+      transitions: [
+        { from: 'idle', to: 'running', trigger: 'start' },
+        { from: 'running', to: 'done', trigger: 'finish', guard: 'ok' },
+        { from: 'running', to: 'idle', trigger: 'abort' },
+      ],
+    },
+    {
+      id: newId(),
+      type: 'node_table',
+      title: 'users',
+      rows: [
+        { key: 'id', md: '`id` **uuid** pk' },
+        { key: 'email', md: '`email` **text** unique' },
+        { md: '`created_at` **timestamptz**' },
+      ],
+    },
+    {
+      id: newId(),
+      type: 'tree',
+      nodes: [
+        {
+          title: 'src',
+          children: [
+            { title: 'lib.rs' },
+            { title: 'widgets', children: [{ title: 'blocks' }] },
+          ],
+        },
+      ],
+    },
+    { id: newId(), type: 'heading', level: 2, md: 'Timeline' },
+    {
+      id: newId(),
+      type: 'timeline',
+      title: 'Release plan',
+      phases: [
+        { label: 'Alpha', from: '2026-01-01', to: '2026-03-01' },
+        { label: 'Beta', from: '2026-03-01', to: '2026-06-01' },
+      ],
+      items: [
+        { label: 'Kickoff', on: '2026-01-01' },
+        { label: 'Feature freeze', on: '2026-04-15' },
+        { label: 'GA', on: '2026-06-01' },
+      ],
+    },
+    {
+      id: newId(),
+      type: 'paragraph',
+      md: 'Footnotes get inline references[^spec] that link to definitions.',
+    },
+    { id: newId(), type: 'footnote', label: 'spec', md: 'See the frozen JSON fixtures in `tests/schema.rs`.' },
   ],
 };
 

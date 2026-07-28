@@ -158,7 +158,47 @@ fn block_to_markdown(block: &Block, out: &mut String, counter: &mut usize) {
             out.push_str(&serde_json::to_string_pretty(data).unwrap_or_default());
             out.push_str("\n```\n");
         }
+        // Natural-markdown forms where the fields allow, else forge fences.
+        BlockKind::Image {
+            src,
+            alt,
+            width: None,
+            height: None,
+        } => {
+            out.push_str(&format!("![{alt}]({src})\n"));
+        }
+        BlockKind::Math { tex } => {
+            out.push_str("$$\n");
+            out.push_str(tex);
+            if !tex.ends_with('\n') {
+                out.push('\n');
+            }
+            out.push_str("$$\n");
+        }
+        BlockKind::Footnote { label, md } if !md.contains('\n') => {
+            out.push_str(&format!("[^{label}]: {md}\n"));
+        }
+        kind => forge_fence(kind, out),
     }
+}
+
+/// Emit a data block as a ```` ```forge:<type> ```` fence holding its JSON
+/// fields (without `type`); the generic export for kinds with no markdown
+/// equivalent.
+fn forge_fence(kind: &BlockKind, out: &mut String) {
+    let Ok(serde_json::Value::Object(mut map)) = serde_json::to_value(kind) else {
+        return;
+    };
+    let Some(serde_json::Value::String(type_name)) = map.remove("type") else {
+        return;
+    };
+    out.push_str("```forge:");
+    out.push_str(&type_name);
+    out.push('\n');
+    out.push_str(
+        &serde_json::to_string_pretty(&serde_json::Value::Object(map)).unwrap_or_default(),
+    );
+    out.push_str("\n```\n");
 }
 
 /// Parse markdown text into a document (line scanner keeping raw inline
@@ -187,7 +227,9 @@ pub fn from_markdown(text: &str) -> Document {
             }
             i += 1; // closing fence
             let body = body.join("\n");
-            if let Some(kind) = info.strip_prefix("block:") {
+            if let Some(type_name) = info.strip_prefix("forge:") {
+                blocks.push(Block::new(parse_forge_fence(type_name, &body)));
+            } else if let Some(kind) = info.strip_prefix("block:") {
                 let data = serde_json::from_str(&body).unwrap_or(serde_json::Value::Null);
                 blocks.push(Block::new(BlockKind::Custom {
                     kind: kind.to_string(),
@@ -202,9 +244,38 @@ pub fn from_markdown(text: &str) -> Document {
             continue;
         }
 
+        // Math ($$ … $$).
+        if trimmed == "$$" {
+            let mut body = Vec::new();
+            i += 1;
+            while i < lines.len() && lines[i].trim() != "$$" {
+                body.push(lines[i]);
+                i += 1;
+            }
+            i += 1; // closing $$
+            blocks.push(Block::new(BlockKind::Math {
+                tex: body.join("\n"),
+            }));
+            continue;
+        }
+
         // Heading.
         if let Some(rest) = heading(trimmed) {
             blocks.push(Block::new(rest));
+            i += 1;
+            continue;
+        }
+
+        // Standalone image line.
+        if let Some(kind) = image_line(trimmed) {
+            blocks.push(Block::new(kind));
+            i += 1;
+            continue;
+        }
+
+        // Footnote definition.
+        if let Some(kind) = footnote_line(trimmed) {
+            blocks.push(Block::new(kind));
             i += 1;
             continue;
         }
@@ -285,6 +356,9 @@ pub fn from_markdown(text: &str) -> Document {
                 || heading(t).is_some()
                 || list_item(l).is_some()
                 || t == "---"
+                || t == "$$"
+                || image_line(t).is_some()
+                || footnote_line(t).is_some()
             {
                 break;
             }
@@ -297,6 +371,52 @@ pub fn from_markdown(text: &str) -> Document {
     }
 
     Document::from_blocks(blocks)
+}
+
+/// Rebuild a builtin block from a ```` ```forge:<type> ```` fence body; on any
+/// parse/shape failure degrade to a code block so content is never lost.
+fn parse_forge_fence(type_name: &str, body: &str) -> BlockKind {
+    let fallback = || BlockKind::Code {
+        lang: format!("forge:{type_name}"),
+        code: body.to_string(),
+    };
+    let Ok(serde_json::Value::Object(mut map)) = serde_json::from_str(body) else {
+        return fallback();
+    };
+    map.insert(
+        "type".to_string(),
+        serde_json::Value::String(type_name.to_string()),
+    );
+    serde_json::from_value(serde_json::Value::Object(map)).unwrap_or_else(|_| fallback())
+}
+
+/// A line that is exactly one `![alt](src)` image reference.
+fn image_line(line: &str) -> Option<BlockKind> {
+    let rest = line.strip_prefix("![")?;
+    let (alt, rest) = rest.split_once("](")?;
+    let src = rest.strip_suffix(')')?;
+    if alt.contains(']') || src.contains('(') {
+        return None;
+    }
+    Some(BlockKind::Image {
+        src: src.to_string(),
+        alt: alt.to_string(),
+        width: None,
+        height: None,
+    })
+}
+
+/// A `[^label]: body` footnote definition line.
+fn footnote_line(line: &str) -> Option<BlockKind> {
+    let rest = line.strip_prefix("[^")?;
+    let (label, md) = rest.split_once("]: ")?;
+    if label.is_empty() || label.contains(' ') {
+        return None;
+    }
+    Some(BlockKind::Footnote {
+        label: label.to_string(),
+        md: md.to_string(),
+    })
 }
 
 fn heading(line: &str) -> Option<BlockKind> {

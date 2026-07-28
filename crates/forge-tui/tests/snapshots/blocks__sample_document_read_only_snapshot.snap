@@ -2,6 +2,10 @@
 source: crates/forge-tui/tests/blocks.rs
 expression: buffer_text(&buf)
 ---
+  DESIGN SYSTEM
+  Forge Blocks
+  4 min · 2026-07-18 · v1
+
   Forge Blocks 🚀
 
   A block-based page editor with inline markdown, code, links, regrets, and ✨
@@ -28,7 +32,3 @@ expression: buffer_text(&buf)
 
    rust
    fn main() {
-       println!("hello, blocks");
-   }
-
-  Data

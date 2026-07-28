@@ -416,7 +416,11 @@ async fn client_credentials_machine_token() {
         ),
     )
     .await;
-    assert_eq!(status, StatusCode::OK, "client_credentials failed: {tokens}");
+    assert_eq!(
+        status,
+        StatusCode::OK,
+        "client_credentials failed: {tokens}"
+    );
     assert_eq!(tokens["scope"], "deploy");
     assert_eq!(tokens["expires_in"], 604800, "per-client TTL applies");
     assert!(tokens["refresh_token"].is_null(), "no refresh for machines");

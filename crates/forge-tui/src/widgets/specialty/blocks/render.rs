@@ -133,6 +133,7 @@ pub(super) fn text_prefix_width(doc: &Document, addr: Address, kind: &BlockKind)
         }
         BlockKind::Quote { .. } => 2,
         BlockKind::Admonition { .. } => 4,
+        BlockKind::Footnote { label, .. } => text::width(&format!("[^{label}] ")) as u16,
         _ => 0,
     }
 }
@@ -166,6 +167,14 @@ pub(super) fn measure_block(p: &mut Painter, block: &Block, addr: Address, w: u1
             }
         }
         BlockKind::Columns { .. } => 1, // containers are measured in layout()
+        kind if kind.is_data() => {
+            if editing_here {
+                if let Editing::Data { ts, err, .. } = &*p.editing {
+                    return ts.line_count() + 1 + usize::from(err.is_some());
+                }
+            }
+            super::visuals::data_height(kind, w.saturating_sub(GUTTER))
+        }
         kind => {
             let prefix = text_prefix_width(p.doc, addr, kind);
             let content_w = w.saturating_sub(GUTTER + prefix).max(1) as usize;
@@ -330,8 +339,28 @@ pub(super) fn paint_block(
             }
         }
         BlockKind::Columns { .. } => {}
+        kind if kind.is_data() => {
+            super::visuals::paint_data(p, addr, kind, buf, w, h, focused_here);
+        }
         kind => paint_text_block(p, addr, kind, buf, w, h, focused_here),
     }
+}
+
+/// Highlighted JSON lines for a data block's source editor (same per-block
+/// cache as code blocks).
+pub(super) fn highlight_json<'c>(
+    p: &'c mut Painter,
+    addr: Address,
+    source: &str,
+) -> &'c StyledLines {
+    let id = match p.doc.block(addr) {
+        Some(b) => b.id.clone(),
+        None => {
+            static EMPTY: StyledLines = Vec::new();
+            return &EMPTY;
+        }
+    };
+    highlight_cached(&mut *p.code_cache, &id, "json", source, p.t)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -374,6 +403,15 @@ fn paint_text_block(
                 Style::new().fg(t.fg[2]),
             );
             Style::new().fg(t.fg[1])
+        }
+        BlockKind::Footnote { label, .. } => {
+            buf.set_string(
+                GUTTER,
+                0,
+                format!("[^{label}] "),
+                Style::new().fg(t.accent.base).add_modifier(Modifier::BOLD),
+            );
+            Style::new().fg(t.fg[2])
         }
         BlockKind::Admonition { tone, title, .. } => {
             let tri = t.severity(tone_severity(*tone));

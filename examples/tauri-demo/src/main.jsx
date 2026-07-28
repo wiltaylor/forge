@@ -4,6 +4,8 @@ import '@forge/tokens/tokens.css';
 import '@forge/tokens/base.css';
 import '@forge/ui/styles.css';
 import '@forge/code/styles.css';
+import '@forge/charts/styles.css';
+import '@forge/graph/styles.css';
 import '@forge/blocks/styles.css';
 import '@forge/term/styles.css';
 import '@forge/desktop/styles.css';

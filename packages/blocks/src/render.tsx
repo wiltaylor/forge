@@ -8,6 +8,11 @@ import { Alert } from '@forge/ui';
 import { CodeEditor } from '@forge/code';
 import type { LanguageInput } from '@forge/code';
 import { InlineMd } from './inline';
+import {
+  BarChartView, ChapterHeaderView, DiagramView, FootnoteView, ImageView, LineChartView,
+  MathView, NodeTableView, PieChartView, SequenceDiagramView, StateDiagramView, TimelineView,
+  TreeView, VideoView,
+} from './datablocks';
 import type { Block, BlockDef, BlockDocument } from './types';
 
 export interface RenderCtx {
@@ -16,6 +21,9 @@ export interface RenderCtx {
   linkTarget?: '_blank' | '_self';
   /** Toggle handler for todo checkboxes; absent = disabled boxes. */
   onToggleTodo?: (id: string, checked: boolean) => void;
+  /** Typeset LaTeX for `math` blocks (e.g. plug KaTeX in here); absent =
+      styled source. */
+  renderMath?: (tex: string) => JSX.Element;
 }
 
 export interface BlockRendererProps extends RenderCtx {
@@ -166,6 +174,48 @@ export function StaticBlock(props: { block: Block; ctx: RenderCtx; num?: number 
       </Match>
       <Match when={props.block.type === 'custom' && props.block}>
         {(b) => <CustomBlockView block={b()} ctx={props.ctx} />}
+      </Match>
+      <Match when={props.block.type === 'image' && props.block}>
+        {(b) => <ImageView block={b()} />}
+      </Match>
+      <Match when={props.block.type === 'video' && props.block}>
+        {(b) => <VideoView block={b()} />}
+      </Match>
+      <Match when={props.block.type === 'math' && props.block}>
+        {(b) => <MathView block={b()} ctx={props.ctx} />}
+      </Match>
+      <Match when={props.block.type === 'bar_chart' && props.block}>
+        {(b) => <BarChartView block={b()} />}
+      </Match>
+      <Match when={props.block.type === 'line_chart' && props.block}>
+        {(b) => <LineChartView block={b()} />}
+      </Match>
+      <Match when={props.block.type === 'pie_chart' && props.block}>
+        {(b) => <PieChartView block={b()} />}
+      </Match>
+      <Match when={props.block.type === 'diagram' && props.block}>
+        {(b) => <DiagramView block={b()} />}
+      </Match>
+      <Match when={props.block.type === 'sequence_diagram' && props.block}>
+        {(b) => <SequenceDiagramView block={b()} />}
+      </Match>
+      <Match when={props.block.type === 'state_diagram' && props.block}>
+        {(b) => <StateDiagramView block={b()} />}
+      </Match>
+      <Match when={props.block.type === 'node_table' && props.block}>
+        {(b) => <NodeTableView block={b()} ctx={props.ctx} />}
+      </Match>
+      <Match when={props.block.type === 'tree' && props.block}>
+        {(b) => <TreeView block={b()} />}
+      </Match>
+      <Match when={props.block.type === 'timeline' && props.block}>
+        {(b) => <TimelineView block={b()} />}
+      </Match>
+      <Match when={props.block.type === 'chapter_header' && props.block}>
+        {(b) => <ChapterHeaderView block={b()} ctx={props.ctx} />}
+      </Match>
+      <Match when={props.block.type === 'footnote' && props.block}>
+        {(b) => <FootnoteView block={b()} ctx={props.ctx} />}
       </Match>
     </Switch>
   );
