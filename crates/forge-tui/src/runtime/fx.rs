@@ -594,9 +594,24 @@ mod tests {
     use ratatui::backend::TestBackend;
     use ratatui::widgets::Paragraph;
     use ratatui::Terminal;
+    use std::sync::{Mutex, PoisonError};
+
+    /// `Motion::resolve` reads FORGE_TUI_MOTION/TERM/NO_COLOR, and the process
+    /// environment is shared by every test thread. `motion_resolution` sets
+    /// FORGE_TUI_MOTION="off" for the length of one assertion; without this
+    /// lock a concurrent `configure()` resolves to `Motion::Off`, `draw` then
+    /// clears `pending`, and the effect under test never spawns at all.
+    /// Every test that reaches the resolver takes it.
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
+
+    fn env_guard() -> std::sync::MutexGuard<'static, ()> {
+        // Don't let one test's panic poison the lock into failing the rest.
+        ENV_LOCK.lock().unwrap_or_else(PoisonError::into_inner)
+    }
 
     #[test]
     fn recreate_particles_land_home() {
+        let _env = env_guard();
         let theme = Theme::dark();
         let mut fx = Fx::with_seed(9);
         fx.configure(
@@ -634,6 +649,7 @@ mod tests {
 
     #[test]
     fn explode_scatters_and_finishes() {
+        let _env = env_guard();
         let theme = Theme::dark();
         let mut fx = Fx::with_seed(3);
         fx.configure(
@@ -700,6 +716,7 @@ mod tests {
     // the process environment, so these must not run as separate #[test]s.
     #[test]
     fn motion_resolution() {
+        let _env = env_guard();
         std::env::set_var("FORGE_TUI_MOTION", "off");
         let m = Motion::Full.resolve(ColorMode::TrueColor, Duration::from_millis(80));
         std::env::remove_var("FORGE_TUI_MOTION");
