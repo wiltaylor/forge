@@ -61,7 +61,7 @@ python-test:
 # Run the black-box contract parity suite against a live server (FORGE_TEST_BASE_URL)
 [group('test')]
 parity-test base_url='http://127.0.0.1:8765':
-	FORGE_TEST_BASE_URL={{base_url}} uv run --with 'httpx>=0.27' --with 'pytest>=8' --with 'websockets>=13' pytest examples/parity
+	FORGE_TEST_BASE_URL={{base_url}} uv run --with 'httpx>=0.28' --with 'pytest>=9' --with 'websockets>=16' pytest examples/parity
 
 # Run forge-tauri tests (own workspace — heavy tauri tree, so not part of `just test`)
 [group('test')]
