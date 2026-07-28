@@ -6,5 +6,7 @@ export default defineConfig((config) => {
     { entries: [{ entry: 'src/index.tsx' }] },
     !!config.watch,
   );
-  return preset.generateTsupOptions(parsed);
+  // dts is emitted by `tsc -p tsconfig.build.json` (see package.json build):
+  // tsup routes declarations through rollup-plugin-dts, which caps at TS 6.
+  return preset.generateTsupOptions(parsed).map((o) => ({ ...o, dts: false }));
 });

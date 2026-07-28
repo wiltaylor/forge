@@ -10,8 +10,10 @@ export type WidgetKind = 'term' | 'vnc' | 'rdp';
  * deliberately tiny so no cross-package dependency is needed.
  */
 export interface WidgetTransport {
-  /** Send a frame. Strings are control JSON; views are payload bytes. */
-  send(data: string | ArrayBufferView): void;
+  /** Send a frame. Strings are control JSON; views are payload bytes.
+      `ArrayBufferView<ArrayBuffer>`, not the bare (SharedArrayBuffer-inclusive)
+      default — WebSocket.send only accepts non-shared buffers. */
+  send(data: string | ArrayBufferView<ArrayBuffer>): void;
   /** Close the session (idempotent). */
   close(): void;
   onopen: (() => void) | null;

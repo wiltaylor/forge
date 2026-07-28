@@ -44,5 +44,10 @@ if (!acquire()) {
 process.on('exit', () => rmSync(lock, { recursive: true, force: true }));
 for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, () => process.exit(1));
 
-const r = spawnSync('tsup', [], { stdio: 'inherit', shell: true });
+// tsup emits the JS, tsc the .d.ts — tsup's own dts step goes through
+// rollup-plugin-dts, which does not support TypeScript 7.
+const r = spawnSync('tsup && tsc -p tsconfig.build.json', [], {
+  stdio: 'inherit',
+  shell: true,
+});
 process.exit(r.status ?? 1);

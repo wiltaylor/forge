@@ -1,0 +1,20 @@
+// Declaration-only build. tsup emits the JS; tsc emits the .d.ts, because
+// tsup's dts step goes through rollup-plugin-dts, which does not support
+// TypeScript 7 (its peer range caps at ^6.0).
+//
+// `paths` is cleared: tsconfig.json maps workspace deps to their *source* so
+// `typecheck` never waits on a sibling's build, but declaration emit needs
+// every input under rootDir. Here they resolve through node_modules to the
+// sibling's built dist/index.d.ts instead — turbo's `dependsOn: ["^build"]`
+// guarantees it exists.
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "outDir": "dist",
+    "rootDir": "src",
+    "paths": {}
+  },
+  "include": ["src"]
+}

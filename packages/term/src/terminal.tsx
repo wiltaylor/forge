@@ -64,7 +64,7 @@ export function Terminal(props: TerminalProps) {
   const enc = new TextEncoder();
 
   const report = (s: TerminalStatus) => { setStatus(s); props.onStatus?.(s); };
-  const send = (data: Uint8Array) => {
+  const send = (data: Uint8Array<ArrayBuffer>) => {
     ws?.send(data);
   };
 

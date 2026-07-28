@@ -16,12 +16,12 @@
     "./fonts.css": "./css/fonts.css"
   },
   "scripts": {
-    "build": "tsup",
+    "build": "tsup && tsc -p tsconfig.build.json",
     "prepare": "node ../../scripts/prepare-package.mjs",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "tsup": "^8.4.0",
-    "typescript": "^5.8.0"
+    "tsup": "^8.5.1",
+    "typescript": "^7.0.0"
   }
 }

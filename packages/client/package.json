@@ -13,14 +13,14 @@
     }
   },
   "scripts": {
-    "build": "tsup",
+    "build": "tsup && tsc -p tsconfig.build.json",
     "prepare": "node ../../scripts/prepare-package.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
   "devDependencies": {
-    "tsup": "^8.4.0",
-    "typescript": "^5.8.0",
-    "vitest": "^3.2.4"
+    "tsup": "^8.5.1",
+    "typescript": "^7.0.0",
+    "vitest": "^4.1.10"
   }
 }
