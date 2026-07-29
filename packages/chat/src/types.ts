@@ -31,6 +31,10 @@ export type LinkResolver = (url: string) => Promise<LinkMeta | null>;
 /* ---------------- Tool calls -------------------------------------------------- */
 export interface ChatToolCallData {
   id?: string;
+  /** Stable identity for persisted expand/collapse state. Falls back to
+      component-local state when absent. Must be unique within one ChatView —
+      unlike `id`, which carries the producer's own tool id. */
+  key?: string;
   /** Tool name, rendered in mono (e.g. "read_file"). */
   name: string;
   status: 'running' | 'success' | 'error';

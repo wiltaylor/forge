@@ -1,17 +1,55 @@
-import { For, Show, createSignal } from 'solid-js';
+import { For, Show, createSignal, useContext } from 'solid-js';
 import type { JSX } from 'solid-js';
 import { Spinner } from '@forge/ui';
 import type { ChatToolCallData } from './types';
 import { ChevronRightSvg } from './internal/icons';
+import { ToolExpansionContext, ToolKeyContext } from './internal/expansion';
 
 /* Collapsible tool-call box for assistant transcripts. Nested `children`
-   render recursively behind a left rail. */
+   render recursively behind a left rail.
+
+   Expansion is, in order of precedence: controlled by `open`/`onToggle` when
+   both are given; else held by the registry ChatView provides, keyed by
+   `tool.key` — that is what survives a transcript update rebuilding the box;
+   else component-local, as it has always been. */
 export interface ChatToolCallProps {
   tool: ChatToolCallData;
+  /** Controlled expansion — pass with `onToggle`, or neither. */
+  open?: boolean;
+  /** Fires with the requested state when the header is clicked. */
+  onToggle?: (open: boolean) => void;
 }
 
 export function ChatToolCall(props: ChatToolCallProps): JSX.Element {
-  const [open, setOpen] = createSignal(!!props.tool.defaultOpen);
+  const registry = useContext(ToolExpansionContext);
+  const inherited = useContext(ToolKeyContext);
+  const [local, setLocal] = createSignal(!!props.tool.defaultOpen);
+
+  const controlled = () => props.open !== undefined && props.onToggle !== undefined;
+  /* Own key when the producer stamped one, else the one our parent derived. */
+  const key = () => props.tool.key ?? inherited?.();
+  const stored = () => {
+    const k = key();
+    return registry !== undefined && k !== undefined ? k : undefined;
+  };
+
+  const open = () => {
+    if (controlled()) return !!props.open;
+    const k = stored();
+    return k === undefined ? local() : registry!.isOpen(k, !!props.tool.defaultOpen);
+  };
+  const toggle = () => {
+    const next = !open();
+    if (controlled()) return props.onToggle!(next);
+    const k = stored();
+    if (k === undefined) setLocal(next);
+    else registry!.setOpen(k, next);
+  };
+
+  const childKey = (index: number) => {
+    const k = key();
+    return k === undefined ? undefined : `${k}/${index}`;
+  };
   const hasBody = () =>
     props.tool.args !== undefined || props.tool.result !== undefined || !!props.tool.children?.length;
 
@@ -22,7 +60,7 @@ export function ChatToolCall(props: ChatToolCallProps): JSX.Element {
         class="fchat-tool-head"
         aria-expanded={open()}
         disabled={!hasBody()}
-        onClick={() => setOpen((o) => !o)}
+        onClick={toggle}
       >
         <ChevronRightSvg />
         <span class="fchat-tool-name">{props.tool.name}</span>
@@ -48,7 +86,13 @@ export function ChatToolCall(props: ChatToolCallProps): JSX.Element {
           </Show>
           <Show when={props.tool.children?.length}>
             <div class="fchat-tool-children">
-              <For each={props.tool.children}>{(child) => <ChatToolCall tool={child} />}</For>
+              <For each={props.tool.children}>
+                {(child, index) => (
+                  <ToolKeyContext.Provider value={() => childKey(index())}>
+                    <ChatToolCall tool={child} />
+                  </ToolKeyContext.Provider>
+                )}
+              </For>
             </div>
           </Show>
         </div>

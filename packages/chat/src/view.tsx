@@ -12,6 +12,8 @@ import type {
 import { ChatMessage } from './message';
 import { dayKey, formatDay, formatTime, isoTime } from './internal/time';
 import { ArrowDownSvg } from './internal/icons';
+import { ToolExpansionContext } from './internal/expansion';
+import type { ToolExpansion } from './internal/expansion';
 
 /* ---------------- ChatView ---------------------------------------------------- */
 /* Data-driven transcript. Owns message grouping, day dividers, the unread
@@ -112,6 +114,21 @@ export function ChatView(props: ChatViewProps): JSX.Element {
     (merged.typing ?? []).map((id) => byId().get(id)?.name ?? id).filter(Boolean),
   );
 
+  /* ------ tool-call expansion ------ */
+  /* Which tool boxes the user opened or closed, keyed by ChatToolCallData.key.
+     It lives here, not in the box, because `entries()` hands <For> fresh
+     objects on every `items` change and a patched message replaces its blocks
+     — so every box is torn down and rebuilt whenever anything lands, and
+     state held inside one would go with it. Only explicit toggles are
+     recorded; an untouched key stays on the box's own `defaultOpen`. Entries
+     are never dropped: one short string per box the user touched is nothing
+     against a session-length transcript. */
+  const [expanded, setExpanded] = createSignal<Record<string, boolean>>({});
+  const expansion: ToolExpansion = {
+    isOpen: (key, defaultOpen) => expanded()[key] ?? defaultOpen,
+    setOpen: (key, open) => setExpanded((prev) => ({ ...prev, [key]: open })),
+  };
+
   /* ------ scroll behavior ------ */
   let scroller!: HTMLDivElement;
   let list!: HTMLDivElement;
@@ -181,93 +198,95 @@ export function ChatView(props: ChatViewProps): JSX.Element {
   const showName = () => merged.variant === 'room';
 
   return (
-    <div class={`fchat ${merged.class ?? ''}`} style={merged.style}>
-      <div class="fchat-scrollwrap">
-        <div class="fchat-scroll" ref={scroller} role="log" aria-label="Conversation" onScroll={onScroll}>
-          <div class="fchat-list" ref={list}>
-            <For each={entries()}>
-              {(entry) => (
-                <Switch>
-                  <Match when={entry.k === 'day' && entry}>
-                    {(e) => <ChatDivider label={(e() as Extract<Entry, { k: 'day' }>).label} />}
-                  </Match>
-                  <Match when={entry.k === 'unread'}>
-                    <div class="fchat-divider is-unread"><span>New</span></div>
-                  </Match>
-                  <Match when={entry.k === 'divider' && entry}>
-                    {(e) => <ChatDivider label={(e() as Extract<Entry, { k: 'divider' }>).item.label} />}
-                  </Match>
-                  <Match when={entry.k === 'event' && entry}>
-                    {(e) => {
-                      const ev = (e() as Extract<Entry, { k: 'event' }>).item;
-                      return (
-                        <div class="fchat-event">
-                          {ev.text}
-                          <Show when={ev.at}>
-                            <time datetime={isoTime(ev.at!)}>{formatTime(ev.at!)}</time>
-                          </Show>
-                        </div>
-                      );
-                    }}
-                  </Match>
-                  <Match when={entry.k === 'group' && entry}>
-                    {(e) => {
-                      const g = () => e() as Extract<Entry, { k: 'group' }>;
-                      const self = () => g().author === merged.self;
-                      const who = () => byId().get(g().author);
-                      return (
-                        <div class="fchat-group" classList={{ 'is-self': self() }}>
-                          <div class="fchat-group-gutter">
-                            <Show when={showAvatar(g().author)}>
-                              <Avatar size="sm" name={who()?.name ?? g().author} src={who()?.avatar}
-                                      status={who()?.status} />
+    <ToolExpansionContext.Provider value={expansion}>
+      <div class={`fchat ${merged.class ?? ''}`} style={merged.style}>
+        <div class="fchat-scrollwrap">
+          <div class="fchat-scroll" ref={scroller} role="log" aria-label="Conversation" onScroll={onScroll}>
+            <div class="fchat-list" ref={list}>
+              <For each={entries()}>
+                {(entry) => (
+                  <Switch>
+                    <Match when={entry.k === 'day' && entry}>
+                      {(e) => <ChatDivider label={(e() as Extract<Entry, { k: 'day' }>).label} />}
+                    </Match>
+                    <Match when={entry.k === 'unread'}>
+                      <div class="fchat-divider is-unread"><span>New</span></div>
+                    </Match>
+                    <Match when={entry.k === 'divider' && entry}>
+                      {(e) => <ChatDivider label={(e() as Extract<Entry, { k: 'divider' }>).item.label} />}
+                    </Match>
+                    <Match when={entry.k === 'event' && entry}>
+                      {(e) => {
+                        const ev = (e() as Extract<Entry, { k: 'event' }>).item;
+                        return (
+                          <div class="fchat-event">
+                            {ev.text}
+                            <Show when={ev.at}>
+                              <time datetime={isoTime(ev.at!)}>{formatTime(ev.at!)}</time>
                             </Show>
                           </div>
-                          <div class="fchat-group-body">
-                            <Show when={showName() || (merged.showTimes && g().at)}>
-                              <div class="fchat-meta">
-                                <Show when={showName()}>
-                                  <span class="fchat-meta-name">{who()?.name ?? g().author}</span>
-                                </Show>
-                                <Show when={merged.showTimes && g().at}>
-                                  <time datetime={isoTime(g().at!)}>{formatTime(g().at!)}</time>
-                                </Show>
-                              </div>
-                            </Show>
-                            <For each={g().messages}>
-                              {(m) => (
-                                <ChatMessage
-                                  message={m}
-                                  participant={who()}
-                                  self={self()}
-                                  showTime={merged.showTimes}
-                                  markdown={merged.markdown}
-                                  resolveLink={merged.resolveLink}
-                                />
-                              )}
-                            </For>
+                        );
+                      }}
+                    </Match>
+                    <Match when={entry.k === 'group' && entry}>
+                      {(e) => {
+                        const g = () => e() as Extract<Entry, { k: 'group' }>;
+                        const self = () => g().author === merged.self;
+                        const who = () => byId().get(g().author);
+                        return (
+                          <div class="fchat-group" classList={{ 'is-self': self() }}>
+                            <div class="fchat-group-gutter">
+                              <Show when={showAvatar(g().author)}>
+                                <Avatar size="sm" name={who()?.name ?? g().author} src={who()?.avatar}
+                                        status={who()?.status} />
+                              </Show>
+                            </div>
+                            <div class="fchat-group-body">
+                              <Show when={showName() || (merged.showTimes && g().at)}>
+                                <div class="fchat-meta">
+                                  <Show when={showName()}>
+                                    <span class="fchat-meta-name">{who()?.name ?? g().author}</span>
+                                  </Show>
+                                  <Show when={merged.showTimes && g().at}>
+                                    <time datetime={isoTime(g().at!)}>{formatTime(g().at!)}</time>
+                                  </Show>
+                                </div>
+                              </Show>
+                              <For each={g().messages}>
+                                {(m) => (
+                                  <ChatMessage
+                                    message={m}
+                                    participant={who()}
+                                    self={self()}
+                                    showTime={merged.showTimes}
+                                    markdown={merged.markdown}
+                                    resolveLink={merged.resolveLink}
+                                  />
+                                )}
+                              </For>
+                            </div>
                           </div>
-                        </div>
-                      );
-                    }}
-                  </Match>
-                </Switch>
-              )}
-            </For>
-            <Show when={typers().length}>
-              <ChatTyping names={typers()} />
-            </Show>
+                        );
+                      }}
+                    </Match>
+                  </Switch>
+                )}
+              </For>
+              <Show when={typers().length}>
+                <ChatTyping names={typers()} />
+              </Show>
+            </div>
           </div>
+          <Show when={!pinned() && newCount() > 0}>
+            <button type="button" class="fchat-jump" onClick={jump}>
+              <ArrowDownSvg />
+              {newCount()} new message{newCount() === 1 ? '' : 's'}
+            </button>
+          </Show>
         </div>
-        <Show when={!pinned() && newCount() > 0}>
-          <button type="button" class="fchat-jump" onClick={jump}>
-            <ArrowDownSvg />
-            {newCount()} new message{newCount() === 1 ? '' : 's'}
-          </button>
-        </Show>
+        {merged.children}
       </div>
-      {merged.children}
-    </div>
+    </ToolExpansionContext.Provider>
   );
 }
 
