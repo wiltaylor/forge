@@ -30,9 +30,13 @@
 }
 
 /* ---------------- Messages ---------------------------------------------------- */
-.fchat-msg { display: flex; align-items: flex-end; gap: 6px; max-width: 100%; min-width: 0; }
+/* The percentage cap lives here, not on .fchat-bubble: the bubble's containing
+   block is sized *from* the bubble, so a percentage there feeds on its own result
+   and clamps a one-word message narrower than the word. .fchat-group-body is a
+   stretched grid item, so this percentage has a definite base. */
+.fchat-msg { display: flex; align-items: flex-end; gap: 6px; max-width: min(640px, 85%); min-width: 0; }
 .fchat-group.is-self .fchat-msg { flex-direction: row-reverse; }
-.fchat-msg-blocks { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.fchat-msg-blocks { display: flex; flex-direction: column; gap: 4px; min-width: 0; max-width: 100%; }
 .fchat-group.is-self .fchat-msg-blocks { align-items: flex-end; }
 .fchat-msg-time {
   font-family: var(--font-mono); font-variant-numeric: tabular-nums;
@@ -45,7 +49,7 @@
 .fchat-msg-fail { font-size: 11px; color: var(--danger-fg); }
 
 .fchat-bubble {
-  max-width: min(640px, 85%);
+  max-width: 100%;
   padding: 6px 10px;
   background: var(--bg-1);
   border: 1px solid var(--border);
@@ -298,7 +302,7 @@ a.fchat-file:hover { border-color: var(--border-strong); }
 
 /* ---------------- Mobile -------------------------------------------------------------- */
 @media (max-width: 768px) {
-  .fchat-bubble { max-width: 92%; }
+  .fchat-msg { max-width: 92%; }
   .fchat-media, .fmd-img { max-width: 100%; }
   .fchat-group { grid-template-columns: 24px 1fr; }
 }
