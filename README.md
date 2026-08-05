@@ -354,7 +354,7 @@ Set in `.env`: `FORGE_JWT_SECRET` (≥32 chars) and `FORGE_AUTH_USERS`
 or `python -m forge_server.hash`). `POST /api/auth/login` issues an HS256 JWT;
 serious deployments skip the built-in login and validate JWTs from an external
 auth service sharing the same secret. With no `FORGE_JWT_SECRET`, auth is off
-and everything is open — playpen-style local tools.
+and everything is open — suitable for local tools.
 
 For a full identity provider, `crates/forge-auth` ships a self-hosted OIDC IdP:
 discovery, authorization code + PKCE, RS256/JWKS, RFC 8693 token exchange
@@ -364,7 +364,7 @@ upstream-OIDC + LDAP federation, and an admin console (`apps/auth`). See
 
 ## Skills
 
-`.claude/skills/forge-design` and `.claude/skills/playpen` remain the Claude
+`.claude/skills/forge-design` and `.claude/skills/forge-tauri` are the Claude
 Code skills that build UIs with this system: forge-design documents the
 tokens/components (the packages here are the source of truth for the Solid
-port), playpen scaffolds server-backed playground apps.
+port), forge-tauri scaffolds Tauri desktop apps over the frozen contract.

@@ -1,4 +1,4 @@
-//! JSON document store (playpen lineage).
+//! JSON document store.
 //!
 //! One file per doc: `<data-dir>/<name>.json`. Names must match
 //! `^[a-z0-9][a-z0-9_-]{0,63}$` — the regex doubles as the path-traversal

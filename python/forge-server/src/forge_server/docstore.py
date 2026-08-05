@@ -1,4 +1,4 @@
-"""JSON document store (playpen lineage): one file per doc, atomic writes.
+"""JSON document store: one file per doc, atomic writes.
 
 - Doc name regex ``^[a-z0-9][a-z0-9_-]{0,63}$`` doubles as the
   path-traversal guard (violations → 400).

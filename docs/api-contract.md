@@ -27,7 +27,7 @@ Wire format is `snake_case` (`expires_at`, `uptime_s`).
 - **Auth-disabled mode is first-class**: when no `FORGE_JWT_SECRET` is
   configured, every endpoint below is open and handlers see an anonymous
   identity (`sub = "anonymous"`, `roles = []`). A server with a doc store and
-  no env vars must run (playpen parity).
+  no env vars must run.
 - External issuer mode: don't call `/api/auth/login`; share the HS256 secret
   with the issuing service. RS256/JWKS is an extension point
   (`TokenValidator` trait in Rust, validator callable in Python), not v1.
@@ -52,7 +52,7 @@ Wire format is `snake_case` (`expires_at`, `uptime_s`).
 | `/api/components/{file}` | GET | yes (`?token=`) | Serve a bundle file. Filename: `^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$`, no `..`, extension allowlist `.js .mjs .css .map`. |
 | `/*` (non-`/api`) | GET | no | Static frontend. Unknown non-`/api` paths fall back to `index.html` (SPA). `/api/*` misses stay JSON 404 envelopes. |
 
-### Document store semantics (playpen lineage)
+### Document store semantics
 
 - Doc name regex: `^[a-z0-9][a-z0-9_-]{0,63}$` — doubles as the
   path-traversal guard. Violations → 400.
