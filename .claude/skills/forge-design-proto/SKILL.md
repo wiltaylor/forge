@@ -96,9 +96,23 @@ which one you are in — read it even when you expect a gap.
 Forge deliberately says nothing about terminal emulators, VNC, or RDP. Those left this
 system. If a job needs one, say so and stop; do not build one from these pages.
 
-## Before you call it done
+## Before you call it done — control work only
+
+Backend work stops at `reference/api/index.md` and does not run these.
 
 1. Check the result against `reference/anti-patterns.md`. If it matches an entry, it is
    wrong, whatever a control page appeared to allow.
-2. Every colour, size, radius and duration is a token reference. No literal values.
+2. Every colour, size, radius and duration is a token reference. No literal values. The
+   names come from `reference/tokens.md`; never invent one.
 3. Render it and look at it — dark and light, and at 375px if it is SolidJS.
+
+## Where names come from
+
+Every token, class and control name you write must already exist in this skill. A name
+that does not resolve is worse than no name — it reads as styled and ships unstyled.
+
+- Control names: the list above, and nowhere else.
+- Token names: `reference/tokens.md`.
+- SolidJS class names: `reference/classes.md`.
+
+If a name you need is in none of them, do not mint one silently. Say so in your summary.
