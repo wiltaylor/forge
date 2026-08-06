@@ -1,7 +1,7 @@
 # button
 
-<!-- PROTOTYPE (wayfinder #64). Deliberately short — this page demonstrates that an easy
-     control is simply a short page, with no rule deciding which controls are "important". -->
+<!-- RECAST against the #66 template. The #64 version stated its geometry in Anatomy
+     prose; all of it turned out to be laws.md's, and dropped out entirely. -->
 
 Implementations: [solid](../impl/solid/button.md) · [ratatui](../impl/ratatui/button.md) ·
 [egui](../impl/egui/button.md)
@@ -13,30 +13,41 @@ navigates rather than acts.
 
 ## Anatomy
 
-A label, optionally an icon before it, optionally an icon after it. 32px high, 4px radius,
-12px horizontal padding. Never full width unless the caller asks.
+A label, optionally an icon before it, optionally an icon after it.
 
 ## Variants
 
-| Variant | Look | Use |
-|---|---|---|
-| `primary` | Accent solid | One per screen |
-| `default` | `surface-raised`, 1px `border` | Everything else |
-| `ghost` | No border, no fill until hover | Toolbars, table rows |
-| `danger` | `danger` solid | Destructive, and never the default focus |
+| Variant | Use |
+|---|---|
+| `primary` | One per screen |
+| `default` | Everything else |
+| `ghost` | Toolbars, table rows |
+| `danger` | Destructive |
 
-Sizes are `sm` (24px) and the 32px default. There is no large.
+Sizes are `sm` and the default. There is no large.
 
 ## State
 
-`disabled`, `loading`, `pressed`. `loading` shows a `spinner` in place of the leading icon
-and disables the button — it does not replace the label, so the button does not resize.
+`disabled`, `loading`, `pressed`.
 
-## Interaction contract
+## Contract
 
-Enter and Space activate it. Activation while `disabled` or `loading` is a no-op. The
-press state is visible for the duration of the press, not a fixed animation.
+- `primary` takes the accent solid with the on-accent text role. `default` takes the
+  raised surface with a 1px border role. `ghost` takes no fill until hover, then the
+  raised surface. `danger` takes the danger solid.
+- Variant selects fill and stroke only. Geometry never changes with variant.
+- `loading` shows a spinner in place of the leading icon and takes the disabled path. The
+  label stays mounted, so the button does not resize.
+- Activation while `disabled` or `loading` is a no-op.
+- Enter and Space activate.
+- The pressed state is visible for the duration of the press, not for a fixed animation.
+- Never full width unless the caller asks.
 
 ## Accessibility
 
-It is a button. It has an accessible name. That is the whole requirement.
+Role `button`; the element owns Enter and Space; it takes focus itself.
+
+## Platform discretion
+
+The hover model, and whether `sm` exists at all — a platform with one row height may
+accept the size and ignore it.

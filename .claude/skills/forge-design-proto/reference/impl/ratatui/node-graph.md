@@ -1,10 +1,14 @@
 # node-graph — ratatui
 
-<!-- PROTOTYPE STUB (wayfinder #64). Body not written; the tree is real so
-     routing and the re-read bill can be measured. -->
+<!-- RECAST against the #66 template. A gap page's body IS the notice — it asserts no
+     status field, so it cannot drift from gaps.md. #64 settled zero-hop direct
+     addressing, so a reader lands here without passing an index. -->
 
-status: gap · control page: [node-graph](../../controls/node-graph.md) · index: [ratatui](index.md)
+control page: [node-graph](../../controls/node-graph.md)
 
-This control is not built on this platform. Read the control page and the nearest complete implementation, then port it.
+**GAP — not built on ratatui.** Nearest reference: The egui page, which is the closest by far: both paint the graph by
+hand and own their own hit-testing.
 
-Not written.
+Fill it by building this control in a real target app from the control page, then write
+this page from that working code. Do not write it from another platform's implementation
+page — see "porting by eye" in [anti-patterns.md](../../anti-patterns.md).

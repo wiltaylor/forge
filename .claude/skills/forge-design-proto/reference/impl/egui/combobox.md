@@ -1,22 +1,16 @@
 # combobox — egui
 
-<!-- PROTOTYPE (wayfinder #64). Long on purpose: same control as the SolidJS page, roughly
-     three times the length, because egui supplies none of what the browser supplies. -->
+<!-- RECAST against the #66 template. #64's hand-written "Divergence, unresolved"
+     blockquote split cleanly in two: the hint-text trick is Mechanism and always allowed,
+     the prefix ranking is a Contract defect. -->
 
-status: complete · control page: [combobox](../../controls/combobox.md) ·
-index: [egui](index.md)
+control page: [combobox](../../controls/combobox.md)
 
-Read the control page first. It owns the state model and the interaction contract.
+## Shape
 
-> **Divergence, unresolved.** The control page makes substring filtering normative. This
-> implementation ranks prefix matches first, and the ratatui one scores a fuzzy
-> subsequence. Three platforms, three answers. Filter behaviour is user-visible, so this
-> is a real inconsistency, not a rendering detail.
-
-## Immediate mode changes the state model
-
-egui redraws every frame. The control holds no memory of its own, so `ComboboxState` is
-plain data the caller owns and passes in:
+The field is two different widgets. Closed, it is a click target painted to look like an
+input. Open, it is a real `TextEdit::singleline` over `query`. Swapping between them is
+the whole reason this page is long.
 
 ```rust
 pub struct ComboboxState {
@@ -26,33 +20,42 @@ pub struct ComboboxState {
 }
 ```
 
-Two consequences the SolidJS page never faces:
+State is plain data the caller owns and passes in. `ComboboxState` has no methods; every
+transition happens in `show`.
 
-`query` is a `String`, not an optional. egui has no "unset" — the field is a text edit
-whose buffer *is* `query`, so there is nowhere to put the null. The control page's
+## What egui gives you
+
+Nothing this control needs. No focus that survives a widget swap, no scroll-into-view, no
+key routing you can rely on, and no accessibility. The browser supplies all four to the
+SolidJS page, which is why that page is a third of this one.
+
+## Mechanism
+
+**`query` is a `String`, not an optional.** egui has no unset — the field is a text edit
+whose buffer *is* `query`, so there is nowhere to put the null. The Contract's
 unset-versus-empty distinction is recovered with **hint text**: while `query` is empty,
-the selected option's label is shown as the hint. The field looks the same; the mechanism
-is different. Do not add an `Option<String>` to get closer to the Solid model — it fights
-the text edit.
+the selected option's label shows as the hint. The field looks the same and behaves the
+same; only the mechanism differs. Do not add an `Option<String>` to get closer to the
+SolidJS model — it fights the text edit and buys nothing.
 
-`value` is an index into the options slice, not a value. The caller keeps the mapping.
+**`value` is an index** into the options slice, not a value. The caller keeps the mapping.
 
-All state transitions happen in `show`. `ComboboxState` has no methods.
-
-## The field is two different widgets
-
-Closed, it is a click target painted to look like an input. Open, it is a real
-`TextEdit::singleline` over `query`. Swapping between them is the whole reason this
-control is long.
-
-The swap loses focus, because the widget that had it no longer exists. Recover it with a
-one-shot flag keyed off the id, and request focus on the first frame the edit exists:
+**Focus is recovered by hand.** The widget swap loses focus, because the widget that had
+it no longer exists. Use a one-shot flag keyed off the id and request focus on the first
+frame the edit exists:
 
 ```rust
 let focus_id = ui.id().with("combobox-focus");
 ```
 
-Without this, the popup opens and the first keystroke goes nowhere.
+Without this the popup opens and the first keystroke goes nowhere.
+
+## Contract defects
+
+- **Filtering ranks prefix matches first.** The Contract says a plain case-insensitive
+  substring match and no ranking. This page is wrong; the ranking has to go, or the
+  Contract has to change for all three platforms. ratatui carries the same defect with a
+  third answer — see [ratatui](../ratatui/combobox.md).
 
 ## Painting the field
 
@@ -62,7 +65,7 @@ a symmetric inner margin of 10.
 
 Set the inner width to the field width minus 20 to account for that margin, and the text
 edit's desired width to the available width minus 16 to leave room for the chevron. These
-two subtractions are not interchangeable and getting them wrong clips the caret.
+two subtractions are not interchangeable, and getting them wrong clips the caret.
 
 Use `Frame::NONE` on the `TextEdit` itself. Its own frame would draw a second border
 inside yours.
@@ -77,9 +80,8 @@ Constrain the popup width to the field width. egui will otherwise size it to its
 option, and the popup ends up wider than the control.
 
 Scroll is not free. The option list needs an explicit `ScrollArea` once it can exceed the
-available height, and keeping the active option visible needs an explicit
-`scroll_to_rect` on the frame where `active` changes — not every frame, or the list fights
-the user's wheel.
+available height, and keeping the active option visible needs an explicit `scroll_to_rect`
+on the frame where `active` changes — not every frame, or the list fights the wheel.
 
 ## Keys
 
@@ -100,6 +102,5 @@ returning `Consumed` for a commit silently breaks the caller.
 
 ## Accessibility
 
-egui gives you nothing. Emit `WidgetInfo` with `WidgetType::ComboBox` yourself, including
-the selected label. Miss it and the control is invisible to assistive tooling, with no
-warning at any layer.
+Emit `WidgetInfo` with `WidgetType::ComboBox` yourself, including the selected label. Miss
+it and the control is invisible to assistive tooling, with no warning at any layer.

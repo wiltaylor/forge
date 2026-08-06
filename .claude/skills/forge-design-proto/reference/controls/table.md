@@ -1,8 +1,8 @@
 # table
 
-<!-- PROTOTYPE (wayfinder #64). Chosen as the third filled control because its platform
-     renderings diverge most — the browser supplies scroll and sticky headers, ratatui and
-     egui supply neither. -->
+<!-- RECAST against the #66 template. #64's ad-hoc "Column alignment" section, which
+     closed with "this is not a preference", was the clearest sign the page had binding
+     claims outside its contract. It is now two Contract lines. -->
 
 Implementations: [solid](../impl/solid/table.md) · [ratatui](../impl/ratatui/table.md) ·
 [egui](../impl/egui/table.md)
@@ -16,17 +16,7 @@ selection.
 ## Anatomy
 
 A header row, then body rows. Optional leading selection column. Optional trailing actions
-column, `ghost` icon-buttons only.
-
-The header is `surface-sunken`, `text-dim`, and stays visible while the body scrolls.
-
-Rows are 32px and do not grow. Content that does not fit truncates with an ellipsis at the
-end. A row is never two lines.
-
-## Column alignment
-
-Text left. Numbers right, tabular, with the unit. Status glyphs centred. This is not a
-preference — a right-aligned number column is how the eye compares magnitudes.
+column.
 
 ## State
 
@@ -37,31 +27,33 @@ preference — a right-aligned number column is how the eye compares magnitudes.
 | `selection` | Selected row keys. Caller-owned |
 | `active` | The keyboard row |
 
-Sorting is requested, never performed. The table reports which column and direction the
-user asked for; the caller sorts and passes new `rows` back. A table that sorts its own
-copy desynchronises from the caller's paging.
+## Contract
 
-## Interaction contract
-
-- Up and Down move `active` by a row, and stop at the ends without wrapping.
-- Page Up and Page Down move by the visible row count.
-- Home and End move to the first and last row.
+- Numbers are right-aligned and tabular. Text is left-aligned. Status glyphs are centred.
+  A right-aligned number column is how the eye compares magnitudes, so this is not a
+  preference.
+- The header is the sunken surface with the dim text role, and stays visible while the
+  body scrolls.
+- Sorting is requested, never performed. The table reports the column and direction the
+  user asked for; the caller sorts and passes new `rows` back. A table that sorts its own
+  copy desynchronises from the caller's paging.
+- Up and Down move `active` by a row and stop at the ends without wrapping. Page Up and
+  Page Down move by the visible row count. Home and End move to the first and last row.
 - Enter activates the `active` row, if the caller supplied an activation handler.
 - Space toggles selection on the `active` row, when selection is on.
 - Activating a header cell cycles its sort: ascending, descending, none.
-- Scrolling follows `active` — the active row is always visible.
-
-## Empty and loading
-
-Empty renders `empty` inside the body, spanning every column, with the header still shown.
-Loading renders `skeleton` rows at the real row height, so the table does not jump.
+- The active row is always visible — scrolling follows `active`.
+- Empty renders `empty` inside the body, spanning every column, with the header still
+  shown. Loading renders `skeleton` rows at the real row height, so the table does not
+  jump.
+- The actions column holds `ghost` icon-buttons only.
 
 ## Accessibility
 
-It is a table with a header row. Header cells report their sort direction. The body is one
-tab stop; arrows move within it. Fine detail is in [anti-patterns.md](../anti-patterns.md).
+Role `table` with a header row; the body is one tab stop and owns the arrows; header cells
+report their sort direction.
 
-## Not normative
+## Platform discretion
 
 Column resizing, column reordering, and virtualisation. A platform may offer them. None is
 required, and a table without them is complete.
