@@ -1,0 +1,10 @@
+# list-box
+
+<!-- PROTOTYPE STUB (wayfinder #64). Body not written; the tree is real so
+     routing and the re-read bill can be measured. -->
+
+Implementations: [solid](../impl/solid/list-box.md) · [ratatui](../impl/ratatui/list-box.md) · [egui](../impl/egui/list-box.md)
+
+Group: Forms.
+
+Not written. See the filled examples: [button](button.md), [combobox](combobox.md), [table](table.md).
