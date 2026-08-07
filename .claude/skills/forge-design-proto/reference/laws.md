@@ -51,7 +51,16 @@ Escape closes the innermost open thing, one layer per press. It never closes two
 
 ## Composition
 
+<!-- #73: a page that names a role spells it in the same breath. The ten class names in
+     this section are the ten unprefixed classes — the one family exempt from the `f`
+     grammar — so they are spelled here rather than left to a lookup. -->
+
 Every screen is `app-shell` > `page-head` > content. Nothing sits outside the shell.
+
+On SolidJS these ten names are literal class names, and they carry no `f` prefix:
+`app-shell`, `app-main`, `page-head`, `page-actions`, `empty`, `eyebrow`,
+`settings-layout`, `settings-nav`, `settings-section`, `settings-row`. Every other Forge
+class does carry the prefix — see `reference/solidjs.md`.
 
 `page-head` carries the title and **one** primary action. Secondary actions go into the
 content or a `dropdown-menu`, never into the head.

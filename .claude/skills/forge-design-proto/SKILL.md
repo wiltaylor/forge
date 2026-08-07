@@ -30,6 +30,10 @@ Read both of these, once, before you write anything:
 
 Neither is optional and neither is summarised here.
 
+Then read the grammar page for the platform you are on, once — `reference/solidjs.md`,
+`reference/ratatui.md`, or `reference/egui.md`. It gives you how a Forge name is spelled
+on that platform. You do not need the other two.
+
 ## For every control, every time
 
 Before you write a control, read **both** of its pages:
@@ -82,15 +86,16 @@ chat-divider, chat-typing, link-card, markdown
 
 ## When a control is missing
 
-Three different situations, three different answers. The implementation page tells you
-which one you are in — read it even when you expect a gap.
+Three different situations, three different answers. When a control page exists but its
+implementation page for your platform does not, look the pair up in `reference/gaps.md` —
+the one place a gap status is recorded.
 
 - **Not in the list above.** Forge does not define it. Build it from `reference/laws.md`
   and say in your summary that you did, so it can be caught and documented.
-- **The page says `status: gap`.** The control exists on other platforms but not this one.
-  The page names the nearest platform that has it. Read *that* implementation page and the
-  control page, then port it.
-- **The page says `status: not-possible`.** The page gives the reason and the substitute.
+- **`gaps.md` says `gap`.** The control exists on other platforms but not this one. Read
+  the implementation page of the nearest platform that has it, and the control page, then
+  port it.
+- **`gaps.md` says `not-possible` or `declined`.** It gives the reason and the substitute.
   Take the substitute. Do not port it anyway.
 
 Forge deliberately says nothing about terminal emulators, VNC, or RDP. Those left this
@@ -113,6 +118,8 @@ that does not resolve is worse than no name — it reads as styled and ships uns
 
 - Control names: the list above, and nowhere else.
 - Token names: `reference/tokens.md`.
-- SolidJS class names: `reference/classes.md`.
+- SolidJS class names: the control's own Shape block, and `reference/solidjs.md` in
+  reverse — you have a class and need to know what owns it.
+- Rust type names: `reference/ratatui.md` and `reference/egui.md`.
 
 If a name you need is in none of them, do not mint one silently. Say so in your summary.
