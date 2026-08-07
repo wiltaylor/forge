@@ -8,9 +8,10 @@ Read this once a session, before the first egui control.
 
 ## Naming
 
-A control's type name is its catalogue name in PascalCase, one to one. `combobox` is
-`ComboBox`, `icon-button` is `IconButton`, `date-picker` is `DatePicker`. No prefix. Never
-invent a name for a control the catalogue does not list.
+A control's type name is its catalogue name in PascalCase, one to one — and the hyphen is
+the only word break. `combobox` is one word, so it is `Combobox`, **not** `ComboBox`.
+`icon-button` has a hyphen, so it is `IconButton`; `date-picker` is `DatePicker`. No
+prefix. Never invent a name for a control the catalogue does not list.
 
 A control with real internal state pairs with a `<Control>State` struct the app owns.
 Value-bound form controls do not: they borrow the app's data directly, as

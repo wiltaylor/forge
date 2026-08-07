@@ -6,15 +6,16 @@
 
 Read this once a session, before the first ratatui control.
 
-Pinned to **ratatui 0.29**. Import crossterm types through `ratatui::crossterm`, never as
+Pinned to **ratatui 0.30**. Import crossterm types through `ratatui::crossterm`, never as
 a direct dependency, so the two versions can never diverge.
 
 ## Naming
 
-A control's type name is its catalogue name in PascalCase, one to one. `combobox` is
-`ComboBox`, `list-box` is `ListBox`, `date-picker` is `DatePicker`. No prefix — the crate
-is the namespace. Never abbreviate, and never invent a name for a control the catalogue
-does not list.
+A control's type name is its catalogue name in PascalCase, one to one — and the hyphen is
+the only word break. `combobox` is one word, so it is `Combobox`, **not** `ComboBox`.
+`list-box` has a hyphen, so it is `ListBox`; `date-picker` is `DatePicker`. No prefix —
+the crate is the namespace. Never abbreviate, and never invent a name for a control the
+catalogue does not list.
 
 A control with persistent state pairs with a second type named `<Control>State` —
 `ComboBoxState`, `TableState`. The app owns the state; the widget is rebuilt each frame.
