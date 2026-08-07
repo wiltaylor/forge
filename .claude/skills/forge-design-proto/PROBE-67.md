@@ -114,18 +114,39 @@ The library ships `'No matches'` as a default.
 
 Fix: state that the line carries text and that the default is supplied, not required.
 
-**3. A control cannot be reopened by mouse after committing.**
+**3. A control cannot be reopened after committing. Three probes of three found it.**
 
 > Focusing the field opens the popup.
 
-After Enter the field still holds focus, so a click fires no focus event and there is no
-route back to the popup. The SolidJS probe found this **by testing, not by reading**, and
-added an open-on-click path.
+After Enter the field still holds focus, so nothing fires a focus event and there is no
+route back to the popup. **Every combobox probe hit this, on all three platforms**, and
+none of them read it on a page — each found it by exercising the control:
+
+- SolidJS added an open-on-click path that re-selects the text.
+- egui fixed it with a one-shot quiet flag after `kittest` reproduced it.
+- ratatui declined to open the popup at launch for the adjacent reason, and routed opening
+  through typing, Down or Tab instead.
 
 The real library has the identical bug — `onFocus` is its only open path. So this is a
-Contract that is incomplete and a library that is wrong in the same place.
+Contract that is incomplete and a library that is wrong in the same place, and the
+convergence is the strongest signal in the run: the entry is not merely silent, it is
+silent in a way that reliably produces a dead control.
 
-**4. The ratatui `default` variant as written is unreadable.**
+**4. Nothing says how `active` is painted, so the egui probe painted it as focus.**
+
+The rendered egui combobox draws the active option with a **2px accent ring** — the exact
+treatment `laws.md` reserves for focus. The page's own Accessibility line says the field
+keeps focus and the popup never takes it, and `laws.md` says exactly one thing holds
+focus. The screen therefore shows two focused things.
+
+The State table defines `active` as "which option the keyboard is on" and stops. Nothing
+on any page says how to render it. SolidJS resolves it with a surface step —
+`.fselect-opt.is-active { background: var(--bg-2) }` — and that fact lives only inside the
+stylesheet, which no page transcribes.
+
+Fix: the control page says what `active` looks like, in the same breath as defining it.
+
+**5. The ratatui `default` variant as written is unreadable.**
 
 > Default is the border colour as a foreground on the surface.
 
@@ -211,13 +232,18 @@ for what the grounding check is for:
   crate's own doc comment. `crates/forge-tui/Cargo.toml` says **0.30**. *A doc comment is
   not a source of truth; the grounding check must read the manifest.*
 - `ratatui.md` and `egui.md` gave `ComboBox` as the worked PascalCase example. The real
-  type is **`Combobox`** — one word, no internal capital. The ratatui probe spotted the
-  collision with the implementation page's Shape block, reasoned that `SKILL.md` routes
-  Rust type names to the grammar page, followed the grammar page, and got the wrong name.
+  type is **`Combobox`** — one word, no internal capital.
 
-The second is the more instructive. **When a name page and an implementation page
-disagree, the routing rule decides — and the routing rule pointed at the wrong one.** #73
-put the name pages in the grounding check's scope; this is why.
+The second is the more instructive, and **both Rust probes made the identical error**.
+Each spotted the collision with the implementation page's Shape block, which spells
+`ComboboxState` correctly; each reasoned that `SKILL.md` routes Rust type names to the
+grammar page; each followed the grammar page and got the wrong name. Neither wavered.
+
+**When a name page and an implementation page disagree, the routing rule decides — and
+the routing rule pointed at the wrong one.** A name page is a single point of failure with
+a 100% hit rate, which is exactly why #73 put the name pages inside the grounding check's
+scope. It also argues the rule should be stated as a rule with its exception spelled: the
+hyphen is the only word break, so a one-word control name stays one word.
 
 Both are fixed on this branch.
 
@@ -229,7 +255,8 @@ Both are fixed on this branch.
 | No "text on solid status" token | Amend the entry — and the library has the same gap |
 | `loading` no-resize guarantee is conditional | Amend the entry |
 | "single empty line" is ambiguous | Amend the entry |
-| No mouse route back to the popup | Amend the entry — and fix the library, if it survives |
+| No route back to the popup after a commit | Amend the entry — and fix the library, if it survives |
+| Nothing says how `active` is painted | Amend the entry |
 | ratatui `default` variant is unreadable | Amend the entry |
 | Every `button` divergence in list 2 | Amend the entry — transcription, which is #68's job |
 | `ComboBox` / ratatui 0.29 | Amend the entry — already done |
@@ -244,5 +271,10 @@ Both are fixed on this branch.
 - Two controls of 73, on the two that were recast. `table` was not probed.
 - Visual fidelity was judged against an invented palette on every platform, so "does it
   look like Forge" was necessarily scored on layout, density and geometry, not hue.
-- egui rendered nothing: the probes built and tested headlessly, but no egui screenshot
-  was taken, so its visual axis rests on code and its own `kittest` tests.
+- All three platforms did render, in the end: SolidJS in a browser against the live
+  gallery, ratatui through `TestBackend`, egui through `kittest` with the `wgpu` and
+  `snapshot` features turned on. The egui fallback the method allowed was not needed.
+- `button` was probed with a Contract that mandates a `loading` state the library has never
+  had. Its page-conformance score is therefore partly a score against fiction — which is
+  the two-list method working, not a flaw in it, but it does mean "did button pass?" has no
+  single answer.
