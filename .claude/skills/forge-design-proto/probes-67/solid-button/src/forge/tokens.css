@@ -1,0 +1,186 @@
+/* Forge tokens — names from reference/tokens.md. Dark is the default. */
+
+:root {
+  /* Surfaces */
+  --bg-0: #0b0d10;
+  --bg-1: #12151a;
+  --bg-2: #181c22;
+  --bg-3: #1f242b;
+  --bg-4: #191d24;
+
+  /* Text */
+  --fg-0: #e6edf3;
+  --fg-1: #b6c2cf;
+  --fg-2: #8b96a3;
+  --fg-3: #5c6773;
+
+  /* Divisions */
+  --border: #262c34;
+  --border-subtle: #1b2027;
+  --border-strong: #39414b;
+
+  /* Accent */
+  --accent: #4c8dff;
+  --accent-hover: #6ba0ff;
+  --accent-press: #3a76e0;
+  --accent-bg: rgba(76, 141, 255, 0.14);
+  --accent-fg: #8fb6ff;
+  --accent-contrast: #06090f;
+
+  /* Status */
+  --success: #3fb950;
+  --success-bg: rgba(63, 185, 80, 0.14);
+  --success-fg: #56d364;
+  --warning: #d29922;
+  --warning-bg: rgba(210, 153, 34, 0.14);
+  --warning-fg: #e3b341;
+  --danger: #e5484d;
+  --danger-bg: rgba(229, 72, 77, 0.14);
+  --danger-fg: #ff6369;
+  --info: #58a6ff;
+  --info-bg: rgba(88, 166, 255, 0.14);
+  --info-fg: #79b8ff;
+
+  /* Geometry */
+  --r-sm: 4px;
+  --r-md: 6px;
+  --r-lg: 8px;
+  --r-pill: 999px;
+
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+  --sp-16: 64px;
+
+  --h-sm: 28px;
+  --h-md: 32px;
+  --h-lg: 36px;
+  --h-xl: 40px;
+
+  --sidebar-w: 240px;
+  --topbar-h: 48px;
+
+  /* Type */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+    "Liberation Mono", monospace;
+
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-base: 14px;
+  --fs-md: 16px;
+  --fs-lg: 18px;
+  --fs-xl: 22px;
+  --fs-2xl: 28px;
+  --fs-3xl: 34px;
+
+  --lh-tight: 1.2;
+  --lh-snug: 1.4;
+  --lh-normal: 1.5;
+  --lh-relaxed: 1.65;
+
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+
+  --tracking-tight: -0.01em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.02em;
+  --tracking-eyebrow: 0.08em;
+
+  /* Motion */
+  --dur-1: 80ms;
+  --dur-2: 160ms;
+  --dur-3: 240ms;
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+
+  /* Shadow — Forge separates layers with a surface step and a border. */
+  --shadow-sm: none;
+  --shadow-md: none;
+}
+
+/* Light theme — the two documented routes. */
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg-0: #ffffff;
+    --bg-1: #f7f8fa;
+    --bg-2: #eef0f4;
+    --bg-3: #e4e7ec;
+    --bg-4: #ffffff;
+
+    --fg-0: #11151a;
+    --fg-1: #3c4551;
+    --fg-2: #66707d;
+    --fg-3: #98a1ad;
+
+    --border: #d8dde3;
+    --border-subtle: #e8ebef;
+    --border-strong: #b8c0c9;
+
+    --accent: #1f6feb;
+    --accent-hover: #1a5fd0;
+    --accent-press: #164fae;
+    --accent-bg: rgba(31, 111, 235, 0.14);
+    --accent-fg: #1a5fd0;
+    --accent-contrast: #ffffff;
+
+    --success: #1a7f37;
+    --success-bg: rgba(26, 127, 55, 0.14);
+    --success-fg: #16652c;
+    --warning: #9a6700;
+    --warning-bg: rgba(154, 103, 0, 0.14);
+    --warning-fg: #7d5400;
+    --danger: #c8232c;
+    --danger-bg: rgba(200, 35, 44, 0.14);
+    --danger-fg: #a51b23;
+    --info: #1f6feb;
+    --info-bg: rgba(31, 111, 235, 0.14);
+    --info-fg: #1a5fd0;
+  }
+}
+
+[data-theme="light"] {
+  --bg-0: #ffffff;
+  --bg-1: #f7f8fa;
+  --bg-2: #eef0f4;
+  --bg-3: #e4e7ec;
+  --bg-4: #ffffff;
+
+  --fg-0: #11151a;
+  --fg-1: #3c4551;
+  --fg-2: #66707d;
+  --fg-3: #98a1ad;
+
+  --border: #d8dde3;
+  --border-subtle: #e8ebef;
+  --border-strong: #b8c0c9;
+
+  --accent: #1f6feb;
+  --accent-hover: #1a5fd0;
+  --accent-press: #164fae;
+  --accent-bg: rgba(31, 111, 235, 0.14);
+  --accent-fg: #1a5fd0;
+  --accent-contrast: #ffffff;
+
+  --success: #1a7f37;
+  --success-bg: rgba(26, 127, 55, 0.14);
+  --success-fg: #16652c;
+  --warning: #9a6700;
+  --warning-bg: rgba(154, 103, 0, 0.14);
+  --warning-fg: #7d5400;
+  --danger: #c8232c;
+  --danger-bg: rgba(200, 35, 44, 0.14);
+  --danger-fg: #a51b23;
+  --info: #1f6feb;
+  --info-bg: rgba(31, 111, 235, 0.14);
+  --info-fg: #1a5fd0;
+}

@@ -1,0 +1,21 @@
+/* spinner — .fspinner. Both spinner pages are stubs, so this is built from
+   laws.md plus the button contract, which puts a spinner in the leading slot. */
+
+.fspinner {
+  width: var(--sp-4);
+  height: var(--sp-4);
+  flex: none;
+  color: currentColor;
+  animation: fspinner-turn calc(var(--dur-3) * 4) linear infinite;
+}
+
+.fbtn-sm .fspinner {
+  width: var(--sp-3);
+  height: var(--sp-3);
+}
+
+@keyframes fspinner-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}

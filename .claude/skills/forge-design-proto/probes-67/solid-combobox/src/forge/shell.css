@@ -1,0 +1,190 @@
+/* The screen skeleton. These classes carry no `f` prefix — they are the one family
+   exempt from the grammar, and laws.md names every one of them. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--bg-0);
+  color: var(--fg-0);
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+  line-height: var(--lh-normal);
+  letter-spacing: var(--tracking-normal);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* app-shell — every screen sits inside it. Nothing sits outside. */
+.app-shell {
+  display: flex;
+  min-height: 100%;
+  background: var(--bg-0);
+}
+
+.app-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: var(--sp-6);
+  gap: var(--sp-6);
+}
+
+/* page-head — the title and one primary action. */
+.page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  min-height: var(--h-xl);
+  padding-bottom: var(--sp-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.page-head h1 {
+  margin: 0;
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg-0);
+}
+
+.page-head p {
+  margin: var(--sp-1) 0 0;
+  font-size: var(--fs-sm);
+  color: var(--fg-2);
+}
+
+.page-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex: none;
+}
+
+/* settings-layout > settings-section > settings-row. */
+.settings-layout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-8);
+  max-width: calc(var(--sp-16) * 14);
+}
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+/* Group related fields under a heading, not inside a card. */
+.settings-section > h2 {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-tight);
+  color: var(--fg-0);
+}
+
+.settings-section > p {
+  margin: 0 0 var(--sp-3);
+  font-size: var(--fs-sm);
+  color: var(--fg-2);
+}
+
+/* One control per row: the label on the left, the control on the right, and the
+   help text under the label. The row lays out the .ffield the control renders,
+   so the label is written once. */
+.settings-row {
+  padding: var(--sp-4) 0;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.settings-row:first-of-type {
+  border-top: 0;
+}
+
+.settings-row > .ffield {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, calc(var(--sp-16) * 6));
+  grid-template-areas:
+    "label control"
+    "help  control";
+  align-items: start;
+  column-gap: var(--sp-6);
+  row-gap: var(--sp-1);
+}
+
+.settings-row > .ffield > .ffield-label {
+  grid-area: label;
+  padding-top: var(--sp-1);
+}
+
+.settings-row > .ffield > .ffield-help {
+  grid-area: help;
+}
+
+.settings-row > .ffield > .fcombo {
+  grid-area: control;
+}
+
+/* Single-column stacking on mobile. A form is one column at every width; the row
+   simply stops putting the label beside the control. */
+@media (max-width: 768px) {
+  .app-main {
+    padding: var(--sp-4);
+    gap: var(--sp-4);
+  }
+
+  .settings-row > .ffield {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "label"
+      "help"
+      "control";
+    row-gap: var(--sp-1);
+  }
+
+  .settings-row > .ffield > .ffield-label {
+    padding-top: 0;
+  }
+
+  .settings-row > .ffield > .fcombo {
+    margin-top: var(--sp-1);
+  }
+}
+
+/* empty — says what to do next. */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  padding: var(--sp-8);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--bg-1);
+  color: var(--fg-2);
+  font-size: var(--fs-sm);
+  text-align: center;
+}
+
+/* eyebrow — the one place all-caps is allowed. */
+.eyebrow {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--fg-2);
+}

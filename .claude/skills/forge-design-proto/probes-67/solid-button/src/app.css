@@ -1,0 +1,44 @@
+/* Screen-level layout for the deploy screen. Not Forge control classes —
+   app-owned names, on Forge tokens. */
+
+.deploy-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.deploy-status {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-4);
+  color: var(--fg-2);
+  font-size: var(--fs-sm);
+}
+
+.deploy-status-value {
+  color: var(--fg-0);
+}
+
+.deploy-status-value.is-active {
+  color: var(--warning-fg);
+}
+
+.deploy-toggle {
+  margin-top: var(--sp-6);
+  padding-top: var(--sp-4);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.deploy-toggle-hint {
+  margin: 0 0 var(--sp-2);
+  color: var(--fg-2);
+  font-size: var(--fs-sm);
+}
+
+@media (max-width: 768px) {
+  .deploy-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

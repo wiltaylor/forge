@@ -1,0 +1,212 @@
+/* Forge tokens — the names come from reference/tokens.md. Nothing here is invented.
+   Dark lives on :root and is the default. Light arrives two ways, so two panes can
+   show both themes at once. */
+
+:root {
+  /* Colour — surfaces */
+  --bg-0: #0c0e12;
+  --bg-1: #12151b;
+  --bg-2: #191d25;
+  --bg-3: #212630;
+  --bg-4: #161a21;
+
+  /* Colour — text */
+  --fg-0: #e4e8ef;
+  --fg-1: #b4bcca;
+  --fg-2: #858e9e;
+  --fg-3: #59616f;
+
+  /* Colour — divisions */
+  --border: #262c36;
+  --border-subtle: #1b2028;
+  --border-strong: #39414f;
+
+  /* Colour — accent */
+  --accent: #4d9dff;
+  --accent-hover: #6cafff;
+  --accent-press: #3a86e0;
+  --accent-bg: rgb(77 157 255 / 14%);
+  --accent-fg: #8ec2ff;
+  --accent-contrast: #06101c;
+
+  /* Colour — status */
+  --success: #3fb950;
+  --success-bg: rgb(63 185 80 / 14%);
+  --success-fg: #6fd47c;
+  --warning: #d29922;
+  --warning-bg: rgb(210 153 34 / 14%);
+  --warning-fg: #e0b352;
+  --danger: #f85149;
+  --danger-bg: rgb(248 81 73 / 14%);
+  --danger-fg: #ff8079;
+  --info: #58a6ff;
+  --info-bg: rgb(88 166 255 / 14%);
+  --info-fg: #85c0ff;
+
+  /* Geometry — radius */
+  --r-sm: 4px;
+  --r-md: 6px;
+  --r-lg: 8px;
+  --r-pill: 999px;
+
+  /* Geometry — spacing. There is no --sp-7, -9, -11 or -13..15. */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+  --sp-16: 64px;
+
+  /* Geometry — control heights and shell */
+  --h-sm: 28px;
+  --h-md: 32px;
+  --h-lg: 36px;
+  --h-xl: 40px;
+  --sidebar-w: 240px;
+  --topbar-h: 48px;
+
+  /* Type */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-base: 14px;
+  --fs-md: 16px;
+  --fs-lg: 18px;
+  --fs-xl: 22px;
+  --fs-2xl: 28px;
+  --fs-3xl: 34px;
+  --lh-tight: 1.2;
+  --lh-snug: 1.4;
+  --lh-normal: 1.5;
+  --lh-relaxed: 1.65;
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+  --tracking-tight: -0.01em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.02em;
+  --tracking-eyebrow: 0.08em;
+
+  /* Motion */
+  --dur-1: 80ms;
+  --dur-2: 160ms;
+  --dur-3: 240ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Shadow — both resolve to none, in both themes. Forge separates layers with a
+     surface step and a border. */
+  --shadow-sm: none;
+  --shadow-md: none;
+
+  color-scheme: dark;
+}
+
+/* Light — the two routes, holding the same names. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg-0: #f4f6f8;
+    --bg-1: #ffffff;
+    --bg-2: #eceff3;
+    --bg-3: #e0e5ec;
+    --bg-4: #ffffff;
+
+    --fg-0: #11151b;
+    --fg-1: #3a4552;
+    --fg-2: #626c7a;
+    --fg-3: #98a1ae;
+
+    --border: #d7dce3;
+    --border-subtle: #e7eaef;
+    --border-strong: #b6bfca;
+
+    --accent: #1f6feb;
+    --accent-hover: #3b83f0;
+    --accent-press: #1859c4;
+    --accent-bg: rgb(31 111 235 / 14%);
+    --accent-fg: #1859c4;
+    --accent-contrast: #ffffff;
+
+    --success: #1a7f37;
+    --success-bg: rgb(26 127 55 / 14%);
+    --success-fg: #16642c;
+    --warning: #9a6700;
+    --warning-bg: rgb(154 103 0 / 14%);
+    --warning-fg: #7d5400;
+    --danger: #cf222e;
+    --danger-bg: rgb(207 34 46 / 14%);
+    --danger-fg: #a91622;
+    --info: #0969da;
+    --info-bg: rgb(9 105 218 / 14%);
+    --info-fg: #0757b0;
+
+    color-scheme: light;
+  }
+}
+
+[data-theme="light"] {
+  --bg-0: #f4f6f8;
+  --bg-1: #ffffff;
+  --bg-2: #eceff3;
+  --bg-3: #e0e5ec;
+  --bg-4: #ffffff;
+
+  --fg-0: #11151b;
+  --fg-1: #3a4552;
+  --fg-2: #626c7a;
+  --fg-3: #98a1ae;
+
+  --border: #d7dce3;
+  --border-subtle: #e7eaef;
+  --border-strong: #b6bfca;
+
+  --accent: #1f6feb;
+  --accent-hover: #3b83f0;
+  --accent-press: #1859c4;
+  --accent-bg: rgb(31 111 235 / 14%);
+  --accent-fg: #1859c4;
+  --accent-contrast: #ffffff;
+
+  --success: #1a7f37;
+  --success-bg: rgb(26 127 55 / 14%);
+  --success-fg: #16642c;
+  --warning: #9a6700;
+  --warning-bg: rgb(154 103 0 / 14%);
+  --warning-fg: #7d5400;
+  --danger: #cf222e;
+  --danger-bg: rgb(207 34 46 / 14%);
+  --danger-fg: #a91622;
+  --info: #0969da;
+  --info-bg: rgb(9 105 218 / 14%);
+  --info-fg: #0757b0;
+
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+/* Coarse pointers raise the control heights. */
+@media (pointer: coarse) {
+  :root {
+    --h-sm: 32px;
+    --h-md: 40px;
+    --h-lg: 44px;
+    --h-xl: 48px;
+  }
+}
+
+/* Reduced motion drops the duration to zero. The state change stays. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-1: 0ms;
+    --dur-2: 0ms;
+    --dur-3: 0ms;
+  }
+}

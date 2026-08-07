@@ -1,0 +1,200 @@
+/* combobox — the field is .fcombo, and the popup rows are .fselect-pop / .fselect-opt,
+   shared with select. The empty line is .fcmd-empty, shared with command. Nothing here
+   is minted; every class comes from the Shape block. */
+
+/* .ffield wraps every form control that has a label and help text. */
+.ffield {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  min-width: 0;
+}
+
+.ffield-label {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-snug);
+  color: var(--fg-1);
+}
+
+.ffield-help {
+  font-size: var(--fs-sm);
+  line-height: var(--lh-snug);
+  color: var(--fg-2);
+}
+
+.ffield-help.is-error {
+  color: var(--danger);
+}
+
+/* The field frame. */
+.ffield-input {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  height: var(--h-md);
+  padding: 0 var(--sp-2);
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--fg-0);
+  cursor: text;
+  transition: border-color var(--dur-1) var(--ease-out),
+    box-shadow var(--dur-1) var(--ease-out);
+}
+
+.ffield-input:hover {
+  border-color: var(--border-strong);
+}
+
+/* Focus is a 2px accent ring, and it is never removed. */
+.ffield-input:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-bg);
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.ffield-input.is-error {
+  border-color: var(--danger);
+}
+
+.ffield-input.is-disabled {
+  background: var(--bg-2);
+  color: var(--fg-3);
+  cursor: not-allowed;
+}
+
+/* The search glyph and the chevron. Real icons in currentColor, sized from a token. */
+.ffield-input > svg,
+.fselect-check > svg {
+  flex: none;
+  width: var(--sp-4);
+  height: var(--sp-4);
+}
+
+.ffield-input > svg {
+  color: var(--fg-2);
+}
+
+.ffield-input > input {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+  line-height: var(--lh-snug);
+  text-overflow: ellipsis;
+}
+
+.ffield-input > input:focus {
+  outline: none;
+}
+
+.ffield-input > input::placeholder {
+  color: var(--fg-3);
+}
+
+.ffield-input > input:disabled {
+  cursor: not-allowed;
+}
+
+/* The field owns the popup, so the popup is positioned against it. */
+.fcombo {
+  position: relative;
+  min-width: 0;
+}
+
+/* The popup — a plain child of .fcombo, positioned by CSS. */
+.fselect-pop {
+  position: absolute;
+  top: calc(100% + var(--sp-1));
+  left: 0;
+  right: 0;
+  z-index: 20;
+  max-height: calc(var(--h-md) * 9);
+  overflow-y: auto;
+  padding: var(--sp-1);
+  background: var(--bg-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  box-shadow: var(--shadow-md);
+  animation: fselect-pop-in var(--dur-2) var(--ease-out);
+}
+
+@keyframes fselect-pop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Rows are 32px and they truncate; they never grow to fit. */
+.fselect-opt {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  height: var(--h-md);
+  padding: 0 var(--sp-2);
+  border-radius: var(--r-sm);
+  color: var(--fg-0);
+  font-size: var(--fs-base);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--dur-1) var(--ease-out),
+    color var(--dur-1) var(--ease-out);
+}
+
+.fselect-opt > span:first-child {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fselect-opt:hover {
+  background: var(--bg-2);
+}
+
+.fselect-opt.is-active {
+  background: var(--bg-3);
+}
+
+.fselect-opt.is-selected {
+  color: var(--accent-fg);
+}
+
+.fselect-opt.is-disabled {
+  color: var(--fg-3);
+  cursor: not-allowed;
+}
+
+.fselect-opt.is-disabled:hover {
+  background: transparent;
+}
+
+.fselect-opt.is-disabled.is-active {
+  background: var(--bg-2);
+}
+
+.fselect-check {
+  flex: none;
+  display: inline-flex;
+  color: var(--accent);
+}
+
+/* The empty line, in place of the option list. */
+.fcmd-empty {
+  display: flex;
+  align-items: center;
+  min-height: var(--h-md);
+  padding: 0 var(--sp-2);
+  color: var(--fg-2);
+  font-size: var(--fs-sm);
+}

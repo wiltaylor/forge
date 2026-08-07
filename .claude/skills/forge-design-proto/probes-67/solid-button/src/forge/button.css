@@ -1,0 +1,140 @@
+/* button — .fbtn .fbtn-primary .fbtn-ghost .fbtn-danger .fbtn-sm */
+
+.fbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  height: var(--h-md);
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--bg-1);
+  color: var(--fg-0);
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--tracking-normal);
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color var(--dur-2) var(--ease-out),
+    border-color var(--dur-2) var(--ease-out),
+    color var(--dur-2) var(--ease-out);
+}
+
+.fbtn-sm {
+  height: var(--h-sm);
+  padding: 0 var(--sp-2);
+  font-size: var(--fs-sm);
+}
+
+.fbtn:hover:not(:disabled) {
+  background: var(--bg-2);
+  border-color: var(--border-strong);
+}
+
+.fbtn:active:not(:disabled) {
+  background: var(--bg-3);
+}
+
+.fbtn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.fbtn:disabled {
+  background: var(--bg-1);
+  border-color: var(--border-subtle);
+  color: var(--fg-3);
+  cursor: not-allowed;
+}
+
+/* primary — the accent solid, on-accent text */
+
+.fbtn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.fbtn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.fbtn-primary:active:not(:disabled) {
+  background: var(--accent-press);
+  border-color: var(--accent-press);
+}
+
+.fbtn-primary:disabled {
+  background: var(--bg-2);
+  border-color: var(--border-subtle);
+  color: var(--fg-3);
+}
+
+/* ghost — no fill until hover, then the raised surface */
+
+.fbtn-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--fg-1);
+}
+
+.fbtn-ghost:hover:not(:disabled) {
+  background: var(--bg-1);
+  border-color: var(--border);
+  color: var(--fg-0);
+}
+
+.fbtn-ghost:active:not(:disabled) {
+  background: var(--bg-2);
+}
+
+.fbtn-ghost:disabled {
+  background: transparent;
+  border-color: transparent;
+  color: var(--fg-3);
+}
+
+/* danger — the danger solid */
+
+.fbtn-danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: var(--accent-contrast);
+}
+
+.fbtn-danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) 86%, var(--fg-0));
+  border-color: color-mix(in srgb, var(--danger) 86%, var(--fg-0));
+}
+
+.fbtn-danger:active:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) 86%, var(--bg-0));
+  border-color: color-mix(in srgb, var(--danger) 86%, var(--bg-0));
+}
+
+.fbtn-danger:disabled {
+  background: var(--bg-2);
+  border-color: var(--border-subtle);
+  color: var(--fg-3);
+}
+
+@media (pointer: coarse) {
+  .fbtn {
+    height: var(--h-lg);
+  }
+
+  .fbtn-sm {
+    height: var(--h-md);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fbtn {
+    transition-duration: 0ms;
+  }
+}
