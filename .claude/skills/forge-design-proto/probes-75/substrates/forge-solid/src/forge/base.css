@@ -1,0 +1,32 @@
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg-0);
+  color: var(--fg-0);
+  font: 13px/1.5 ui-sans-serif, system-ui, sans-serif;
+}
+
+.app-shell { min-height: 100vh; display: flex; flex-direction: column; }
+
+.app-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  height: 48px; padding: 0 var(--space-4);
+  background: var(--bg-1); border-bottom: 1px solid var(--border);
+}
+
+.page { padding: var(--space-4); }
+.page-title { font-size: 15px; font-weight: 600; margin: 0 0 var(--space-3); }
+.eyebrow { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--fg-2); }
+.muted { color: var(--fg-1); }
+.stack { list-style: none; margin: 0; padding: 0; }
+
+.row {
+  display: grid; grid-template-columns: 1fr 1fr auto; gap: var(--space-3);
+  align-items: center; height: var(--control-h);
+  border-bottom: 1px solid var(--border);
+}
+
+.fbadge { padding: 0 var(--space-2); border-radius: var(--radius); font-size: 11px; }
+.fbadge-ok { color: var(--ok); background: color-mix(in oklab, var(--ok) 14%, transparent); }
+.fbadge-warn { color: var(--warn); background: color-mix(in oklab, var(--warn) 14%, transparent); }

@@ -1,0 +1,167 @@
+{
+  "_note": "Probe set for wayfinder #75. Asks fixed before any result was seen. 'expect' is the prediction under test, not a filter applied afterwards.",
+  "_model": "opus",
+  "_runs_per_probe": 3,
+  "probes": [
+    {
+      "id": "P1-solid-control",
+      "kind": "positive",
+      "substrate": "forge-solid",
+      "claim": "named control, SolidJS",
+      "expect": "fire",
+      "ask": "Add a command palette to the admin console."
+    },
+    {
+      "id": "P2-ratatui-control",
+      "kind": "positive",
+      "substrate": "forge-ratatui",
+      "claim": "ratatui binds to a TUI ask that never names the library",
+      "expect": "fire",
+      "ask": "Build a settings screen for the TUI."
+    },
+    {
+      "id": "P3-egui-control",
+      "kind": "positive",
+      "substrate": "forge-egui",
+      "claim": "egui binds to a desktop ask that never names the library",
+      "expect": "fire",
+      "ask": "Add a data table to the desktop app."
+    },
+    {
+      "id": "P4-vague",
+      "kind": "positive",
+      "substrate": "forge-solid",
+      "claim": "a vague ask reaches the skill without naming a control or a quoted trigger",
+      "expect": "fire",
+      "ask": "The new alerts panel looks off next to the rest of the app. Tidy it up."
+    },
+    {
+      "id": "P5-backend-forge",
+      "kind": "positive",
+      "substrate": "plain-axum",
+      "claim": "the word Forge is the sole discriminator \u2014 same repo as N1, only the ask differs",
+      "expect": "fire",
+      "ask": "Wire up the Forge doc store in axum."
+    },
+    {
+      "id": "P6-tauri",
+      "kind": "positive",
+      "substrate": "forge-tauri",
+      "claim": "Tauri v2 IPC transport and desktop packaging",
+      "expect": "fire",
+      "ask": "Package this as a Tauri v2 desktop app and wire the IPC transport."
+    },
+    {
+      "id": "P7-chat",
+      "kind": "positive",
+      "substrate": "forge-solid",
+      "claim": "dropped phrase \"chat UI\" \u2014 prose noun fires as well as a quoted trigger",
+      "expect": "fire",
+      "ask": "Build a chat UI with an assistant transcript."
+    },
+    {
+      "id": "P8-chart",
+      "kind": "positive",
+      "substrate": "forge-solid",
+      "claim": "dropped phrase \"add a chart\"",
+      "expect": "fire",
+      "ask": "Add a chart showing request latency over the last hour."
+    },
+    {
+      "id": "P9-diff",
+      "kind": "positive",
+      "substrate": "forge-solid",
+      "claim": "dropped phrase \"show a diff\"",
+      "expect": "fire",
+      "ask": "Show a diff between the two config versions."
+    },
+    {
+      "id": "P10-node-editor",
+      "kind": "positive",
+      "substrate": "forge-solid",
+      "claim": "dropped phrase \"build a node editor\"",
+      "expect": "fire",
+      "ask": "Build a node editor for the pipeline graph."
+    },
+    {
+      "id": "N1-axum-sse",
+      "kind": "negative",
+      "substrate": "plain-axum",
+      "claim": "the riskiest line \u2014 generic backend work must not fire",
+      "expect": "silent",
+      "ask": "Add an SSE endpoint to my axum server."
+    },
+    {
+      "id": "N2-fastapi",
+      "kind": "negative",
+      "substrate": "plain-fastapi",
+      "claim": "generic FastAPI work must not fire",
+      "expect": "silent",
+      "ask": "Build a FastAPI service that exposes a documents table."
+    },
+    {
+      "id": "N3-react",
+      "kind": "negative",
+      "substrate": "plain-react",
+      "claim": "a non-SolidJS UI framework must not fire",
+      "expect": "silent",
+      "ask": "Create a React component for the user profile card."
+    },
+    {
+      "id": "N4-terminal",
+      "kind": "negative",
+      "substrate": "forge-solid",
+      "claim": "the excluded vertical, met with silence \u2014 hardest case, inside a Forge repo",
+      "expect": "silent",
+      "ask": "Add a terminal emulator pane to the app."
+    },
+    {
+      "id": "N5-vnc",
+      "kind": "negative",
+      "substrate": "forge-solid",
+      "claim": "the excluded vertical, met with silence \u2014 inside a Forge repo",
+      "expect": "silent",
+      "ask": "Add a VNC viewer to the remote sessions page."
+    },
+    {
+      "id": "N6-rdp",
+      "kind": "negative",
+      "substrate": "forge-solid",
+      "claim": "the excluded vertical, met with silence \u2014 inside a Forge repo",
+      "expect": "silent",
+      "ask": "Add an RDP viewer so operators can reach a Windows host."
+    },
+    {
+      "id": "X1-sse-in-forge-repo",
+      "kind": "cross-check",
+      "substrate": "forge-solid",
+      "claim": "false fire where it is most likely and most damaging \u2014 generic backend ask inside a Forge repo",
+      "expect": "silent",
+      "ask": "Add an SSE endpoint to the server so the UI can stream updates."
+    },
+    {
+      "id": "P4b-vague",
+      "kind": "positive",
+      "substrate": "forge-solid-alerts",
+      "claim": "re-probe of P4 \u2014 same ask, referent now present",
+      "expect": "fire",
+      "ask": "The new alerts panel looks off next to the rest of the app. Tidy it up."
+    },
+    {
+      "id": "P9b-diff-original",
+      "kind": "positive",
+      "substrate": "forge-solid-configs",
+      "claim": "re-probe of P9 \u2014 original ask unchanged, referent now present",
+      "expect": "fire",
+      "ask": "Show a diff between the two config versions."
+    },
+    {
+      "id": "P9c-diff-ui",
+      "kind": "positive",
+      "substrate": "forge-solid-configs",
+      "claim": "P9 with the UI intent made explicit \u2014 isolates ambiguous-ask from missing-referent",
+      "expect": "fire",
+      "ask": "Show a diff between the two config versions in the UI."
+    }
+  ]
+}

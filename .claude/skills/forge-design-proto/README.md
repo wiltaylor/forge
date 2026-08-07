@@ -4,7 +4,7 @@ Branch `prototype/page-templates`, built for
 [The control-page and implementation-page templates](https://github.com/wiltaylor/forge/issues/66),
 a child of [Map: Forge as skills, not a library](https://github.com/wiltaylor/forge/issues/61).
 
-Forked from `prototype/skill-routing`, which answered #64. **Do not merge either to
+Forked from `prototype/skill-routing`, which answered #64. **Do not merge any of these to
 `main`.**
 
 ## What this branch adds

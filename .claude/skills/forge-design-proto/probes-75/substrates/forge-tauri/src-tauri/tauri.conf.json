@@ -1,0 +1,9 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "opsview",
+  "version": "0.1.0",
+  "identifier": "dev.opsview.desktop",
+  "build": { "frontendDist": "../dist", "devUrl": "http://localhost:5173" },
+  "app": { "windows": [{ "title": "opsview", "width": 1200, "height": 800 }] },
+  "bundle": { "active": true, "targets": "all" }
+}

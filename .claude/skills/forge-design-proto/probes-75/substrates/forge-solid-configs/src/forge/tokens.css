@@ -1,0 +1,22 @@
+:root {
+  --bg-0: #0B0D10;
+  --bg-1: #11141A;
+  --bg-2: #171B22;
+  --border: #262C36;
+  --fg-0: #E6EAF0;
+  --fg-1: #A8B2C0;
+  --fg-2: #6B7688;
+  --accent: oklch(0.62 0.16 250);
+  --accent-contrast: #FFFFFF;
+  --ok: #3FB950;
+  --warn: #D29922;
+  --danger: #F85149;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --control-h: 32px;
+  --radius: 4px;
+  --dur-fast: 120ms;
+}

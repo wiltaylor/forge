@@ -1,0 +1,8 @@
+{
+  "name": "opsview-web",
+  "private": true,
+  "type": "module",
+  "scripts": { "dev": "vite", "build": "vite build" },
+  "dependencies": { "solid-js": "^1.9.3" },
+  "devDependencies": { "vite": "^6.0.3", "vite-plugin-solid": "^2.11.0", "typescript": "^5.7.2" }
+}
