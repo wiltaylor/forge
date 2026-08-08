@@ -1,6 +1,6 @@
 use crate::event::{in_area, is_press, left_down, scroll_delta, Outcome};
 use crate::text;
-use crate::theme::{default_theme, Theme};
+use crate::theme::{resolve_theme, Theme};
 use crate::widgets::forms::{Input, InputState};
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent, MouseEventKind};
@@ -179,7 +179,7 @@ impl<'a> StatefulWidget for Palette<'a> {
         if area.is_empty() {
             return;
         }
-        let t = self.theme.unwrap_or_else(|| default_theme());
+        let t = &*resolve_theme(self.theme);
         // First render with an untouched filter: rank everything.
         if state.filtered.is_empty() && state.input.value().is_empty() {
             state.filter(self.commands);

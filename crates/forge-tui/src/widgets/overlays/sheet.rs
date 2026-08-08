@@ -1,4 +1,4 @@
-use crate::theme::{default_theme, Theme};
+use crate::theme::{resolve_theme, Theme};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
@@ -75,7 +75,7 @@ impl<'a> Sheet<'a> {
     }
 
     pub fn inner(&self, area: Rect) -> Rect {
-        let t = self.theme.unwrap_or_else(|| default_theme());
+        let t = &*resolve_theme(self.theme);
         self.block(t).inner(self.panel(area))
     }
 }
@@ -85,7 +85,7 @@ impl Widget for Sheet<'_> {
         if area.is_empty() {
             return;
         }
-        let t = self.theme.unwrap_or_else(|| default_theme());
+        let t = &*resolve_theme(self.theme);
         let panel = self.panel(area);
         Clear.render(panel, buf);
         self.block(t).render(panel, buf);

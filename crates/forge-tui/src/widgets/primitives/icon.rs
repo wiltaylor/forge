@@ -1,4 +1,4 @@
-use crate::theme::{default_theme, Theme};
+use crate::theme::{resolve_theme, Theme};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::{Color, Style};
@@ -81,7 +81,7 @@ impl Widget for Icon<'_> {
         if area.is_empty() {
             return;
         }
-        let t = self.theme.unwrap_or_else(|| default_theme());
+        let t = &*resolve_theme(self.theme);
         let color = self.color.unwrap_or(t.fg[1]);
         buf.set_string(area.x, area.y, self.glyph.as_str(), Style::new().fg(color));
     }

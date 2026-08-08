@@ -1,5 +1,5 @@
 use crate::event::{clicked, is_press, Outcome};
-use crate::theme::{default_theme, Theme};
+use crate::theme::{resolve_theme, Theme};
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
 use ratatui::layout::Rect;
@@ -114,7 +114,7 @@ impl<'a> StatefulWidget for Pagination<'a> {
         if area.is_empty() || state.pages == 0 {
             return;
         }
-        let t = self.theme.unwrap_or_else(|| default_theme());
+        let t = &*resolve_theme(self.theme);
         let right = area.x + area.width;
         let mut x = area.x;
         let arrow = |enabled: bool| {

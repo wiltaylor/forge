@@ -1,4 +1,4 @@
-use crate::theme::{default_theme, Theme};
+use crate::theme::{resolve_theme, Theme};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
@@ -54,7 +54,7 @@ impl<'a> Card<'a> {
 
     /// The content region inside the border and padding.
     pub fn inner(&self, area: Rect) -> Rect {
-        let t = self.theme.unwrap_or_else(|| default_theme());
+        let t = &*resolve_theme(self.theme);
         self.block(t).inner(area)
     }
 }
@@ -64,7 +64,7 @@ impl Widget for Card<'_> {
         if area.is_empty() {
             return;
         }
-        let t = self.theme.unwrap_or_else(|| default_theme());
+        let t = &*resolve_theme(self.theme);
         self.block(t).render(area, buf);
     }
 }

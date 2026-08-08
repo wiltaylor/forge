@@ -1,4 +1,4 @@
-use crate::theme::{chart_series, default_theme, Theme};
+use crate::theme::{chart_series, resolve_theme, Theme};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
@@ -44,7 +44,7 @@ impl Widget for Avatar<'_> {
         if area.is_empty() {
             return;
         }
-        let t = self.theme.unwrap_or_else(|| default_theme());
+        let t = &*resolve_theme(self.theme);
         let hues = chart_series(t);
         let hash: usize = self
             .name

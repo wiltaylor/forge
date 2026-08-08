@@ -1,6 +1,6 @@
 use crate::event::{in_area, is_press, left_down, Outcome};
 use crate::text;
-use crate::theme::{default_theme, Severity, Theme};
+use crate::theme::{resolve_theme, Severity, Theme};
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent, MouseEventKind};
 use ratatui::layout::Rect;
@@ -142,7 +142,7 @@ impl<'a> StatefulWidget for Slider<'a> {
         if area.is_empty() {
             return;
         }
-        let t = self.theme.unwrap_or_else(|| default_theme());
+        let t = &*resolve_theme(self.theme);
         let fill = if self.disabled {
             t.fg[3]
         } else {

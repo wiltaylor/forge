@@ -4,7 +4,7 @@
 //! elbow lines through the gaps.
 
 use crate::text;
-use crate::theme::{default_theme, Theme};
+use crate::theme::{resolve_theme, Theme};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::Style;
@@ -110,7 +110,7 @@ impl Widget for Flowchart<'_> {
         if area.is_empty() || self.nodes.is_empty() {
             return;
         }
-        let t = self.theme.unwrap_or_else(|| default_theme());
+        let t = &*resolve_theme(self.theme);
         let layers = self.layers();
         let n_layers = layers.values().max().copied().unwrap_or(0) + 1;
 

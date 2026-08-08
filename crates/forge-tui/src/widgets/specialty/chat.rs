@@ -4,7 +4,7 @@
 
 use crate::event::{clicked, in_area, is_press, scroll_delta, Outcome};
 use crate::text;
-use crate::theme::{default_theme, Theme};
+use crate::theme::{resolve_theme, Theme};
 use crate::widgets::forms::{Textarea, TextareaState};
 use crate::widgets::specialty::markdown::markdown_lines;
 use ratatui::buffer::Buffer;
@@ -298,7 +298,7 @@ impl<'a> StatefulWidget for ChatView<'a> {
         if area.is_empty() {
             return;
         }
-        let t = self.theme.unwrap_or_else(|| default_theme());
+        let t = &*resolve_theme(self.theme);
         let width = area.width as usize;
         let mut lines: Vec<Line<'static>> = Vec::new();
         for item in self.items {
@@ -395,7 +395,7 @@ impl<'a> StatefulWidget for Composer<'a> {
     type State = ComposerState;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut ComposerState) {
-        let t = self.theme.unwrap_or_else(|| default_theme());
+        let t = &*resolve_theme(self.theme);
         Textarea::new()
             .placeholder(self.placeholder)
             .focused(self.focused)
@@ -489,7 +489,7 @@ impl<'a> StatefulWidget for ChatPrompt<'a> {
         if area.is_empty() {
             return;
         }
-        let t = self.theme.unwrap_or_else(|| default_theme());
+        let t = &*resolve_theme(self.theme);
         buf.set_string(
             area.x,
             area.y,

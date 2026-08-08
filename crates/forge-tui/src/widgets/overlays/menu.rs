@@ -1,6 +1,6 @@
 use crate::event::{in_area, is_press, left_down, Outcome};
 use crate::text;
-use crate::theme::{default_theme, Theme};
+use crate::theme::{resolve_theme, Theme};
 use crate::widgets::overlays::place;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent, MouseEventKind};
@@ -215,7 +215,7 @@ impl<'a> StatefulWidget for DropdownMenu<'a> {
         if area.is_empty() {
             return;
         }
-        let t = self.theme.unwrap_or_else(|| default_theme());
+        let t = &*resolve_theme(self.theme);
         let panel = place(self.anchor, self.size(), area);
         state.panel = panel;
         Clear.render(panel, buf);

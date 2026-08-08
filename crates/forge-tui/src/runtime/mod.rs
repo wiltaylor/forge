@@ -22,7 +22,7 @@ pub use toaster::{Toast, ToastHandle, Toaster};
 
 use crate::error::Result;
 use crate::event::is_press;
-use crate::theme::{set_default_theme, ColorMode, Theme};
+use crate::theme::{set_ambient_theme, set_default_theme, ColorMode, Theme};
 use ratatui::backend::CrosstermBackend;
 use ratatui::crossterm::event::{
     self, DisableBracketedPaste, DisableMouseCapture, EnableBracketedPaste, EnableMouseCapture,
@@ -72,6 +72,11 @@ impl Default for RunOptions {
 /// Per-run context handed to every [`App`] callback.
 pub struct Ctx {
     /// The active theme, already quantized for the terminal's color mode.
+    ///
+    /// This is what the runtime paints its own chrome with. Assigning it does
+    /// *not* reach a widget that carries no explicit `.theme(...)`: those paint
+    /// with the ambient theme, so an app that switches theme mid-run must also
+    /// call [`set_ambient_theme`](crate::theme::set_ambient_theme).
     pub theme: Theme,
     pub focus: FocusRing,
     pub overlays: OverlayStack,
@@ -223,12 +228,18 @@ impl Drop for TerminalGuard {
 
 /// Run an [`App`] until it calls [`Ctx::quit`] (or the user hits Ctrl+C).
 ///
-/// Detects the terminal's color mode, quantizes the theme once, installs it
-/// as the process default, and drives the draw/event/tick loop. Event routing
-/// is top-down: topmost overlay → global keybinds → `App::on_event`.
+/// Detects the terminal's color mode, quantizes the theme once, installs it as
+/// the ambient theme, and drives the draw/event/tick loop. Event routing is
+/// top-down: topmost overlay → global keybinds → `App::on_event`.
+///
+/// An app that switches theme mid-run installs the new one with
+/// [`set_ambient_theme`](crate::theme::set_ambient_theme); every widget built
+/// without an explicit `.theme(...)` follows on the next frame. Assigning
+/// [`Ctx::theme`] alone repaints the runtime's chrome and nothing else.
 pub fn run(app: &mut dyn App, theme: Theme, opts: RunOptions) -> Result<()> {
     let mode = opts.color_mode.unwrap_or_else(ColorMode::detect);
     let theme = theme.quantized(mode);
+    set_ambient_theme(theme.clone());
     let _ = set_default_theme(theme.clone());
 
     let guard = TerminalGuard::new(&opts)?;

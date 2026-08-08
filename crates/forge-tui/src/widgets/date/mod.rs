@@ -1,7 +1,7 @@
 //! Calendar + DatePicker (cargo feature `calendar`, uses the `time` crate).
 
 use crate::event::{clicked, in_area, is_press, left_down, scroll_delta, Outcome};
-use crate::theme::{default_theme, Theme};
+use crate::theme::{resolve_theme, Theme};
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
 use ratatui::layout::Rect;
@@ -184,7 +184,7 @@ impl<'a> StatefulWidget for Calendar<'a> {
         if area.width < 21 || area.height < 3 {
             return;
         }
-        let t = self.theme.unwrap_or_else(|| default_theme());
+        let t = &*resolve_theme(self.theme);
         let (year, month) = state.view;
         // Header.
         let header = format!("{} {}", month_name(month), year);
@@ -350,7 +350,7 @@ impl<'a> StatefulWidget for DatePicker<'a> {
         if area.is_empty() {
             return;
         }
-        let t = self.theme.unwrap_or_else(|| default_theme());
+        let t = &*resolve_theme(self.theme);
         let edge = if self.focused && !self.disabled {
             t.accent.base
         } else {

@@ -1,5 +1,15 @@
-use forge_tui::theme::{blend, chart_series, color::nearest_indexed, ColorMode, Severity, Theme};
+use forge_tui::theme::{
+    ambient_theme, blend, chart_series, color::nearest_indexed, ColorMode, Severity, Theme,
+};
 use ratatui::style::Color;
+
+/// Nothing in this test binary installs a theme, so this asserts the state a
+/// widget paints in before the runtime gets a chance to. The swap tests live in
+/// `ambient_theme.rs`, which is its own binary and cannot reach this one.
+#[test]
+fn the_ambient_theme_starts_dark() {
+    assert_eq!(ambient_theme(), Theme::dark());
+}
 
 /// The five near-black dark backgrounds must stay distinct after 256-color
 /// quantization — this is what the grayscale-ramp-aware quantizer is for.

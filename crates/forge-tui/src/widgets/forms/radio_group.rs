@@ -1,6 +1,6 @@
 use crate::event::{clicked, is_press, Outcome};
 use crate::text;
-use crate::theme::{default_theme, Theme};
+use crate::theme::{resolve_theme, Theme};
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
 use ratatui::layout::Rect;
@@ -140,7 +140,7 @@ impl<'a> StatefulWidget for RadioGroup<'a> {
         if area.is_empty() {
             return;
         }
-        let t = self.theme.unwrap_or_else(|| default_theme());
+        let t = &*resolve_theme(self.theme);
         if self.horizontal {
             let mut x = area.x;
             for (i, item) in self.items.iter().enumerate() {
