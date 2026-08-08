@@ -103,7 +103,7 @@ fn input_submit_and_cancel() {
 fn checkbox_and_toggle_toggle_on_space() {
     let mut c = CheckboxState::new(false);
     assert_eq!(c.handle_key(key(KeyCode::Char(' '))), Outcome::Changed);
-    assert!(c.checked);
+    assert!(c.on);
     let mut t = ToggleState::new(true);
     assert_eq!(t.handle_key(key(KeyCode::Enter)), Outcome::Changed);
     assert!(!t.on);

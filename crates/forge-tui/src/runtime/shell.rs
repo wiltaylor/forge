@@ -3,10 +3,10 @@
 //! collapses to a slim rail on narrow terminals (or on Ctrl+B, the toggle
 //! the shell's `handle_key` implements).
 
-use crate::event::{clicked, is_press, Outcome};
+use crate::event::{is_press, Outcome};
 use crate::text;
 use crate::theme::{Surface, TextRole, Theme};
-use crate::widgets::paint;
+use crate::widgets::{paint, RectCache};
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent};
 use ratatui::layout::Rect;
@@ -35,7 +35,7 @@ pub struct ShellState {
     pub collapsed: Option<bool>,
     nav_len: usize,
     content: Rect,
-    item_rects: Vec<Rect>,
+    item_rects: RectCache,
 }
 
 impl ShellState {
@@ -50,18 +50,7 @@ impl ShellState {
 
     /// Click a nav item to activate it.
     pub fn handle_mouse(&mut self, ev: &MouseEvent) -> Outcome {
-        for (i, rect) in self.item_rects.iter().enumerate() {
-            if clicked(ev, *rect) {
-                let changed = self.selected != i;
-                self.selected = i;
-                return if changed {
-                    Outcome::Changed
-                } else {
-                    Outcome::Consumed
-                };
-            }
-        }
-        Outcome::Ignored
+        self.item_rects.select(ev, &mut self.selected)
     }
 
     /// ↑/↓ move the active nav item; Enter submits it; Ctrl+B toggles the

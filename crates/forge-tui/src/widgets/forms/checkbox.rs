@@ -1,52 +1,16 @@
-use crate::event::{clicked, is_press, Outcome};
 use crate::text;
 use crate::theme::TextRole;
+use crate::widgets::hit::ToggleState;
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
-use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
 use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
 use ratatui::widgets::StatefulWidget;
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct CheckboxState {
-    area: Rect,
-    pub checked: bool,
-}
+/// A checkbox is the shared click-to-toggle state; `on` means checked.
+pub type CheckboxState = ToggleState;
 
-impl CheckboxState {
-    pub fn new(checked: bool) -> CheckboxState {
-        CheckboxState {
-            checked,
-            area: Rect::default(),
-        }
-    }
-
-    /// Click anywhere on the control toggles it.
-    pub fn handle_mouse(&mut self, ev: &MouseEvent) -> Outcome {
-        if clicked(ev, self.area) {
-            self.checked = !self.checked;
-            Outcome::Changed
-        } else {
-            Outcome::Ignored
-        }
-    }
-
-    pub fn handle_key(&mut self, key: KeyEvent) -> Outcome {
-        if !is_press(&key) {
-            return Outcome::Ignored;
-        }
-        match key.code {
-            KeyCode::Char(' ') | KeyCode::Enter => {
-                self.checked = !self.checked;
-                Outcome::Changed
-            }
-            _ => Outcome::Ignored,
-        }
-    }
-}
-
-/// `[✓] label` — Space/Enter toggles (via [`CheckboxState::handle_key`]).
+/// `[✓] label` — Space/Enter toggles (via [`ToggleState::handle_key`]).
 #[derive(Clone, Debug)]
 pub struct Checkbox<'a> {
     label: &'a str,
@@ -78,7 +42,7 @@ impl<'a> StatefulWidget for Checkbox<'a> {
     type State = CheckboxState;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut CheckboxState) {
-        state.area = Rect::new(area.x, area.y, area.width, 1);
+        state.set_area(Rect::new(area.x, area.y, area.width, 1));
         paint(area, |t| {
             let bracket = Style::new().fg(if self.disabled {
                 t.text(TextRole::Disabled)
@@ -96,7 +60,7 @@ impl<'a> StatefulWidget for Checkbox<'a> {
             buf.set_string(
                 area.x + 1,
                 area.y,
-                if state.checked { "✓" } else { " " },
+                if state.on { "✓" } else { " " },
                 Style::new().fg(mark_color),
             );
             buf.set_string(area.x + 2, area.y, "]", bracket);

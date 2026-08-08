@@ -19,5 +19,5 @@ pub use radio_group::{RadioGroup, RadioState};
 pub use select::{Select, SelectState};
 pub use slider::{Slider, SliderState};
 pub use textarea::{Textarea, TextareaState};
-pub use toggle::{Toggle, ToggleState};
+pub use toggle::Toggle;
 pub use toggle_group::{ToggleGroup, ToggleGroupState};

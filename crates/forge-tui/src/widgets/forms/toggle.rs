@@ -1,50 +1,11 @@
-use crate::event::{clicked, is_press, Outcome};
 use crate::text;
 use crate::theme::TextRole;
+use crate::widgets::hit::ToggleState;
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
-use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
 use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
 use ratatui::widgets::StatefulWidget;
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct ToggleState {
-    area: Rect,
-    pub on: bool,
-}
-
-impl ToggleState {
-    pub fn new(on: bool) -> ToggleState {
-        ToggleState {
-            on,
-            area: Rect::default(),
-        }
-    }
-
-    /// Click anywhere on the control toggles it.
-    pub fn handle_mouse(&mut self, ev: &MouseEvent) -> Outcome {
-        if clicked(ev, self.area) {
-            self.on = !self.on;
-            Outcome::Changed
-        } else {
-            Outcome::Ignored
-        }
-    }
-
-    pub fn handle_key(&mut self, key: KeyEvent) -> Outcome {
-        if !is_press(&key) {
-            return Outcome::Ignored;
-        }
-        match key.code {
-            KeyCode::Char(' ') | KeyCode::Enter => {
-                self.on = !self.on;
-                Outcome::Changed
-            }
-            _ => Outcome::Ignored,
-        }
-    }
-}
 
 /// On/off switch: `○──` (off) / `──●` (on, accent). Space/Enter toggles.
 #[derive(Clone, Debug)]
@@ -78,7 +39,7 @@ impl<'a> StatefulWidget for Toggle<'a> {
     type State = ToggleState;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut ToggleState) {
-        state.area = Rect::new(area.x, area.y, area.width, 1);
+        state.set_area(Rect::new(area.x, area.y, area.width, 1));
         paint(area, |t| {
             let (track, knob) = if self.disabled {
                 (t.text(TextRole::Disabled), t.text(TextRole::Disabled))

@@ -1,6 +1,7 @@
-use crate::event::{clicked, is_press, Outcome};
+use crate::event::{is_press, Outcome};
 use crate::text;
 use crate::theme::TextRole;
+use crate::widgets::hit::RectCache;
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
@@ -12,7 +13,7 @@ use ratatui::widgets::StatefulWidget;
 pub struct TabsState {
     pub selected: usize,
     len: usize,
-    label_rects: Vec<Rect>,
+    label_rects: RectCache,
 }
 
 impl TabsState {
@@ -25,18 +26,7 @@ impl TabsState {
 
     /// Click a tab label to select it.
     pub fn handle_mouse(&mut self, ev: &MouseEvent) -> Outcome {
-        for (i, rect) in self.label_rects.iter().enumerate() {
-            if clicked(ev, *rect) {
-                let changed = self.selected != i;
-                self.selected = i;
-                return if changed {
-                    Outcome::Changed
-                } else {
-                    Outcome::Consumed
-                };
-            }
-        }
-        Outcome::Ignored
+        self.label_rects.select(ev, &mut self.selected)
     }
 
     /// ←/→ (or [ / ]) switch tabs; 1–9 jump directly.

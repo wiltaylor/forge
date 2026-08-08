@@ -1,6 +1,7 @@
 use crate::event::{clicked, is_press, Outcome};
 use crate::text;
 use crate::theme::{Surface, TextRole};
+use crate::widgets::hit::ToggleState;
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
@@ -8,48 +9,50 @@ use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
 use ratatui::widgets::StatefulWidget;
 
+/// Open/closed state for [`Collapsible`]: the shared click-to-toggle
+/// [`ToggleState`] (the header is the clickable rectangle) plus the
+/// disclosure arrow keys — → opens, ← closes.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct CollapsibleState {
-    pub open: bool,
-    header: Rect,
+    toggle: ToggleState,
 }
 
 impl CollapsibleState {
     pub fn new(open: bool) -> CollapsibleState {
         CollapsibleState {
-            open,
-            header: Rect::default(),
+            toggle: ToggleState::new(open),
         }
+    }
+
+    /// Is the panel open?
+    pub fn open(&self) -> bool {
+        self.toggle.on
+    }
+
+    pub fn set_open(&mut self, open: bool) {
+        self.toggle.on = open;
     }
 
     /// Click the header to toggle.
     pub fn handle_mouse(&mut self, ev: &MouseEvent) -> Outcome {
-        if clicked(ev, self.header) {
-            self.open = !self.open;
-            Outcome::Changed
-        } else {
-            Outcome::Ignored
-        }
+        self.toggle.handle_mouse(ev)
     }
 
+    /// Space/Enter toggles; → opens, ← closes.
     pub fn handle_key(&mut self, key: KeyEvent) -> Outcome {
         if !is_press(&key) {
             return Outcome::Ignored;
         }
         match key.code {
-            KeyCode::Enter | KeyCode::Char(' ') => {
-                self.open = !self.open;
+            KeyCode::Right if !self.toggle.on => {
+                self.toggle.on = true;
                 Outcome::Changed
             }
-            KeyCode::Right if !self.open => {
-                self.open = true;
+            KeyCode::Left if self.toggle.on => {
+                self.toggle.on = false;
                 Outcome::Changed
             }
-            KeyCode::Left if self.open => {
-                self.open = false;
-                Outcome::Changed
-            }
-            _ => Outcome::Ignored,
+            _ => self.toggle.handle_key(key),
         }
     }
 }
@@ -84,7 +87,7 @@ impl<'a> Collapsible<'a> {
 
     /// Rows this widget wants at `width` for the given state.
     pub fn height(&self, width: u16, state: &CollapsibleState) -> u16 {
-        if !state.open {
+        if !state.open() {
             return 1;
         }
         1 + self
@@ -108,9 +111,9 @@ impl<'a> StatefulWidget for Collapsible<'a> {
     type State = CollapsibleState;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut CollapsibleState) {
-        state.header = Rect::new(area.x, area.y, area.width, 1);
+        state.toggle.set_area(Rect::new(area.x, area.y, area.width, 1));
         paint(area, |t| {
-            let chevron = if state.open { "▾" } else { "▸" };
+            let chevron = if state.open() { "▾" } else { "▸" };
             let mut style = Style::new().fg(t.text(TextRole::Primary));
             if self.focused {
                 style = style.add_modifier(Modifier::UNDERLINED);
@@ -127,7 +130,7 @@ impl<'a> StatefulWidget for Collapsible<'a> {
                 text::truncate(self.title, area.width.saturating_sub(2) as usize),
                 style,
             );
-            if state.open {
+            if state.open() {
                 if let Some(body) = self.body {
                     let inner = self.body_area(area);
                     for (i, line) in text::wrap(body, inner.width.max(1) as usize)
