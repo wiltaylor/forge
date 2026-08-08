@@ -1,4 +1,5 @@
-use crate::theme::{chart_series, resolve_theme, Theme};
+use crate::theme::chart_series;
+use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
@@ -9,17 +10,11 @@ use unicode_segmentation::UnicodeSegmentation;
 #[derive(Clone, Debug)]
 pub struct Avatar<'a> {
     name: &'a str,
-    theme: Option<&'a Theme>,
 }
 
 impl<'a> Avatar<'a> {
     pub fn new(name: &'a str) -> Avatar<'a> {
-        Avatar { name, theme: None }
-    }
-
-    pub fn theme(mut self, theme: &'a Theme) -> Self {
-        self.theme = Some(theme);
-        self
+        Avatar { name }
     }
 
     fn initials(&self) -> String {
@@ -41,23 +36,21 @@ impl<'a> Avatar<'a> {
 
 impl Widget for Avatar<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        if area.is_empty() {
-            return;
-        }
-        let t = &*resolve_theme(self.theme);
-        let hues = chart_series(t);
-        let hash: usize = self
-            .name
-            .bytes()
-            .fold(0usize, |a, b| a.wrapping_mul(31).wrapping_add(b as usize));
-        let bg = hues[hash % hues.len()];
-        let style = Style::new()
-            .fg(t.accent.contrast)
-            .bg(bg)
-            .add_modifier(Modifier::BOLD);
-        let initials = self.initials();
-        let w = (initials.chars().count() as u16 + 2).min(area.width);
-        buf.set_style(Rect::new(area.x, area.y, w, 1), style);
-        buf.set_string(area.x + 1, area.y, initials, style);
+        paint(area, |t| {
+            let hues = chart_series(t);
+            let hash: usize = self
+                .name
+                .bytes()
+                .fold(0usize, |a, b| a.wrapping_mul(31).wrapping_add(b as usize));
+            let bg = hues[hash % hues.len()];
+            let style = Style::new()
+                .fg(t.accent.contrast)
+                .bg(bg)
+                .add_modifier(Modifier::BOLD);
+            let initials = self.initials();
+            let w = (initials.chars().count() as u16 + 2).min(area.width);
+            buf.set_style(Rect::new(area.x, area.y, w, 1), style);
+            buf.set_string(area.x + 1, area.y, initials, style);
+        });
     }
 }

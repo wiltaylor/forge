@@ -62,18 +62,18 @@ impl DateState {
     }
 }
 
-pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut DateState) {
+pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, state: &mut DateState) {
     let f_cal = ctx.focus.register(CAL);
     let f_picker = ctx.focus.register(PICKER);
     if area.height < 4 {
         return;
     }
     frame.render_widget(
-        Eyebrow::new("Calendar — arrows · PgUp/PgDn month · t today").theme(t),
+        Eyebrow::new("Calendar — arrows · PgUp/PgDn month · t today"),
         Rect::new(area.x, area.y, area.width, 1),
     );
     frame.render_stateful_widget(
-        Calendar::new().focused(f_cal).theme(t),
+        Calendar::new().focused(f_cal),
         Rect::new(area.x, area.y + 1, 22, 9),
         &mut state.cal,
     );
@@ -81,11 +81,11 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
     let px = area.x + 30;
     if px + 16 < area.x + area.width {
         frame.render_widget(
-            Eyebrow::new("DatePicker").theme(t),
+            Eyebrow::new("DatePicker"),
             Rect::new(px, area.y, area.width - 30, 1),
         );
         frame.render_stateful_widget(
-            DatePicker::new().focused(f_picker).theme(t),
+            DatePicker::new().focused(f_picker),
             Rect::new(px, area.y + 1, 16, 1),
             &mut state.picker,
         );

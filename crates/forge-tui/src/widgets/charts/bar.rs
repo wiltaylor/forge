@@ -1,4 +1,4 @@
-use crate::theme::{resolve_theme, Theme};
+use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::{Color, Style};
@@ -11,7 +11,6 @@ pub struct BarChart<'a> {
     data: &'a [(&'a str, u64)],
     color: Option<Color>,
     bar_width: u16,
-    theme: Option<&'a Theme>,
 }
 
 impl<'a> BarChart<'a> {
@@ -20,7 +19,6 @@ impl<'a> BarChart<'a> {
             data,
             color: None,
             bar_width: 7,
-            theme: None,
         }
     }
 
@@ -33,36 +31,29 @@ impl<'a> BarChart<'a> {
         self.bar_width = width;
         self
     }
-
-    pub fn theme(mut self, theme: &'a Theme) -> Self {
-        self.theme = Some(theme);
-        self
-    }
 }
 
 impl Widget for BarChart<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        if area.is_empty() {
-            return;
-        }
-        let t = &*resolve_theme(self.theme);
-        let color = self.color.unwrap_or(t.accent.base);
-        let bars: Vec<Bar> = self
-            .data
-            .iter()
-            .map(|(label, value)| {
-                Bar::default()
-                    .value(*value)
-                    .label(*label)
-                    .style(Style::new().fg(color))
-                    .value_style(Style::new().fg(t.bg[0]).bg(color))
-            })
-            .collect();
-        ratatui::widgets::BarChart::default()
-            .data(BarGroup::default().bars(&bars))
-            .bar_width(self.bar_width)
-            .bar_gap(1)
-            .label_style(Style::new().fg(t.fg[2]))
-            .render(area, buf);
+        paint(area, |t| {
+            let color = self.color.unwrap_or(t.accent.base);
+            let bars: Vec<Bar> = self
+                .data
+                .iter()
+                .map(|(label, value)| {
+                    Bar::default()
+                        .value(*value)
+                        .label(*label)
+                        .style(Style::new().fg(color))
+                        .value_style(Style::new().fg(t.bg[0]).bg(color))
+                })
+                .collect();
+            ratatui::widgets::BarChart::default()
+                .data(BarGroup::default().bars(&bars))
+                .bar_width(self.bar_width)
+                .bar_gap(1)
+                .label_style(Style::new().fg(t.fg[2]))
+                .render(area, buf);
+        });
     }
 }

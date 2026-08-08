@@ -49,7 +49,7 @@ impl FeedbackState {
     }
 }
 
-pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut FeedbackState) {
+pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, state: &mut FeedbackState) {
     state.btn_rects.clear();
     let mut y = area.y;
     let x = area.x;
@@ -65,7 +65,7 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
     };
 
     if let Some(r) = row(1, 0, &mut y) {
-        frame.render_widget(Eyebrow::new("Alerts").theme(t), r);
+        frame.render_widget(Eyebrow::new("Alerts"), r);
     }
     let alerts = [
         (
@@ -87,41 +87,37 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
     ];
     for (sev, title, body) in alerts {
         if let Some(r) = row(2, 1, &mut y) {
-            frame.render_widget(Alert::new(sev, title).body(body).theme(t), r);
+            frame.render_widget(Alert::new(sev, title).body(body), r);
         }
     }
 
     if let Some(r) = row(1, 0, &mut y) {
-        frame.render_widget(Eyebrow::new("Progress").theme(t), r);
+        frame.render_widget(Eyebrow::new("Progress"), r);
     }
     if let Some(r) = row(1, 0, &mut y) {
         let ratio = (ctx.frame % 100) as f64 / 100.0;
-        frame.render_widget(Progress::new(ratio).label("build").theme(t), r);
+        frame.render_widget(Progress::new(ratio).label("build"), r);
     }
     if let Some(r) = row(1, 0, &mut y) {
         frame.render_widget(
             Progress::new(0.82)
                 .label("disk")
-                .severity(Severity::Warning)
-                .theme(t),
+                .severity(Severity::Warning),
             r,
         );
     }
     if let Some(r) = row(1, 1, &mut y) {
-        frame.render_widget(
-            Spinner::new().frame(ctx.frame).label("Deploying…").theme(t),
-            r,
-        );
+        frame.render_widget(Spinner::new().frame(ctx.frame).label("Deploying…"), r);
     }
 
     if let Some(r) = row(1, 0, &mut y) {
-        frame.render_widget(Eyebrow::new("Toasts").theme(t), r);
+        frame.render_widget(Eyebrow::new("Toasts"), r);
     }
     if let Some(r) = row(1, 0, &mut y) {
         let mut bx = r.x;
         for (i, (_, label, _)) in TOASTS.iter().enumerate() {
             let focused = ctx.focus.register(FocusId::indexed(TOAST_BTN, i as u32));
-            let b = Button::new(label).focused(focused).theme(t);
+            let b = Button::new(label).focused(focused);
             let bw = b.width();
             if bx + bw > r.x + r.width {
                 break;

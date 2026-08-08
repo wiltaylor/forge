@@ -1,9 +1,8 @@
 //! The Forge theme: a Rust mirror of `packages/tokens/src/theme.ts`.
 //!
-//! Widgets take a theme via their `.theme(&theme)` builder method; without one
-//! they paint with the [ambient theme](ambient_theme), which the runtime
-//! installs and an app can swap at any time. Overrides use plain struct-update
-//! syntax — Rust's native "DeepPartial":
+//! Widgets paint with the [ambient theme](ambient_theme), which the runtime
+//! installs and an app can swap at any time; no widget takes one. Overrides use
+//! plain struct-update syntax — Rust's native "DeepPartial":
 //!
 //! ```
 //! use forge_tui::theme::{Theme, Accent};
@@ -19,7 +18,7 @@ mod chart_palette;
 pub mod color;
 mod palette;
 
-pub use ambient::{ambient_theme, resolve_theme, set_ambient_theme};
+pub use ambient::{ambient_theme, set_ambient_theme};
 pub use chart_palette::{chart_series, series_color, CHART_SERIES_LEN};
 pub use color::{blend, quantize, rgb, shift, ColorMode};
 

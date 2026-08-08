@@ -54,17 +54,17 @@ impl FilesState {
     }
 }
 
-pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut FilesState) {
+pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, state: &mut FilesState) {
     let focused = ctx.focus.register(PICKER);
     if area.height < 3 {
         return;
     }
     frame.render_widget(
-        Eyebrow::new("FilePicker — Enter descend/pick · Bksp up · . hidden").theme(t),
+        Eyebrow::new("FilePicker — Enter descend/pick · Bksp up · . hidden"),
         Rect::new(area.x, area.y, area.width, 1),
     );
     frame.render_stateful_widget(
-        FilePicker::new().focused(focused).theme(t),
+        FilePicker::new().focused(focused),
         Rect::new(area.x, area.y + 1, area.width.min(60), area.height - 1),
         &mut state.picker,
     );

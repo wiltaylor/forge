@@ -1,4 +1,5 @@
-use crate::theme::{resolve_theme, Theme};
+use crate::theme::{ambient_theme, Theme};
+use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
@@ -11,7 +12,6 @@ use ratatui::widgets::{Block, Padding, Widget};
 pub struct Card<'a> {
     title: Option<&'a str>,
     footer: Option<&'a str>,
-    theme: Option<&'a Theme>,
 }
 
 impl<'a> Card<'a> {
@@ -26,11 +26,6 @@ impl<'a> Card<'a> {
 
     pub fn footer(mut self, footer: &'a str) -> Self {
         self.footer = Some(footer);
-        self
-    }
-
-    pub fn theme(mut self, theme: &'a Theme) -> Self {
-        self.theme = Some(theme);
         self
     }
 
@@ -54,17 +49,15 @@ impl<'a> Card<'a> {
 
     /// The content region inside the border and padding.
     pub fn inner(&self, area: Rect) -> Rect {
-        let t = &*resolve_theme(self.theme);
+        let t = &ambient_theme();
         self.block(t).inner(area)
     }
 }
 
 impl Widget for Card<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        if area.is_empty() {
-            return;
-        }
-        let t = &*resolve_theme(self.theme);
-        self.block(t).render(area, buf);
+        paint(area, |t| {
+            self.block(t).render(area, buf);
+        });
     }
 }

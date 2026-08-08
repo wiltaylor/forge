@@ -25,9 +25,9 @@ Button::new(\"Deploy\").variant(Variant::Primary)
 3. ~~Write your own CSS~~ Ship a console
 ";
 
-pub fn draw(frame: &mut Frame, area: Rect, _ctx: &mut Ctx, t: &Theme) {
+pub fn draw(frame: &mut Frame, area: Rect, _ctx: &mut Ctx) {
     frame.render_widget(
-        Markdown::new(SAMPLE).theme(t),
+        Markdown::new(SAMPLE),
         Rect::new(area.x, area.y, area.width.min(64), area.height),
     );
 }

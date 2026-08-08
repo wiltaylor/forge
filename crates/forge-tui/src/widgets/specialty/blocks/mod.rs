@@ -34,8 +34,9 @@ use ratatui::layout::Rect;
 use ratatui::widgets::StatefulWidget;
 
 use crate::event::{in_area, is_press, left_down, scroll_delta, Outcome};
-use crate::theme::{resolve_theme, Severity, Theme};
+use crate::theme::{Severity, Theme};
 use crate::widgets::forms::TextareaState;
+use crate::widgets::paint;
 
 use popups::{builtin_kind, emoji_query, slash_commands, EmojiState, Popup, SlashState};
 use render::{layout, text_prefix_width, Hit, Painter, GUTTER};
@@ -1418,20 +1419,14 @@ impl BlockEditorState {
 /// The block editor widget. Standard kit contract: builder args only; every
 /// interaction lives in [`BlockEditorState`].
 #[derive(Clone, Debug, Default)]
-pub struct BlockEditor<'a> {
-    theme: Option<&'a Theme>,
+pub struct BlockEditor {
     read_only: bool,
     focused: bool,
 }
 
-impl<'a> BlockEditor<'a> {
-    pub fn new() -> BlockEditor<'a> {
+impl BlockEditor {
+    pub fn new() -> BlockEditor {
         BlockEditor::default()
-    }
-
-    pub fn theme(mut self, theme: &'a Theme) -> Self {
-        self.theme = Some(theme);
-        self
     }
 
     /// Render-only mode: selection, carets, and editing keys are disabled;
@@ -1447,7 +1442,7 @@ impl<'a> BlockEditor<'a> {
     }
 }
 
-impl<'a> StatefulWidget for BlockEditor<'a> {
+impl StatefulWidget for BlockEditor {
     type State = BlockEditorState;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut BlockEditorState) {
@@ -1455,126 +1450,123 @@ impl<'a> StatefulWidget for BlockEditor<'a> {
         state.view_h = area.height as usize;
         state.read_only = self.read_only;
         state.hits.clear();
-        if area.is_empty() {
-            return;
-        }
-        let t = &*resolve_theme(self.theme);
+        paint(area, |t| {
+            let selecting =
+                !self.read_only && !state.custom_active && matches!(state.editing, Editing::None);
+            let container_focus = if selecting {
+                state.focus.filter(|a| {
+                    matches!(a, Address::Root(_))
+                        && matches!(
+                            state.doc.block(*a).map(|b| &b.kind),
+                            Some(BlockKind::Columns { .. })
+                        )
+                })
+            } else {
+                None
+            };
 
-        let selecting =
-            !self.read_only && !state.custom_active && matches!(state.editing, Editing::None);
-        let container_focus = if selecting {
-            state.focus.filter(|a| {
-                matches!(a, Address::Root(_))
-                    && matches!(
-                        state.doc.block(*a).map(|b| &b.kind),
-                        Some(BlockKind::Columns { .. })
-                    )
-            })
-        } else {
-            None
-        };
+            let mut painter = Painter {
+                doc: &state.doc,
+                focus: if self.read_only { None } else { state.focus },
+                editing: &mut state.editing,
+                table_cell: state.table_cell,
+                custom_active: state.custom_active,
+                custom: &mut state.custom,
+                code_cache: &mut state.code_cache,
+                read_only: self.read_only,
+                widget_focused: self.focused,
+                t,
+            };
+            let (slots, total) = layout(&mut painter, area.width);
+            state.total = total;
+            let view_h = area.height as usize;
+            let max_scroll = total.saturating_sub(view_h);
 
-        let mut painter = Painter {
-            doc: &state.doc,
-            focus: if self.read_only { None } else { state.focus },
-            editing: &mut state.editing,
-            table_cell: state.table_cell,
-            custom_active: state.custom_active,
-            custom: &mut state.custom,
-            code_cache: &mut state.code_cache,
-            read_only: self.read_only,
-            widget_focused: self.focused,
-            t,
-        };
-        let (slots, total) = layout(&mut painter, area.width);
-        state.total = total;
-        let view_h = area.height as usize;
-        let max_scroll = total.saturating_sub(view_h);
-
-        // Keep the focused block in view (skipped read-only so manual
-        // scrolling wins).
-        if !self.read_only {
-            if let Some(f) = state.focus {
-                let slot = slots
-                    .iter()
-                    .find(|s| !s.container && s.addr == f)
-                    .or_else(|| slots.iter().find(|s| s.container && s.addr == f));
-                if let Some(slot) = slot {
-                    if slot.y < state.scroll {
-                        state.scroll = slot.y;
-                    } else if slot.y + slot.h > state.scroll + view_h {
-                        state.scroll = (slot.y + slot.h).saturating_sub(view_h);
+            // Keep the focused block in view (skipped read-only so manual
+            // scrolling wins).
+            if !self.read_only {
+                if let Some(f) = state.focus {
+                    let slot = slots
+                        .iter()
+                        .find(|s| !s.container && s.addr == f)
+                        .or_else(|| slots.iter().find(|s| s.container && s.addr == f));
+                    if let Some(slot) = slot {
+                        if slot.y < state.scroll {
+                            state.scroll = slot.y;
+                        } else if slot.y + slot.h > state.scroll + view_h {
+                            state.scroll = (slot.y + slot.h).saturating_sub(view_h);
+                        }
                     }
                 }
             }
-        }
-        state.scroll = state.scroll.min(max_scroll);
-        let scroll = state.scroll;
+            state.scroll = state.scroll.min(max_scroll);
+            let scroll = state.scroll;
 
-        let mut hits: Vec<Hit> = Vec::new();
-        for slot in &slots {
-            let vis_top = slot.y.max(scroll);
-            let vis_bot = (slot.y + slot.h).min(scroll + view_h);
-            if vis_top >= vis_bot {
-                continue;
-            }
-            let top_skip = (vis_top - slot.y) as u16;
-            let dst_y = area.y + (vis_top - scroll) as u16;
-            let rect = Rect::new(area.x + slot.x, dst_y, slot.w, (vis_bot - vis_top) as u16);
-            if slot.container {
+            let mut hits: Vec<Hit> = Vec::new();
+            for slot in &slots {
+                let vis_top = slot.y.max(scroll);
+                let vis_bot = (slot.y + slot.h).min(scroll + view_h);
+                if vis_top >= vis_bot {
+                    continue;
+                }
+                let top_skip = (vis_top - slot.y) as u16;
+                let dst_y = area.y + (vis_top - scroll) as u16;
+                let rect = Rect::new(area.x + slot.x, dst_y, slot.w, (vis_bot - vis_top) as u16);
+                if slot.container {
+                    hits.push(Hit {
+                        addr: slot.addr,
+                        container: true,
+                        rect,
+                        top_skip,
+                    });
+                    continue;
+                }
+                let Some(block) = painter.doc.block(slot.addr) else {
+                    continue;
+                };
+                let mut scratch = Buffer::empty(Rect::new(0, 0, slot.w, slot.h as u16));
+                let container_selected = container_focus == Some(Address::Root(slot.addr.root()))
+                    && slot.addr.in_column();
+                render::paint_block(
+                    &mut painter,
+                    block,
+                    slot.addr,
+                    &mut scratch,
+                    slot.w,
+                    slot.h as u16,
+                    container_selected,
+                );
+                for ry in 0..rect.height {
+                    for rx in 0..rect.width {
+                        buf[(rect.x + rx, rect.y + ry)] = scratch[(rx, top_skip + ry)].clone();
+                    }
+                }
                 hits.push(Hit {
                     addr: slot.addr,
-                    container: true,
+                    container: false,
                     rect,
                     top_skip,
                 });
-                continue;
             }
-            let Some(block) = painter.doc.block(slot.addr) else {
-                continue;
-            };
-            let mut scratch = Buffer::empty(Rect::new(0, 0, slot.w, slot.h as u16));
-            let container_selected =
-                container_focus == Some(Address::Root(slot.addr.root())) && slot.addr.in_column();
-            render::paint_block(
-                &mut painter,
-                block,
-                slot.addr,
-                &mut scratch,
-                slot.w,
-                slot.h as u16,
-                container_selected,
-            );
-            for ry in 0..rect.height {
-                for rx in 0..rect.width {
-                    buf[(rect.x + rx, rect.y + ry)] = scratch[(rx, top_skip + ry)].clone();
-                }
-            }
-            hits.push(Hit {
-                addr: slot.addr,
-                container: false,
-                rect,
-                top_skip,
-            });
-        }
-        state.hits = hits;
+            state.hits = hits;
 
-        // Popups render last, anchored near the focused block.
-        if !matches!(state.popup, Popup::None) {
-            let anchor = state
-                .hits
-                .iter()
-                .find(|h| !h.container && Some(h.addr) == state.focus)
-                .map(|h| h.rect)
-                .unwrap_or(Rect::new(area.x, area.y, 1, 1));
-            match &mut state.popup {
-                Popup::Slash(sl) => {
-                    let commands = slash_commands(&state.custom);
-                    popups::render_slash(sl, &commands, anchor, area, buf, t);
+            // Popups render last, anchored near the focused block.
+            if !matches!(state.popup, Popup::None) {
+                let anchor = state
+                    .hits
+                    .iter()
+                    .find(|h| !h.container && Some(h.addr) == state.focus)
+                    .map(|h| h.rect)
+                    .unwrap_or(Rect::new(area.x, area.y, 1, 1));
+                match &mut state.popup {
+                    Popup::Slash(sl) => {
+                        let commands = slash_commands(&state.custom);
+                        popups::render_slash(sl, &commands, anchor, area, buf, t);
+                    }
+                    Popup::Emoji(em) => popups::render_emoji(em, anchor, area, buf, t),
+                    Popup::None => {}
                 }
-                Popup::Emoji(em) => popups::render_emoji(em, anchor, area, buf, t),
-                Popup::None => {}
             }
-        }
+        });
     }
 }

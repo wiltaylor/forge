@@ -97,16 +97,13 @@ fn composer_enter_sends_alt_enter_newlines() {
 
 #[test]
 fn chat_view_follows_tail() {
-    let t = Theme::dark();
     let items: Vec<ChatItem> = (0..10)
         .map(|i| ChatItem::user(format!("message number {i}")))
         .collect();
     let mut state = ChatViewState::new();
     let area = Rect::new(0, 0, 40, 6);
     let mut buf = Buffer::empty(area);
-    ChatView::new(&items)
-        .theme(&t)
-        .render(area, &mut buf, &mut state);
+    ChatView::new(&items).render(area, &mut buf, &mut state);
     assert!(buffer_text(&buf).contains("message number 9"));
     let _ = state.handle_key(key(KeyCode::Up));
     assert!(!state.follow);
@@ -114,14 +111,9 @@ fn chat_view_follows_tail() {
 
 #[test]
 fn chat_prompt_selects_and_submits() {
-    let t = Theme::dark();
     let mut state = ChatPromptState::new();
     let mut buf = Buffer::empty(Rect::new(0, 0, 40, 2));
-    ChatPrompt::new("Q?", &["a", "b", "c"]).theme(&t).render(
-        Rect::new(0, 0, 40, 2),
-        &mut buf,
-        &mut state,
-    );
+    ChatPrompt::new("Q?", &["a", "b", "c"]).render(Rect::new(0, 0, 40, 2), &mut buf, &mut state);
     let _ = state.handle_key(key(KeyCode::Right));
     let _ = state.handle_key(key(KeyCode::Right));
     let _ = state.handle_key(key(KeyCode::Right));
@@ -139,7 +131,6 @@ fn code_view_highlights_and_marks() {
     let marks = [(1usize, forge_tui::theme::Severity::Warning)];
     CodeView::new(src, "rs")
         .marks(&marks)
-        .theme(&t)
         .render(area, &mut buf, &mut state);
     let text = buffer_text(&buf);
     assert!(text.contains("fn main"));
@@ -162,15 +153,12 @@ fn code_view_highlights_and_marks() {
 
 #[test]
 fn diff_view_marks_adds_and_dels() {
-    let t = Theme::dark();
     let old = "a\nb\nc\n";
     let new = "a\nX\nc\nd\n";
     let mut state = CodeViewState::new();
     let area = Rect::new(0, 0, 20, 8);
     let mut buf = Buffer::empty(area);
-    DiffView::new(old, new)
-        .theme(&t)
-        .render(area, &mut buf, &mut state);
+    DiffView::new(old, new).render(area, &mut buf, &mut state);
     let text = buffer_text(&buf);
     assert!(text.contains("- b"));
     assert!(text.contains("+ X"));
@@ -180,7 +168,6 @@ fn diff_view_marks_adds_and_dels() {
 
 #[test]
 fn flowchart_layers_and_arrows() {
-    let t = Theme::dark();
     let nodes = [
         FlowNode::new("a", "alpha"),
         FlowNode::new("b", "beta"),
@@ -189,9 +176,7 @@ fn flowchart_layers_and_arrows() {
     let edges = [FlowEdge::new("a", "b"), FlowEdge::new("b", "c")];
     let area = Rect::new(0, 0, 60, 8);
     let mut buf = Buffer::empty(area);
-    Flowchart::new(&nodes, &edges)
-        .theme(&t)
-        .render(area, &mut buf);
+    Flowchart::new(&nodes, &edges).render(area, &mut buf);
     let text = buffer_text(&buf);
     assert!(text.contains("alpha") && text.contains("beta") && text.contains("gamma"));
     assert!(text.contains("▸"), "edges end in arrowheads");
@@ -222,10 +207,9 @@ fn terminal_runs_a_real_pty() {
     let mut seen = false;
     for _ in 0..100 {
         state.drain();
-        let t = Theme::dark();
         let area = Rect::new(0, 0, 40, 6);
         let mut buf = Buffer::empty(area);
-        Terminal::new().theme(&t).render(area, &mut buf, &mut state);
+        Terminal::new().render(area, &mut buf, &mut state);
         if buffer_text(&buf).contains("forge-tui-pty-ok") {
             seen = true;
             break;

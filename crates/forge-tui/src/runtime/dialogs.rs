@@ -11,7 +11,7 @@
 use crate::event::{clicked, is_press, left_down, Keymap, Outcome};
 use crate::runtime::{Overlay, OverlayOutcome};
 use crate::text;
-use crate::theme::Theme;
+use crate::theme::{ambient_theme, Theme};
 use crate::widgets::overlays::{
     Command, DropdownMenu, MenuEntry, MenuState, Modal, Palette, PaletteState,
 };
@@ -95,14 +95,17 @@ impl ConfirmDialog {
 }
 
 impl Overlay for ConfirmDialog {
-    fn draw(&mut self, frame: &mut Frame, area: Rect, theme: &Theme) {
+    fn draw(&mut self, frame: &mut Frame, area: Rect, _theme: &Theme) {
+        // The `Modal` and the `Button`s below paint with the ambient theme, so
+        // the text between them reads it too. A dialog painted from two themes
+        // is worse than one painted from the wrong theme.
+        let theme = &ambient_theme();
         let body = text::wrap(&self.message, 46);
         let h = (body.len() as u16 + 5).max(7);
         let modal = Modal::new()
             .title(&self.title)
             .footer(" Esc cancel · Enter confirm ")
-            .size(52, h)
-            .theme(theme);
+            .size(52, h);
         let inner = modal.inner(area);
         frame.render_widget(modal, area);
         let buf = frame.buffer_mut();
@@ -119,17 +122,14 @@ impl Overlay for ConfirmDialog {
             );
         }
         let by = inner.y + inner.height.saturating_sub(1);
-        let cancel = Button::new("Cancel")
-            .focused(!self.focus_confirm)
-            .theme(theme);
+        let cancel = Button::new("Cancel").focused(!self.focus_confirm);
         let confirm = Button::new(&self.confirm_label)
             .variant(if self.danger {
                 Variant::Danger
             } else {
                 Variant::Primary
             })
-            .focused(self.focus_confirm)
-            .theme(theme);
+            .focused(self.focus_confirm);
         let cw = confirm.width();
         let caw = cancel.width();
         let total = cw + caw + 2;
@@ -217,13 +217,13 @@ impl HelpOverlay {
 }
 
 impl Overlay for HelpOverlay {
-    fn draw(&mut self, frame: &mut Frame, area: Rect, theme: &Theme) {
+    fn draw(&mut self, frame: &mut Frame, area: Rect, _theme: &Theme) {
+        let theme = &ambient_theme();
         let h = (self.rows.len() as u16 + 4).min(area.height);
         let modal = Modal::new()
             .title(&self.title)
             .footer(" Esc close ")
-            .size(44, h)
-            .theme(theme);
+            .size(44, h);
         let inner = modal.inner(area);
         frame.render_widget(modal, area);
         let buf = frame.buffer_mut();
@@ -367,9 +367,9 @@ fn borrow_entries(entries: &[OwnedMenuEntry]) -> Vec<MenuEntry<'_>> {
 }
 
 impl Overlay for MenuOverlay {
-    fn draw(&mut self, frame: &mut Frame, area: Rect, theme: &Theme) {
+    fn draw(&mut self, frame: &mut Frame, area: Rect, _theme: &Theme) {
         let entries = borrow_entries(&self.entries);
-        let menu = DropdownMenu::new(&entries, self.anchor).theme(theme);
+        let menu = DropdownMenu::new(&entries, self.anchor);
         frame.render_stateful_widget(menu, area, &mut self.state);
     }
 
@@ -460,9 +460,9 @@ fn borrow_commands(commands: &[OwnedCommand]) -> Vec<Command<'_>> {
 }
 
 impl Overlay for PaletteOverlay {
-    fn draw(&mut self, frame: &mut Frame, area: Rect, theme: &Theme) {
+    fn draw(&mut self, frame: &mut Frame, area: Rect, _theme: &Theme) {
         let commands = borrow_commands(&self.commands);
-        let palette = Palette::new(&commands).theme(theme);
+        let palette = Palette::new(&commands);
         frame.render_stateful_widget(palette, area, &mut self.state);
     }
 

@@ -1,6 +1,6 @@
 use crate::event::{in_area, is_press, left_down, scroll_delta, Outcome};
 use crate::text;
-use crate::theme::{resolve_theme, Theme};
+use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
 use ratatui::layout::Rect;
@@ -186,7 +186,6 @@ impl TreeState {
 pub struct Tree<'a> {
     roots: &'a [TreeNode<'a>],
     focused: bool,
-    theme: Option<&'a Theme>,
 }
 
 impl<'a> Tree<'a> {
@@ -194,17 +193,11 @@ impl<'a> Tree<'a> {
         Tree {
             roots,
             focused: false,
-            theme: None,
         }
     }
 
     pub fn focused(mut self, focused: bool) -> Self {
         self.focused = focused;
-        self
-    }
-
-    pub fn theme(mut self, theme: &'a Theme) -> Self {
-        self.theme = Some(theme);
         self
     }
 }
@@ -215,60 +208,58 @@ impl<'a> StatefulWidget for Tree<'a> {
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut TreeState) {
         state.view_h = area.height as usize;
         state.area = area;
-        if area.is_empty() {
-            return;
-        }
-        let t = &*resolve_theme(self.theme);
-        let mut rows = Vec::new();
-        flatten(self.roots, &state.expanded, &mut Vec::new(), &mut rows);
-        if rows.is_empty() {
-            return;
-        }
-        state.cursor = state.cursor.min(rows.len() - 1);
-        if state.cursor < state.offset {
-            state.offset = state.cursor;
-        } else if state.cursor >= state.offset + state.view_h {
-            state.offset = state.cursor + 1 - state.view_h;
-        }
-        for vis in 0..state.view_h {
-            let ri = state.offset + vis;
-            let Some((path, depth, node)) = rows.get(ri) else {
-                break;
-            };
-            let y = area.y + vis as u16;
-            let is_cursor = ri == state.cursor;
-            let indent = (depth * 2) as u16;
-            let mut style = Style::new().fg(if is_cursor { t.fg[0] } else { t.fg[1] });
-            if is_cursor {
-                buf.set_style(
-                    Rect::new(area.x, y, area.width, 1),
-                    Style::new().bg(t.bg[3]),
-                );
-                style = style.bg(t.bg[3]);
-                if self.focused {
-                    style = style.add_modifier(Modifier::BOLD);
-                }
+        paint(area, |t| {
+            let mut rows = Vec::new();
+            flatten(self.roots, &state.expanded, &mut Vec::new(), &mut rows);
+            if rows.is_empty() {
+                return;
             }
-            let marker = if node.children.is_empty() {
-                "·"
-            } else if state.expanded.contains(path) {
-                "▾"
-            } else {
-                "▸"
-            };
-            if indent + 2 < area.width {
-                let mut marker_style = Style::new().fg(t.fg[2]);
+            state.cursor = state.cursor.min(rows.len() - 1);
+            if state.cursor < state.offset {
+                state.offset = state.cursor;
+            } else if state.cursor >= state.offset + state.view_h {
+                state.offset = state.cursor + 1 - state.view_h;
+            }
+            for vis in 0..state.view_h {
+                let ri = state.offset + vis;
+                let Some((path, depth, node)) = rows.get(ri) else {
+                    break;
+                };
+                let y = area.y + vis as u16;
+                let is_cursor = ri == state.cursor;
+                let indent = (depth * 2) as u16;
+                let mut style = Style::new().fg(if is_cursor { t.fg[0] } else { t.fg[1] });
                 if is_cursor {
-                    marker_style = marker_style.bg(t.bg[3]);
+                    buf.set_style(
+                        Rect::new(area.x, y, area.width, 1),
+                        Style::new().bg(t.bg[3]),
+                    );
+                    style = style.bg(t.bg[3]);
+                    if self.focused {
+                        style = style.add_modifier(Modifier::BOLD);
+                    }
                 }
-                buf.set_string(area.x + indent, y, marker, marker_style);
-                buf.set_string(
-                    area.x + indent + 2,
-                    y,
-                    text::truncate(node.label, (area.width - indent - 2) as usize),
-                    style,
-                );
+                let marker = if node.children.is_empty() {
+                    "·"
+                } else if state.expanded.contains(path) {
+                    "▾"
+                } else {
+                    "▸"
+                };
+                if indent + 2 < area.width {
+                    let mut marker_style = Style::new().fg(t.fg[2]);
+                    if is_cursor {
+                        marker_style = marker_style.bg(t.bg[3]);
+                    }
+                    buf.set_string(area.x + indent, y, marker, marker_style);
+                    buf.set_string(
+                        area.x + indent + 2,
+                        y,
+                        text::truncate(node.label, (area.width - indent - 2) as usize),
+                        style,
+                    );
+                }
             }
-        }
+        });
     }
 }

@@ -4,8 +4,9 @@
 
 use crate::event::{clicked, in_area, is_press, scroll_delta, Outcome};
 use crate::text;
-use crate::theme::{resolve_theme, Theme};
+use crate::theme::Theme;
 use crate::widgets::forms::{Textarea, TextareaState};
+use crate::widgets::paint;
 use crate::widgets::specialty::markdown::markdown_lines;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent};
@@ -167,7 +168,6 @@ pub struct ChatView<'a> {
     items: &'a [ChatItem],
     frame: u64,
     focused: bool,
-    theme: Option<&'a Theme>,
 }
 
 impl<'a> ChatView<'a> {
@@ -176,7 +176,6 @@ impl<'a> ChatView<'a> {
             items,
             frame: 0,
             focused: false,
-            theme: None,
         }
     }
 
@@ -187,11 +186,6 @@ impl<'a> ChatView<'a> {
 
     pub fn focused(mut self, focused: bool) -> Self {
         self.focused = focused;
-        self
-    }
-
-    pub fn theme(mut self, theme: &'a Theme) -> Self {
-        self.theme = Some(theme);
         self
     }
 
@@ -295,29 +289,27 @@ impl<'a> StatefulWidget for ChatView<'a> {
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut ChatViewState) {
         state.view_h = area.height as usize;
         state.area = area;
-        if area.is_empty() {
-            return;
-        }
-        let t = &*resolve_theme(self.theme);
-        let width = area.width as usize;
-        let mut lines: Vec<Line<'static>> = Vec::new();
-        for item in self.items {
-            lines.extend(self.item_lines(item, width, t));
-        }
-        state.total = lines.len();
-        let max_offset = state.total.saturating_sub(state.view_h);
-        if state.follow {
-            state.offset = max_offset;
-        } else {
-            state.offset = state.offset.min(max_offset);
-        }
-        for (i, line) in lines.iter().skip(state.offset).enumerate() {
-            if i as u16 >= area.height {
-                break;
+        paint(area, |t| {
+            let width = area.width as usize;
+            let mut lines: Vec<Line<'static>> = Vec::new();
+            for item in self.items {
+                lines.extend(self.item_lines(item, width, t));
             }
-            buf.set_line(area.x, area.y + i as u16, line, area.width);
-        }
-        let _ = self.focused;
+            state.total = lines.len();
+            let max_offset = state.total.saturating_sub(state.view_h);
+            if state.follow {
+                state.offset = max_offset;
+            } else {
+                state.offset = state.offset.min(max_offset);
+            }
+            for (i, line) in lines.iter().skip(state.offset).enumerate() {
+                if i as u16 >= area.height {
+                    break;
+                }
+                buf.set_line(area.x, area.y + i as u16, line, area.width);
+            }
+            let _ = self.focused;
+        });
     }
 }
 
@@ -364,7 +356,6 @@ impl ComposerState {
 pub struct Composer<'a> {
     placeholder: &'a str,
     focused: bool,
-    theme: Option<&'a Theme>,
 }
 
 impl<'a> Composer<'a> {
@@ -384,22 +375,15 @@ impl<'a> Composer<'a> {
         self.focused = focused;
         self
     }
-
-    pub fn theme(mut self, theme: &'a Theme) -> Self {
-        self.theme = Some(theme);
-        self
-    }
 }
 
 impl<'a> StatefulWidget for Composer<'a> {
     type State = ComposerState;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut ComposerState) {
-        let t = &*resolve_theme(self.theme);
         Textarea::new()
             .placeholder(self.placeholder)
             .focused(self.focused)
-            .theme(t)
             .render(area, buf, &mut state.input);
     }
 }
@@ -456,7 +440,6 @@ pub struct ChatPrompt<'a> {
     question: &'a str,
     options: &'a [&'a str],
     focused: bool,
-    theme: Option<&'a Theme>,
 }
 
 impl<'a> ChatPrompt<'a> {
@@ -465,17 +448,11 @@ impl<'a> ChatPrompt<'a> {
             question,
             options,
             focused: false,
-            theme: None,
         }
     }
 
     pub fn focused(mut self, focused: bool) -> Self {
         self.focused = focused;
-        self
-    }
-
-    pub fn theme(mut self, theme: &'a Theme) -> Self {
-        self.theme = Some(theme);
         self
     }
 }
@@ -486,38 +463,36 @@ impl<'a> StatefulWidget for ChatPrompt<'a> {
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut ChatPromptState) {
         state.len = self.options.len();
         state.chip_rects.clear();
-        if area.is_empty() {
-            return;
-        }
-        let t = &*resolve_theme(self.theme);
-        buf.set_string(
-            area.x,
-            area.y,
-            text::truncate(self.question, area.width as usize),
-            Style::new().fg(t.fg[0]),
-        );
-        if area.height < 2 {
-            return;
-        }
-        let mut x = area.x;
-        for (i, option) in self.options.iter().enumerate() {
-            let w = text::width(option) as u16 + 2;
-            if x + w > area.x + area.width {
-                break;
+        paint(area, |t| {
+            buf.set_string(
+                area.x,
+                area.y,
+                text::truncate(self.question, area.width as usize),
+                Style::new().fg(t.fg[0]),
+            );
+            if area.height < 2 {
+                return;
             }
-            let active = i == state.selected;
-            let mut style = if active {
-                Style::new().fg(t.accent.contrast).bg(t.accent.base)
-            } else {
-                Style::new().fg(t.fg[1]).bg(t.bg[3])
-            };
-            if active && self.focused {
-                style = style.add_modifier(Modifier::BOLD | Modifier::UNDERLINED);
+            let mut x = area.x;
+            for (i, option) in self.options.iter().enumerate() {
+                let w = text::width(option) as u16 + 2;
+                if x + w > area.x + area.width {
+                    break;
+                }
+                let active = i == state.selected;
+                let mut style = if active {
+                    Style::new().fg(t.accent.contrast).bg(t.accent.base)
+                } else {
+                    Style::new().fg(t.fg[1]).bg(t.bg[3])
+                };
+                if active && self.focused {
+                    style = style.add_modifier(Modifier::BOLD | Modifier::UNDERLINED);
+                }
+                state.chip_rects.push(Rect::new(x, area.y + 1, w, 1));
+                buf.set_style(Rect::new(x, area.y + 1, w, 1), style);
+                buf.set_string(x + 1, area.y + 1, *option, style);
+                x += w + 1;
             }
-            state.chip_rects.push(Rect::new(x, area.y + 1, w, 1));
-            buf.set_style(Rect::new(x, area.y + 1, w, 1), style);
-            buf.set_string(x + 1, area.y + 1, *option, style);
-            x += w + 1;
-        }
+        });
     }
 }

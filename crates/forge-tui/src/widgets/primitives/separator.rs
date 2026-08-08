@@ -1,4 +1,4 @@
-use crate::theme::{resolve_theme, Theme};
+use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::Style;
@@ -14,48 +14,38 @@ pub enum Orientation {
 /// A subtle rule. Horizontal fills the first row of the area; vertical fills
 /// the first column.
 #[derive(Clone, Debug, Default)]
-pub struct Separator<'a> {
+pub struct Separator {
     orientation: Orientation,
-    theme: Option<&'a Theme>,
 }
 
-impl<'a> Separator<'a> {
-    pub fn horizontal() -> Separator<'a> {
+impl Separator {
+    pub fn horizontal() -> Separator {
         Separator {
             orientation: Orientation::Horizontal,
-            theme: None,
         }
     }
 
-    pub fn vertical() -> Separator<'a> {
+    pub fn vertical() -> Separator {
         Separator {
             orientation: Orientation::Vertical,
-            theme: None,
         }
-    }
-
-    pub fn theme(mut self, theme: &'a Theme) -> Self {
-        self.theme = Some(theme);
-        self
     }
 }
 
-impl Widget for Separator<'_> {
+impl Widget for Separator {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        if area.is_empty() {
-            return;
-        }
-        let t = &*resolve_theme(self.theme);
-        let style = Style::new().fg(t.border.subtle);
-        match self.orientation {
-            Orientation::Horizontal => {
-                buf.set_string(area.x, area.y, "─".repeat(area.width as usize), style);
-            }
-            Orientation::Vertical => {
-                for dy in 0..area.height {
-                    buf.set_string(area.x, area.y + dy, "│", style);
+        paint(area, |t| {
+            let style = Style::new().fg(t.border.subtle);
+            match self.orientation {
+                Orientation::Horizontal => {
+                    buf.set_string(area.x, area.y, "─".repeat(area.width as usize), style);
+                }
+                Orientation::Vertical => {
+                    for dy in 0..area.height {
+                        buf.set_string(area.x, area.y + dy, "│", style);
+                    }
                 }
             }
-        }
+        });
     }
 }

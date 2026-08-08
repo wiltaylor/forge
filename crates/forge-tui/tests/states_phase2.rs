@@ -1,7 +1,6 @@
 use forge_tui::event::Outcome;
 use forge_tui::runtime::{NavSection, ShellState};
 use forge_tui::text::fuzzy_score;
-use forge_tui::theme::Theme;
 use forge_tui::widgets::*;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
@@ -21,8 +20,7 @@ fn render_stateful<W: StatefulWidget>(widget: W, w: u16, h: u16, state: &mut W::
 #[test]
 fn tabs_navigate_and_number_jump() {
     let mut state = TabsState::new(0);
-    let t = Theme::dark();
-    render_stateful(Tabs::new(&["a", "b", "c"]).theme(&t), 30, 2, &mut state);
+    render_stateful(Tabs::new(&["a", "b", "c"]), 30, 2, &mut state);
     assert_eq!(state.handle_key(key(KeyCode::Right)), Outcome::Changed);
     assert_eq!(state.selected, 1);
     assert_eq!(state.handle_key(key(KeyCode::Char('3'))), Outcome::Changed);
@@ -57,10 +55,9 @@ fn split_resizes_within_bounds() {
 
 #[test]
 fn listbox_selection_modes() {
-    let t = Theme::dark();
     let items = ["a", "b", "c", "d"];
     let mut single = ListBoxState::new();
-    render_stateful(ListBox::new(&items).theme(&t), 20, 4, &mut single);
+    render_stateful(ListBox::new(&items), 20, 4, &mut single);
     let _ = single.handle_key(key(KeyCode::Down));
     assert_eq!(single.handle_key(key(KeyCode::Char(' '))), Outcome::Changed);
     let _ = single.handle_key(key(KeyCode::Down));
@@ -69,7 +66,7 @@ fn listbox_selection_modes() {
     assert_eq!(single.selected_one(), Some(2));
 
     let mut multi = ListBoxState::multi();
-    render_stateful(ListBox::new(&items).theme(&t), 20, 4, &mut multi);
+    render_stateful(ListBox::new(&items), 20, 4, &mut multi);
     let _ = multi.handle_key(key(KeyCode::Char(' ')));
     let _ = multi.handle_key(key(KeyCode::Down));
     let _ = multi.handle_key(key(KeyCode::Char(' ')));
@@ -81,14 +78,13 @@ fn listbox_selection_modes() {
 
 #[test]
 fn listbox_scrolls_to_cursor() {
-    let t = Theme::dark();
     let items: Vec<String> = (0..20).map(|i| format!("item-{i}")).collect();
     let refs: Vec<&str> = items.iter().map(String::as_str).collect();
     let mut state = ListBoxState::new();
-    render_stateful(ListBox::new(&refs).theme(&t), 20, 5, &mut state);
+    render_stateful(ListBox::new(&refs), 20, 5, &mut state);
     let _ = state.handle_key(key(KeyCode::End));
     assert_eq!(state.highlight, 19);
-    let buf = render_stateful(ListBox::new(&refs).theme(&t), 20, 5, &mut state);
+    let buf = render_stateful(ListBox::new(&refs), 20, 5, &mut state);
     let last_row: String = (0..20u16).map(|x| buf[(x, 4)].symbol()).collect();
     assert!(
         last_row.contains("item-19"),
@@ -102,13 +98,8 @@ fn select_open_choose_commit() {
     assert_eq!(s.handle_key(key(KeyCode::Enter)), Outcome::Consumed);
     assert!(s.open);
     // Needs a render for the list to learn its length.
-    let t = Theme::dark();
     let mut buf = Buffer::empty(Rect::new(0, 0, 24, 10));
-    Select::new(&["dev", "staging", "prod"]).theme(&t).render(
-        Rect::new(0, 0, 24, 1),
-        &mut buf,
-        &mut s,
-    );
+    Select::new(&["dev", "staging", "prod"]).render(Rect::new(0, 0, 24, 1), &mut buf, &mut s);
     let _ = s.handle_key(key(KeyCode::Down));
     assert_eq!(s.handle_key(key(KeyCode::Enter)), Outcome::Changed);
     assert!(!s.open);
@@ -182,12 +173,13 @@ fn menu_state_skips_and_submits() {
         MenuEntry::Separator,
         MenuEntry::danger("Delete"),
     ];
-    let t = Theme::dark();
     let mut state = MenuState::new();
     let mut buf = Buffer::empty(Rect::new(0, 0, 30, 10));
-    DropdownMenu::new(&entries, Rect::new(0, 0, 1, 1))
-        .theme(&t)
-        .render(Rect::new(0, 0, 30, 10), &mut buf, &mut state);
+    DropdownMenu::new(&entries, Rect::new(0, 0, 1, 1)).render(
+        Rect::new(0, 0, 30, 10),
+        &mut buf,
+        &mut state,
+    );
     let _ = state.handle_key(key(KeyCode::Down));
     let _ = state.handle_key(key(KeyCode::Down));
     assert_eq!(state.highlight, 2); // "Delete" (selectable index)
@@ -228,7 +220,6 @@ fn palette_filters_and_navigates() {
 
 #[test]
 fn shell_nav_and_collapse() {
-    let t = Theme::dark();
     let sections = [
         NavSection::new(Some("A"), &["one", "two"]),
         NavSection::new(None, &["three"]),
@@ -237,7 +228,6 @@ fn shell_nav_and_collapse() {
     let mut buf = Buffer::empty(Rect::new(0, 0, 80, 20));
     forge_tui::runtime::AppShell::new("T", &sections)
         .status("hints")
-        .theme(&t)
         .render(Rect::new(0, 0, 80, 20), &mut buf, &mut state);
     assert!(!state.content().is_empty());
     let _ = state.handle_key(key(KeyCode::Down));
@@ -253,9 +243,8 @@ fn shell_nav_and_collapse() {
 
 #[test]
 fn toggle_group_and_slider() {
-    let t = Theme::dark();
     let mut tg = ToggleGroupState::new(0);
-    render_stateful(ToggleGroup::new(&["a", "b"]).theme(&t), 20, 1, &mut tg);
+    render_stateful(ToggleGroup::new(&["a", "b"]), 20, 1, &mut tg);
     assert_eq!(tg.handle_key(key(KeyCode::Right)), Outcome::Changed);
     assert_eq!(tg.handle_key(key(KeyCode::Right)), Outcome::Consumed);
 

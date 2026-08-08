@@ -4,7 +4,8 @@
 //! hyperlinks).
 
 use crate::text;
-use crate::theme::{resolve_theme, Theme};
+use crate::theme::{ambient_theme, Theme};
+use crate::widgets::paint;
 use pulldown_cmark::{CodeBlockKind, Event, HeadingLevel, Options, Parser, Tag, TagEnd};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
@@ -276,16 +277,11 @@ pub fn markdown_lines(source: &str, width: usize, t: &Theme) -> Vec<Line<'static
 pub struct Markdown<'a> {
     source: &'a str,
     scroll: u16,
-    theme: Option<&'a Theme>,
 }
 
 impl<'a> Markdown<'a> {
     pub fn new(source: &'a str) -> Markdown<'a> {
-        Markdown {
-            source,
-            scroll: 0,
-            theme: None,
-        }
+        Markdown { source, scroll: 0 }
     }
 
     pub fn scroll(mut self, scroll: u16) -> Self {
@@ -293,30 +289,23 @@ impl<'a> Markdown<'a> {
         self
     }
 
-    pub fn theme(mut self, theme: &'a Theme) -> Self {
-        self.theme = Some(theme);
-        self
-    }
-
     /// Total rows at `width` cells.
     pub fn height(&self, width: u16) -> u16 {
-        let t = &*resolve_theme(self.theme);
+        let t = &ambient_theme();
         markdown_lines(self.source, width as usize, t).len() as u16
     }
 }
 
 impl Widget for Markdown<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        if area.is_empty() {
-            return;
-        }
-        let t = &*resolve_theme(self.theme);
-        let lines = markdown_lines(self.source, area.width as usize, t);
-        for (i, line) in lines.iter().skip(self.scroll as usize).enumerate() {
-            if i as u16 >= area.height {
-                break;
+        paint(area, |t| {
+            let lines = markdown_lines(self.source, area.width as usize, t);
+            for (i, line) in lines.iter().skip(self.scroll as usize).enumerate() {
+                if i as u16 >= area.height {
+                    break;
+                }
+                buf.set_line(area.x, area.y + i as u16, line, area.width);
             }
-            buf.set_line(area.x, area.y + i as u16, line, area.width);
-        }
+        });
     }
 }

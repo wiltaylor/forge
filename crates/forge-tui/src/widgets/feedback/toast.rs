@@ -1,5 +1,6 @@
 use crate::text;
-use crate::theme::{resolve_theme, Severity, Theme};
+use crate::theme::Severity;
+use crate::widgets::paint;
 use crate::widgets::primitives::Glyph;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
@@ -12,21 +13,11 @@ use ratatui::widgets::{Block, Widget};
 pub struct ToastView<'a> {
     severity: Severity,
     message: &'a str,
-    theme: Option<&'a Theme>,
 }
 
 impl<'a> ToastView<'a> {
     pub fn new(severity: Severity, message: &'a str) -> ToastView<'a> {
-        ToastView {
-            severity,
-            message,
-            theme: None,
-        }
-    }
-
-    pub fn theme(mut self, theme: &'a Theme) -> Self {
-        self.theme = Some(theme);
-        self
+        ToastView { severity, message }
     }
 
     fn glyph(&self) -> Glyph {
@@ -47,30 +38,28 @@ impl<'a> ToastView<'a> {
 
 impl Widget for ToastView<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        if area.is_empty() {
-            return;
-        }
-        let t = &*resolve_theme(self.theme);
-        let tri = t.severity(self.severity);
-        let block = Block::bordered()
-            .border_style(Style::new().fg(tri.base).bg(t.bg[4]))
-            .style(Style::new().bg(t.bg[4]));
-        let inner = block.inner(area);
-        block.render(area, buf);
-        if inner.is_empty() {
-            return;
-        }
-        buf.set_string(
-            inner.x + 1,
-            inner.y,
-            self.glyph().as_str(),
-            Style::new().fg(tri.base).bg(t.bg[4]),
-        );
-        buf.set_string(
-            inner.x + 3,
-            inner.y,
-            text::truncate(self.message, inner.width.saturating_sub(4) as usize),
-            Style::new().fg(t.fg[0]).bg(t.bg[4]),
-        );
+        paint(area, |t| {
+            let tri = t.severity(self.severity);
+            let block = Block::bordered()
+                .border_style(Style::new().fg(tri.base).bg(t.bg[4]))
+                .style(Style::new().bg(t.bg[4]));
+            let inner = block.inner(area);
+            block.render(area, buf);
+            if inner.is_empty() {
+                return;
+            }
+            buf.set_string(
+                inner.x + 1,
+                inner.y,
+                self.glyph().as_str(),
+                Style::new().fg(tri.base).bg(t.bg[4]),
+            );
+            buf.set_string(
+                inner.x + 3,
+                inner.y,
+                text::truncate(self.message, inner.width.saturating_sub(4) as usize),
+                Style::new().fg(t.fg[0]).bg(t.bg[4]),
+            );
+        });
     }
 }

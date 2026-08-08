@@ -1,5 +1,4 @@
 use forge_tui::event::Outcome;
-use forge_tui::theme::Theme;
 use forge_tui::widgets::*;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
@@ -17,7 +16,6 @@ fn shift(code: KeyCode) -> KeyEvent {
 
 #[test]
 fn table_cursor_selection_and_sort_cycle() {
-    let t = Theme::dark();
     let columns = [Column::new("a"), Column::new("b")];
     let rows: Vec<Vec<&str>> = vec![vec!["r0", "x"], vec!["r1", "y"], vec!["r2", "z"]];
     let mut state = TableState::new();
@@ -43,16 +41,13 @@ fn table_cursor_selection_and_sort_cycle() {
 
 #[test]
 fn logs_follow_pins_to_tail() {
-    let t = Theme::dark();
     let lines: Vec<LogLine> = (0..30)
         .map(|i| LogLine::new(Level::Info, format!("line {i}")))
         .collect();
     let mut state = LogsState::new();
     let area = Rect::new(0, 0, 30, 5);
     let mut buf = Buffer::empty(area);
-    Logs::new(&lines)
-        .theme(&t)
-        .render(area, &mut buf, &mut state);
+    Logs::new(&lines).render(area, &mut buf, &mut state);
     let bottom_row: String = (0..30u16).map(|x| buf[(x, 4)].symbol()).collect();
     assert!(
         bottom_row.contains("line 29"),
@@ -104,11 +99,8 @@ fn tree_expand_collapse_and_parent_jump() {
 fn json_viewer_paths_and_expansion() {
     let value = json!({"a": [1, 2], "b": "text"});
     let mut state = JsonViewerState::new();
-    let t = Theme::dark();
     let mut buf = Buffer::empty(Rect::new(0, 0, 40, 8));
-    JsonViewer::new()
-        .theme(&t)
-        .render_value(&value, Rect::new(0, 0, 40, 8), &mut buf, &mut state);
+    JsonViewer::new().render_value(&value, Rect::new(0, 0, 40, 8), &mut buf, &mut state);
     assert_eq!(state.cursor_path(), "$");
     let _ = state.handle_key(key(KeyCode::Down), &value);
     // Expand $.a and verify the array children appear.
@@ -116,13 +108,9 @@ fn json_viewer_paths_and_expansion() {
         state.handle_key(key(KeyCode::Right), &value),
         Outcome::Changed
     );
-    JsonViewer::new()
-        .theme(&t)
-        .render_value(&value, Rect::new(0, 0, 40, 8), &mut buf, &mut state);
+    JsonViewer::new().render_value(&value, Rect::new(0, 0, 40, 8), &mut buf, &mut state);
     let _ = state.handle_key(key(KeyCode::Down), &value);
-    JsonViewer::new()
-        .theme(&t)
-        .render_value(&value, Rect::new(0, 0, 40, 8), &mut buf, &mut state);
+    JsonViewer::new().render_value(&value, Rect::new(0, 0, 40, 8), &mut buf, &mut state);
     assert_eq!(state.cursor_path(), "$.a[0]");
 }
 
@@ -134,12 +122,9 @@ fn kanban_moves_are_requested_not_applied() {
         KanbanColumn::new("A", &cards_a),
         KanbanColumn::new("B", &cards_b),
     ];
-    let t = Theme::dark();
     let mut state = KanbanState::new();
     let mut buf = Buffer::empty(Rect::new(0, 0, 40, 10));
-    Kanban::new(&cols)
-        .theme(&t)
-        .render(Rect::new(0, 0, 40, 10), &mut buf, &mut state);
+    Kanban::new(&cols).render(Rect::new(0, 0, 40, 10), &mut buf, &mut state);
 
     assert_eq!(state.handle_key(shift(KeyCode::Right)), Outcome::Changed);
     let mv = state.take_move().expect("move requested");
@@ -214,13 +199,10 @@ fn file_picker_navigates_directories() {
 
 #[test]
 fn accordion_is_exclusive() {
-    let t = Theme::dark();
     let items = [("one", "body1"), ("two", "body2")];
     let mut state = AccordionState::new();
     let mut buf = Buffer::empty(Rect::new(0, 0, 30, 8));
-    Accordion::new(&items)
-        .theme(&t)
-        .render(Rect::new(0, 0, 30, 8), &mut buf, &mut state);
+    Accordion::new(&items).render(Rect::new(0, 0, 30, 8), &mut buf, &mut state);
     let _ = state.handle_key(key(KeyCode::Enter));
     assert_eq!(state.open, Some(0));
     let _ = state.handle_key(key(KeyCode::Down));

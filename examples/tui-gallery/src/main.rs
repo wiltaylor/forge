@@ -78,7 +78,6 @@ impl Gallery {
 
 impl App for Gallery {
     fn draw(&mut self, frame: &mut Frame, ctx: &mut Ctx) {
-        let t = ctx.theme.clone();
         let nav_focused = ctx.focus.register(NAV);
         let nav_sections = [
             NavSection::new(Some("Basics"), &SECTIONS[0..2]),
@@ -94,30 +93,29 @@ impl App for Gallery {
             .topbar_right("alt-ai@wiltaylor.dev")
             .status("Tab focus · ↑/↓ section · t theme · q quit")
             .status_right("forge-tui 0.1")
-            .nav_focused(nav_focused)
-            .theme(&t);
+            .nav_focused(nav_focused);
         frame.render_stateful_widget(shell, frame.area(), &mut self.shell);
         let content = self.shell.content();
 
         match self.section() {
-            0 => sections::primitives::draw(frame, content, ctx, &t),
-            1 => sections::feedback::draw(frame, content, ctx, &t, &mut self.feedback),
-            2 => sections::forms::draw(frame, content, ctx, &t, &mut self.forms),
-            3 => sections::pickers::draw(frame, content, ctx, &t, &mut self.pickers),
-            4 => sections::structure::draw(frame, content, ctx, &t, &mut self.structure),
-            5 => sections::overlays::draw(frame, content, ctx, &t, &mut self.overlays),
-            6 => sections::data::draw(frame, content, ctx, &t, &mut self.data),
-            7 => sections::files::draw(frame, content, ctx, &t, &mut self.files),
-            8 => sections::board::draw(frame, content, ctx, &t, &mut self.board),
-            9 => sections::charts::draw(frame, content, ctx, &t),
-            10 => sections::date::draw(frame, content, ctx, &t, &mut self.date),
-            11 => sections::text::draw(frame, content, ctx, &t),
-            12 => sections::chat::draw(frame, content, ctx, &t, &mut self.chat),
-            13 => sections::code::draw(frame, content, ctx, &t, &mut self.code),
-            14 => sections::term::draw(frame, content, ctx, &t, &mut self.term),
-            15 => sections::flow::draw(frame, content, ctx, &t),
-            16 => sections::effects::draw(frame, content, ctx, &t, &mut self.effects),
-            _ => sections::blocks::draw(frame, content, ctx, &t, &mut self.blocks),
+            0 => sections::primitives::draw(frame, content, ctx),
+            1 => sections::feedback::draw(frame, content, ctx, &mut self.feedback),
+            2 => sections::forms::draw(frame, content, ctx, &mut self.forms),
+            3 => sections::pickers::draw(frame, content, ctx, &mut self.pickers),
+            4 => sections::structure::draw(frame, content, ctx, &mut self.structure),
+            5 => sections::overlays::draw(frame, content, ctx, &mut self.overlays),
+            6 => sections::data::draw(frame, content, ctx, &mut self.data),
+            7 => sections::files::draw(frame, content, ctx, &mut self.files),
+            8 => sections::board::draw(frame, content, ctx, &mut self.board),
+            9 => sections::charts::draw(frame, content, ctx),
+            10 => sections::date::draw(frame, content, ctx, &mut self.date),
+            11 => sections::text::draw(frame, content, ctx),
+            12 => sections::chat::draw(frame, content, ctx, &mut self.chat),
+            13 => sections::code::draw(frame, content, ctx, &mut self.code),
+            14 => sections::term::draw(frame, content, ctx, &mut self.term),
+            15 => sections::flow::draw(frame, content, ctx),
+            16 => sections::effects::draw(frame, content, ctx, &mut self.effects),
+            _ => sections::blocks::draw(frame, content, ctx, &mut self.blocks),
         }
     }
 
@@ -167,7 +165,11 @@ impl App for Gallery {
                             Scheme::Dark => Theme::light(),
                             Scheme::Light => Theme::dark(),
                         };
+                        // `ctx.theme` paints the runtime's own chrome; the
+                        // ambient theme paints every widget. Both, or the
+                        // toggle only moves half the screen.
                         ctx.theme = next.quantized(self.mode);
+                        set_ambient_theme(ctx.theme.clone());
                     }
                     _ => {}
                 }

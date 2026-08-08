@@ -1,4 +1,4 @@
-use crate::theme::{resolve_theme, Theme};
+use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::{Color, Style};
@@ -10,38 +10,26 @@ use ratatui::widgets::Widget;
 pub struct Sparkline<'a> {
     data: &'a [u64],
     color: Option<Color>,
-    theme: Option<&'a Theme>,
 }
 
 impl<'a> Sparkline<'a> {
     pub fn new(data: &'a [u64]) -> Sparkline<'a> {
-        Sparkline {
-            data,
-            color: None,
-            theme: None,
-        }
+        Sparkline { data, color: None }
     }
 
     pub fn color(mut self, color: Color) -> Self {
         self.color = Some(color);
         self
     }
-
-    pub fn theme(mut self, theme: &'a Theme) -> Self {
-        self.theme = Some(theme);
-        self
-    }
 }
 
 impl Widget for Sparkline<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        if area.is_empty() {
-            return;
-        }
-        let t = &*resolve_theme(self.theme);
-        ratatui::widgets::Sparkline::default()
-            .data(self.data)
-            .style(Style::new().fg(self.color.unwrap_or(t.accent.base)))
-            .render(area, buf);
+        paint(area, |t| {
+            ratatui::widgets::Sparkline::default()
+                .data(self.data)
+                .style(Style::new().fg(self.color.unwrap_or(t.accent.base)))
+                .render(area, buf);
+        });
     }
 }

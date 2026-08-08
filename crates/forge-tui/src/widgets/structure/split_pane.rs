@@ -1,5 +1,5 @@
 use crate::event::{is_press, Outcome};
-use crate::theme::{resolve_theme, Theme};
+use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent, MouseEventKind};
 use ratatui::layout::Rect;
@@ -92,18 +92,16 @@ impl SplitState {
 /// [`SplitPane::areas`] for the pane rects, render your content, then render
 /// the `SplitPane` itself to paint the divider.
 #[derive(Clone, Debug, Default)]
-pub struct SplitPane<'a> {
+pub struct SplitPane {
     focused: bool,
     min: u16,
-    theme: Option<&'a Theme>,
 }
 
-impl<'a> SplitPane<'a> {
-    pub fn new() -> SplitPane<'a> {
+impl SplitPane {
+    pub fn new() -> SplitPane {
         SplitPane {
             focused: false,
             min: 8,
-            theme: None,
         }
     }
 
@@ -115,11 +113,6 @@ impl<'a> SplitPane<'a> {
 
     pub fn focused(mut self, focused: bool) -> Self {
         self.focused = focused;
-        self
-    }
-
-    pub fn theme(mut self, theme: &'a Theme) -> Self {
-        self.theme = Some(theme);
         self
     }
 
@@ -146,23 +139,21 @@ impl<'a> SplitPane<'a> {
     }
 }
 
-impl<'a> StatefulWidget for SplitPane<'a> {
+impl StatefulWidget for SplitPane {
     type State = SplitState;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut SplitState) {
-        if area.is_empty() {
-            return;
-        }
-        state.last_area = area;
-        let t = &*resolve_theme(self.theme);
-        let dx = area.x + self.divider_x(area, state);
-        let color = if self.focused {
-            t.accent.base
-        } else {
-            t.border.default
-        };
-        for dy in 0..area.height {
-            buf.set_string(dx, area.y + dy, "│", Style::new().fg(color));
-        }
+        paint(area, |t| {
+            state.last_area = area;
+            let dx = area.x + self.divider_x(area, state);
+            let color = if self.focused {
+                t.accent.base
+            } else {
+                t.border.default
+            };
+            for dy in 0..area.height {
+                buf.set_string(dx, area.y + dy, "│", Style::new().fg(color));
+            }
+        });
     }
 }

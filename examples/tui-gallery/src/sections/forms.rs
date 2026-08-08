@@ -121,7 +121,7 @@ impl FormsState {
     }
 }
 
-pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut FormsState) {
+pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, state: &mut FormsState) {
     let mut y = area.y;
     let x = area.x;
     let w = area.width.min(48);
@@ -136,15 +136,12 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
     };
 
     if let Some(r) = row(1, 0, &mut y) {
-        frame.render_widget(Eyebrow::new("Profile").theme(t), r);
+        frame.render_widget(Eyebrow::new("Profile"), r);
     }
     if let Some(r) = row(1, 1, &mut y) {
         let focused = ctx.focus.register(NAME);
         frame.render_stateful_widget(
-            Input::new()
-                .placeholder("Full name")
-                .focused(focused)
-                .theme(t),
+            Input::new().placeholder("Full name").focused(focused),
             r,
             &mut state.name,
         );
@@ -155,8 +152,7 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
             Input::new()
                 .placeholder("Password")
                 .masked(true)
-                .focused(focused)
-                .theme(t),
+                .focused(focused),
             r,
             &mut state.password,
         );
@@ -168,8 +164,7 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
             Input::new()
                 .placeholder("Handle")
                 .invalid(invalid)
-                .focused(focused)
-                .theme(t),
+                .focused(focused),
             r,
             &mut state.handle,
         );
@@ -177,21 +172,19 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
     if let Some(r) = row(1, 1, &mut y) {
         if invalid {
             frame.render_widget(
-                Badge::new("handle must not contain spaces")
-                    .severity(Severity::Danger)
-                    .theme(t),
+                Badge::new("handle must not contain spaces").severity(Severity::Danger),
                 r,
             );
         }
     }
 
     if let Some(r) = row(1, 0, &mut y) {
-        frame.render_widget(Eyebrow::new("Preferences").theme(t), r);
+        frame.render_widget(Eyebrow::new("Preferences"), r);
     }
     if let Some(r) = row(1, 0, &mut y) {
         let focused = ctx.focus.register(AGREE);
         frame.render_stateful_widget(
-            Checkbox::new("Accept the terms").focused(focused).theme(t),
+            Checkbox::new("Accept the terms").focused(focused),
             r,
             &mut state.agree,
         );
@@ -199,21 +192,19 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
     if let Some(r) = row(1, 1, &mut y) {
         let focused = ctx.focus.register(NOTIFY);
         frame.render_stateful_widget(
-            Toggle::new("Email notifications").focused(focused).theme(t),
+            Toggle::new("Email notifications").focused(focused),
             r,
             &mut state.notify,
         );
     }
 
     if let Some(r) = row(1, 0, &mut y) {
-        frame.render_widget(Eyebrow::new("Log level").theme(t), r);
+        frame.render_widget(Eyebrow::new("Log level"), r);
     }
     if let Some(r) = row(3, 1, &mut y) {
         let focused = ctx.focus.register(LEVEL);
         frame.render_stateful_widget(
-            RadioGroup::new(&["debug", "info", "warning"])
-                .focused(focused)
-                .theme(t),
+            RadioGroup::new(&["debug", "info", "warning"]).focused(focused),
             r,
             &mut state.level,
         );
@@ -223,8 +214,7 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
         let focused = ctx.focus.register(SUBMIT);
         let b = Button::new("Save profile")
             .variant(Variant::Primary)
-            .focused(focused)
-            .theme(t);
+            .focused(focused);
         let bw = b.width().min(r.width);
         state.submit_rect = Rect::new(r.x, r.y, bw, 1);
         frame.render_widget(b, state.submit_rect);

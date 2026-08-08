@@ -111,13 +111,14 @@ impl BlocksState {
     }
 }
 
-pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut BlocksState) {
+pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, state: &mut BlocksState) {
+    let t = &ambient_theme();
     let focused = ctx.focus.register(EDITOR);
     if area.height < 4 {
         return;
     }
     frame.render_stateful_widget(
-        BlockEditor::new().focused(focused).theme(t),
+        BlockEditor::new().focused(focused),
         Rect::new(area.x, area.y, area.width, area.height - 1),
         &mut state.editor,
     );

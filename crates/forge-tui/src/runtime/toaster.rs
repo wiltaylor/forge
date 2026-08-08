@@ -111,11 +111,14 @@ impl Toaster {
     }
 
     /// Paint the newest `max_visible` toasts stacked from the top-right.
-    pub fn draw(&mut self, frame: &mut Frame, area: Rect, theme: &Theme) {
+    ///
+    /// `theme` is ignored: the toast views paint with the ambient theme. See
+    /// [`Overlay::draw`](crate::runtime::Overlay::draw).
+    pub fn draw(&mut self, frame: &mut Frame, area: Rect, _theme: &Theme) {
         let mut y = area.y + 1;
         let start = self.active.len().saturating_sub(self.max_visible);
         for active in &self.active[start..] {
-            let view = ToastView::new(active.toast.severity, &active.toast.message).theme(theme);
+            let view = ToastView::new(active.toast.severity, &active.toast.message);
             let (w, h) = view.size(area.width.saturating_sub(4).min(44));
             if y + h > area.y + area.height {
                 break;

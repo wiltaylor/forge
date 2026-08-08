@@ -2,7 +2,7 @@ use forge_tui::prelude::*;
 use ratatui::layout::Rect;
 use ratatui::Frame;
 
-pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme) {
+pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx) {
     let mut y = area.y;
     let x = area.x;
     let w = area.width;
@@ -17,7 +17,7 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme) {
     };
 
     if let Some(r) = row(1, &mut y) {
-        frame.render_widget(Eyebrow::new("Buttons").theme(t), r);
+        frame.render_widget(Eyebrow::new("Buttons"), r);
     }
     if let Some(r) = row(1, &mut y) {
         let labels: [(&str, Variant, bool); 5] = [
@@ -29,10 +29,7 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme) {
         ];
         let mut bx = r.x;
         for (i, (label, variant, disabled)) in labels.iter().enumerate() {
-            let b = Button::new(label)
-                .variant(*variant)
-                .disabled(*disabled)
-                .theme(t);
+            let b = Button::new(label).variant(*variant).disabled(*disabled);
             let bw = b.width();
             if bx + bw > r.x + r.width {
                 break;
@@ -44,7 +41,7 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme) {
     }
 
     if let Some(r) = row(1, &mut y) {
-        frame.render_widget(Eyebrow::new("Badges · Status · Kbd").theme(t), r);
+        frame.render_widget(Eyebrow::new("Badges · Status · Kbd"), r);
     }
     if let Some(r) = row(1, &mut y) {
         let mut bx = r.x;
@@ -56,7 +53,7 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme) {
             (Some(Severity::Info), "beta"),
         ];
         for (sev, label) in badges {
-            let mut badge = Badge::new(label).theme(t);
+            let mut badge = Badge::new(label);
             if let Some(s) = sev {
                 badge = badge.severity(s);
             }
@@ -81,19 +78,18 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme) {
                 StatusDot::new(sev)
                     .label(label)
                     .pulse(pulse)
-                    .frame(ctx.frame)
-                    .theme(t),
+                    .frame(ctx.frame),
                 Rect::new(bx + 1, r.y, need, 1),
             );
             bx += need + 1;
         }
         if bx + 8 <= r.x + r.width {
-            frame.render_widget(Kbd::new("⌃K").theme(t), Rect::new(bx + 1, r.y, 6, 1));
+            frame.render_widget(Kbd::new("⌃K"), Rect::new(bx + 1, r.y, 6, 1));
         }
     }
 
     if let Some(r) = row(1, &mut y) {
-        frame.render_widget(Eyebrow::new("Stats").theme(t), r);
+        frame.render_widget(Eyebrow::new("Stats"), r);
     }
     if let Some(r) = row(3, &mut y) {
         let stats: [(&str, &str, &str, Trend); 3] = [
@@ -106,36 +102,32 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme) {
             frame.render_widget(
                 Stat::new(label, value)
                     .delta(delta, trend)
-                    .up_is_good(label != "Errors")
-                    .theme(t),
+                    .up_is_good(label != "Errors"),
                 cell,
             );
         }
     }
 
     if let Some(r) = row(1, &mut y) {
-        frame.render_widget(Separator::horizontal().theme(t), r);
+        frame.render_widget(Separator::horizontal(), r);
     }
 
     if let Some(r) = row(6, &mut y) {
         let cells = Grid::new(3).gap(2).cells(r, 3, 6);
         if let Some(c) = cells.first() {
-            let card = Card::new().title(" Card ").footer(" footer ").theme(t);
+            let card = Card::new().title(" Card ").footer(" footer ");
             let inner = card.inner(*c);
             frame.render_widget(card, *c);
             frame.render_widget(
-                Avatar::new("Wil Taylor").theme(t),
+                Avatar::new("Wil Taylor"),
                 Rect::new(inner.x, inner.y, inner.width, 1),
             );
         }
         if let Some(c) = cells.get(1) {
-            frame.render_widget(Skeleton::new().frame(ctx.frame).theme(t), *c);
+            frame.render_widget(Skeleton::new().frame(ctx.frame), *c);
         }
         if let Some(c) = cells.get(2) {
-            frame.render_widget(
-                Empty::new("No results").hint("Adjust the filters").theme(t),
-                *c,
-            );
+            frame.render_widget(Empty::new("No results").hint("Adjust the filters"), *c);
         }
     }
 }

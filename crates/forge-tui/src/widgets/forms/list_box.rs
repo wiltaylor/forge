@@ -1,6 +1,6 @@
 use crate::event::{in_area, is_press, left_down, scroll_delta, Outcome};
 use crate::text;
-use crate::theme::{resolve_theme, Theme};
+use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
 use ratatui::layout::Rect;
@@ -163,7 +163,6 @@ impl ListBoxState {
 pub struct ListBox<'a> {
     items: &'a [&'a str],
     focused: bool,
-    theme: Option<&'a Theme>,
 }
 
 impl<'a> ListBox<'a> {
@@ -171,17 +170,11 @@ impl<'a> ListBox<'a> {
         ListBox {
             items,
             focused: false,
-            theme: None,
         }
     }
 
     pub fn focused(mut self, focused: bool) -> Self {
         self.focused = focused;
-        self
-    }
-
-    pub fn theme(mut self, theme: &'a Theme) -> Self {
-        self.theme = Some(theme);
         self
     }
 }
@@ -193,66 +186,65 @@ impl<'a> StatefulWidget for ListBox<'a> {
         state.len = self.items.len();
         state.view_h = area.height as usize;
         state.area = area;
-        if area.is_empty() {
-            return;
-        }
-        let t = &*resolve_theme(self.theme);
-        state.highlight = state.highlight.min(state.len.saturating_sub(1));
-        // Keep the cursor in view.
-        if state.highlight < state.offset {
-            state.offset = state.highlight;
-        } else if state.highlight >= state.offset + state.view_h {
-            state.offset = state.highlight + 1 - state.view_h;
-        }
-        let overflow = state.len > state.view_h;
-        let text_w = area.width.saturating_sub(if overflow { 1 } else { 0 });
-        for (vis, i) in (state.offset..state.len.min(state.offset + state.view_h)).enumerate() {
-            let y = area.y + vis as u16;
-            let is_cursor = i == state.highlight;
-            let is_selected = state.is_selected(i);
-            let mut style = Style::new().fg(if is_selected { t.accent.fg } else { t.fg[1] });
-            if is_cursor {
-                style = style
-                    .bg(t.bg[3])
-                    .fg(if is_selected { t.accent.fg } else { t.fg[0] });
-                if self.focused {
-                    style = style.add_modifier(Modifier::BOLD);
-                }
-                buf.set_style(Rect::new(area.x, y, text_w, 1), style);
+        paint(area, |t| {
+            state.highlight = state.highlight.min(state.len.saturating_sub(1));
+            // Keep the cursor in view.
+            if state.highlight < state.offset {
+                state.offset = state.highlight;
+            } else if state.highlight >= state.offset + state.view_h {
+                state.offset = state.highlight + 1 - state.view_h;
             }
-            let mark = if state.multi {
-                if is_selected {
-                    "✓ "
+            let overflow = state.len > state.view_h;
+            let text_w = area.width.saturating_sub(if overflow { 1 } else { 0 });
+            for (vis, i) in (state.offset..state.len.min(state.offset + state.view_h)).enumerate() {
+                let y = area.y + vis as u16;
+                let is_cursor = i == state.highlight;
+                let is_selected = state.is_selected(i);
+                let mut style = Style::new().fg(if is_selected { t.accent.fg } else { t.fg[1] });
+                if is_cursor {
+                    style = style
+                        .bg(t.bg[3])
+                        .fg(if is_selected { t.accent.fg } else { t.fg[0] });
+                    if self.focused {
+                        style = style.add_modifier(Modifier::BOLD);
+                    }
+                    buf.set_style(Rect::new(area.x, y, text_w, 1), style);
+                }
+                let mark = if state.multi {
+                    if is_selected {
+                        "✓ "
+                    } else {
+                        "  "
+                    }
+                } else if is_selected {
+                    "● "
                 } else {
                     "  "
-                }
-            } else if is_selected {
-                "● "
-            } else {
-                "  "
-            };
-            buf.set_string(area.x, y, mark, style);
-            buf.set_string(
-                area.x + 2,
-                y,
-                text::truncate(self.items[i], text_w.saturating_sub(2) as usize),
-                style,
-            );
-        }
-        if overflow {
-            let x = area.x + area.width - 1;
-            let track_h = area.height as usize;
-            let thumb_h = (track_h * track_h / state.len).max(1);
-            let thumb_top = state.offset * track_h / state.len;
-            for dy in 0..area.height {
-                let in_thumb = (dy as usize) >= thumb_top && (dy as usize) < thumb_top + thumb_h;
-                let (ch, color) = if in_thumb {
-                    ("█", t.border.strong)
-                } else {
-                    ("│", t.border.subtle)
                 };
-                buf.set_string(x, area.y + dy, ch, Style::new().fg(color));
+                buf.set_string(area.x, y, mark, style);
+                buf.set_string(
+                    area.x + 2,
+                    y,
+                    text::truncate(self.items[i], text_w.saturating_sub(2) as usize),
+                    style,
+                );
             }
-        }
+            if overflow {
+                let x = area.x + area.width - 1;
+                let track_h = area.height as usize;
+                let thumb_h = (track_h * track_h / state.len).max(1);
+                let thumb_top = state.offset * track_h / state.len;
+                for dy in 0..area.height {
+                    let in_thumb =
+                        (dy as usize) >= thumb_top && (dy as usize) < thumb_top + thumb_h;
+                    let (ch, color) = if in_thumb {
+                        ("█", t.border.strong)
+                    } else {
+                        ("│", t.border.subtle)
+                    };
+                    buf.set_string(x, area.y + dy, ch, Style::new().fg(color));
+                }
+            }
+        });
     }
 }

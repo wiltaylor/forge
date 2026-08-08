@@ -57,9 +57,7 @@ pub(super) fn data_height(kind: &BlockKind, _w: u16) -> usize {
         BlockKind::SequenceDiagram {
             messages, notes, ..
         } => 3 + messages.len() * 2 + notes.as_ref().map_or(0, Vec::len) + 1,
-        BlockKind::NodeTable { title, rows } => {
-            rows.len() + 2 + usize::from(!title.is_empty())
-        }
+        BlockKind::NodeTable { title, rows } => rows.len() + 2 + usize::from(!title.is_empty()),
         BlockKind::Tree { nodes } => count_tree(nodes).max(1),
         BlockKind::Timeline {
             title,
@@ -171,8 +169,13 @@ pub(super) fn paint_data(
                 .iter()
                 .map(|s| PieSlice::new(&s.label, s.value))
                 .collect();
-            let pie_area = Rect::new(area.x, y, area.width, area.height.saturating_sub(y - area.y));
-            PieChart::new(&slices).legend(true).theme(t).render(pie_area, buf);
+            let pie_area = Rect::new(
+                area.x,
+                y,
+                area.width,
+                area.height.saturating_sub(y - area.y),
+            );
+            PieChart::new(&slices).legend(true).render(pie_area, buf);
         }
         BlockKind::Diagram { nodes, edges, .. } => {
             let fnodes: Vec<FlowNode> = nodes
@@ -189,12 +192,12 @@ pub(super) fn paint_data(
                     }
                 })
                 .collect();
-            Flowchart::new(&fnodes, &fedges).theme(t).render(area, buf);
+            Flowchart::new(&fnodes, &fedges).render(area, buf);
         }
         BlockKind::StateDiagram {
             states,
             transitions,
-        } => paint_states(buf, area, t, states, transitions),
+        } => paint_states(buf, area, states, transitions),
         BlockKind::SequenceDiagram {
             participants,
             messages,
@@ -223,7 +226,11 @@ pub(super) fn paint_data(
             t,
             title,
             kicker.as_deref(),
-            &[reading_time.as_deref(), updated.as_deref(), version.as_deref()],
+            &[
+                reading_time.as_deref(),
+                updated.as_deref(),
+                version.as_deref(),
+            ],
         ),
         _ => {}
     }
@@ -419,7 +426,11 @@ fn paint_bars(
         .max(f64::EPSILON);
     let cat_w = categories.iter().map(|c| text::width(c)).max().unwrap_or(0);
     let name_w = if multi {
-        series.iter().map(|s| text::width(&s.name)).max().unwrap_or(0)
+        series
+            .iter()
+            .map(|s| text::width(&s.name))
+            .max()
+            .unwrap_or(0)
     } else {
         0
     };
@@ -516,7 +527,6 @@ fn paint_line(
     LineChart::new(&line_series)
         .x_bounds([0.0, (n - 1) as f64])
         .y_bounds([lo, hi])
-        .theme(t)
         .render(Rect::new(area.x, y, area.width, chart_h.max(3)), buf);
     if series.len() > 1 {
         let ly = y + chart_h.max(3);
@@ -538,7 +548,6 @@ fn paint_line(
 fn paint_states(
     buf: &mut Buffer,
     area: Rect,
-    t: &Theme,
     states: &[StateNode],
     transitions: &[StateTransition],
 ) {
@@ -581,7 +590,7 @@ fn paint_states(
             }
         })
         .collect();
-    Flowchart::new(&nodes, &edges).theme(t).render(area, buf);
+    Flowchart::new(&nodes, &edges).render(area, buf);
 }
 
 fn paint_sequence(
@@ -622,7 +631,10 @@ fn paint_sequence(
             bx + 2,
             area.y + 1,
             text::truncate(name, wu.saturating_sub(4)),
-            Style::new().fg(t.fg[0]).bg(t.bg[1]).add_modifier(Modifier::BOLD),
+            Style::new()
+                .fg(t.fg[0])
+                .bg(t.bg[1])
+                .add_modifier(Modifier::BOLD),
         );
         buf.set_string(bx, area.y + 2, format!("└{}┘", "─".repeat(wu - 2)), border);
     }

@@ -1,6 +1,6 @@
 use crate::event::{clicked, is_press, Outcome};
 use crate::text;
-use crate::theme::{resolve_theme, Theme};
+use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
 use ratatui::layout::Rect;
@@ -81,7 +81,6 @@ impl TabsState {
 pub struct Tabs<'a> {
     labels: &'a [&'a str],
     focused: bool,
-    theme: Option<&'a Theme>,
 }
 
 impl<'a> Tabs<'a> {
@@ -89,17 +88,11 @@ impl<'a> Tabs<'a> {
         Tabs {
             labels,
             focused: false,
-            theme: None,
         }
     }
 
     pub fn focused(mut self, focused: bool) -> Self {
         self.focused = focused;
-        self
-    }
-
-    pub fn theme(mut self, theme: &'a Theme) -> Self {
-        self.theme = Some(theme);
         self
     }
 }
@@ -110,48 +103,46 @@ impl<'a> StatefulWidget for Tabs<'a> {
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut TabsState) {
         state.len = self.labels.len();
         state.label_rects.clear();
-        if area.is_empty() {
-            return;
-        }
-        let t = &*resolve_theme(self.theme);
-        let two_rows = area.height >= 2;
-        if two_rows {
-            buf.set_string(
-                area.x,
-                area.y + 1,
-                "─".repeat(area.width as usize),
-                Style::new().fg(t.border.subtle),
-            );
-        }
-        let right = area.x + area.width;
-        let mut x = area.x;
-        for (i, label) in self.labels.iter().enumerate() {
-            let lw = text::width(label) as u16;
-            if x + lw > right {
-                break;
-            }
-            state.label_rects.push(Rect::new(x, area.y, lw, 1));
-            let active = i == state.selected;
-            let mut style = Style::new().fg(if active { t.fg[0] } else { t.fg[1] });
-            if active {
-                style = style.add_modifier(Modifier::BOLD);
-                if !two_rows {
-                    style = style.fg(t.accent.fg).add_modifier(Modifier::UNDERLINED);
-                }
-                if self.focused {
-                    style = style.add_modifier(Modifier::UNDERLINED);
-                }
-            }
-            buf.set_string(x, area.y, *label, style);
-            if active && two_rows {
+        paint(area, |t| {
+            let two_rows = area.height >= 2;
+            if two_rows {
                 buf.set_string(
-                    x,
+                    area.x,
                     area.y + 1,
-                    "━".repeat(lw as usize),
-                    Style::new().fg(t.accent.base),
+                    "─".repeat(area.width as usize),
+                    Style::new().fg(t.border.subtle),
                 );
             }
-            x += lw + 3;
-        }
+            let right = area.x + area.width;
+            let mut x = area.x;
+            for (i, label) in self.labels.iter().enumerate() {
+                let lw = text::width(label) as u16;
+                if x + lw > right {
+                    break;
+                }
+                state.label_rects.push(Rect::new(x, area.y, lw, 1));
+                let active = i == state.selected;
+                let mut style = Style::new().fg(if active { t.fg[0] } else { t.fg[1] });
+                if active {
+                    style = style.add_modifier(Modifier::BOLD);
+                    if !two_rows {
+                        style = style.fg(t.accent.fg).add_modifier(Modifier::UNDERLINED);
+                    }
+                    if self.focused {
+                        style = style.add_modifier(Modifier::UNDERLINED);
+                    }
+                }
+                buf.set_string(x, area.y, *label, style);
+                if active && two_rows {
+                    buf.set_string(
+                        x,
+                        area.y + 1,
+                        "━".repeat(lw as usize),
+                        Style::new().fg(t.accent.base),
+                    );
+                }
+                x += lw + 3;
+            }
+        });
     }
 }

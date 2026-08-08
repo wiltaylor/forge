@@ -1,6 +1,7 @@
 use crate::event::{clicked, is_press, Outcome};
 use crate::text;
-use crate::theme::{resolve_theme, Theme};
+use crate::theme::Theme;
+use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
 use ratatui::layout::Rect;
@@ -75,7 +76,6 @@ pub struct RadioGroup<'a> {
     horizontal: bool,
     focused: bool,
     disabled: bool,
-    theme: Option<&'a Theme>,
 }
 
 impl<'a> RadioGroup<'a> {
@@ -85,7 +85,6 @@ impl<'a> RadioGroup<'a> {
             horizontal: false,
             focused: false,
             disabled: false,
-            theme: None,
         }
     }
 
@@ -101,11 +100,6 @@ impl<'a> RadioGroup<'a> {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
-        self
-    }
-
-    pub fn theme(mut self, theme: &'a Theme) -> Self {
-        self.theme = Some(theme);
         self
     }
 
@@ -137,49 +131,47 @@ impl<'a> StatefulWidget for RadioGroup<'a> {
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut RadioState) {
         state.len = self.items.len();
         state.item_rects.clear();
-        if area.is_empty() {
-            return;
-        }
-        let t = &*resolve_theme(self.theme);
-        if self.horizontal {
-            let mut x = area.x;
-            for (i, item) in self.items.iter().enumerate() {
-                let selected = i == state.selected;
-                let (mark, label) = self.item_style(t, selected);
-                let cell = format!("({})", if selected { "•" } else { " " });
-                let need = 4 + text::width(item) as u16 + 2;
-                if x + need > area.x + area.width {
-                    break;
+        paint(area, |t| {
+            if self.horizontal {
+                let mut x = area.x;
+                for (i, item) in self.items.iter().enumerate() {
+                    let selected = i == state.selected;
+                    let (mark, label) = self.item_style(t, selected);
+                    let cell = format!("({})", if selected { "•" } else { " " });
+                    let need = 4 + text::width(item) as u16 + 2;
+                    if x + need > area.x + area.width {
+                        break;
+                    }
+                    state.item_rects.push(Rect::new(x, area.y, need, 1));
+                    buf.set_string(x, area.y, cell, mark);
+                    buf.set_string(x + 4, area.y, *item, label);
+                    x += need;
                 }
-                state.item_rects.push(Rect::new(x, area.y, need, 1));
-                buf.set_string(x, area.y, cell, mark);
-                buf.set_string(x + 4, area.y, *item, label);
-                x += need;
-            }
-        } else {
-            for (i, item) in self.items.iter().enumerate() {
-                if i as u16 >= area.height {
-                    break;
-                }
-                let selected = i == state.selected;
-                let (mark, label) = self.item_style(t, selected);
-                let y = area.y + i as u16;
-                state.item_rects.push(Rect::new(area.x, y, area.width, 1));
-                buf.set_string(
-                    area.x,
-                    y,
-                    format!("({})", if selected { "•" } else { " " }),
-                    mark,
-                );
-                if area.width > 4 {
+            } else {
+                for (i, item) in self.items.iter().enumerate() {
+                    if i as u16 >= area.height {
+                        break;
+                    }
+                    let selected = i == state.selected;
+                    let (mark, label) = self.item_style(t, selected);
+                    let y = area.y + i as u16;
+                    state.item_rects.push(Rect::new(area.x, y, area.width, 1));
                     buf.set_string(
-                        area.x + 4,
+                        area.x,
                         y,
-                        text::truncate(item, area.width as usize - 4),
-                        label,
+                        format!("({})", if selected { "•" } else { " " }),
+                        mark,
                     );
+                    if area.width > 4 {
+                        buf.set_string(
+                            area.x + 4,
+                            y,
+                            text::truncate(item, area.width as usize - 4),
+                            label,
+                        );
+                    }
                 }
             }
-        }
+        });
     }
 }

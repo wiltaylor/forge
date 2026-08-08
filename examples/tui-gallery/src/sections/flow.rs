@@ -2,12 +2,12 @@ use forge_tui::prelude::*;
 use ratatui::layout::Rect;
 use ratatui::Frame;
 
-pub fn draw(frame: &mut Frame, area: Rect, _ctx: &mut Ctx, t: &Theme) {
+pub fn draw(frame: &mut Frame, area: Rect, _ctx: &mut Ctx) {
     if area.height < 4 {
         return;
     }
     frame.render_widget(
-        Eyebrow::new("Flowchart — auto-layered, read-only").theme(t),
+        Eyebrow::new("Flowchart — auto-layered, read-only"),
         Rect::new(area.x, area.y, area.width, 1),
     );
     let nodes = [
@@ -28,7 +28,7 @@ pub fn draw(frame: &mut Frame, area: Rect, _ctx: &mut Ctx, t: &Theme) {
         FlowEdge::new("events", "ws"),
     ];
     frame.render_widget(
-        Flowchart::new(&nodes, &edges).theme(t),
+        Flowchart::new(&nodes, &edges),
         Rect::new(area.x, area.y + 2, area.width, area.height - 2),
     );
 }

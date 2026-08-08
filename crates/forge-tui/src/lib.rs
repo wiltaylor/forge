@@ -39,9 +39,8 @@ pub mod prelude {
         OwnedCommand, OwnedMenuEntry, PaletteOverlay, RunOptions, ShellState, ToastHandle,
     };
     pub use crate::theme::{
-        ambient_theme, blend, chart_series, default_theme, resolve_theme, series_color,
-        set_ambient_theme, set_default_theme, ColorMode, Scheme, Severity, Surface, TextRole,
-        Theme,
+        ambient_theme, blend, chart_series, default_theme, series_color, set_ambient_theme,
+        set_default_theme, ColorMode, Scheme, Severity, Surface, TextRole, Theme,
     };
     pub use crate::widgets::*;
     pub use ratatui::crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers, MouseEvent};

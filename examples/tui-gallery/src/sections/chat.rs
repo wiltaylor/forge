@@ -117,7 +117,7 @@ impl PopTyping for Vec<ChatItem> {
     }
 }
 
-pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut ChatState) {
+pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, state: &mut ChatState) {
     let f_view = ctx.focus.register(VIEW);
     let f_prompt = ctx.focus.register(PROMPT);
     let f_composer = ctx.focus.register(COMPOSER);
@@ -130,24 +130,19 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
     let view_h = area.height - prompt_h - composer_h;
 
     frame.render_stateful_widget(
-        ChatView::new(&state.items)
-            .frame(ctx.frame)
-            .focused(f_view)
-            .theme(t),
+        ChatView::new(&state.items).frame(ctx.frame).focused(f_view),
         Rect::new(area.x, area.y, w, view_h),
         &mut state.view,
     );
     if !state.prompt_answered {
         frame.render_stateful_widget(
-            ChatPrompt::new("Ready to deploy?", &PROMPT_OPTIONS)
-                .focused(f_prompt)
-                .theme(t),
+            ChatPrompt::new("Ready to deploy?", &PROMPT_OPTIONS).focused(f_prompt),
             Rect::new(area.x, area.y + view_h, w, 2),
             &mut state.prompt,
         );
     }
     frame.render_stateful_widget(
-        Composer::new().focused(f_composer).theme(t),
+        Composer::new().focused(f_composer),
         Rect::new(area.x, area.y + view_h + prompt_h, w, composer_h.min(4)),
         &mut state.composer,
     );

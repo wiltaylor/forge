@@ -1,4 +1,4 @@
-use crate::theme::{resolve_theme, Theme};
+use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::{Color, Style};
@@ -50,39 +50,27 @@ impl Glyph {
 
 /// A single themed glyph.
 #[derive(Clone, Debug)]
-pub struct Icon<'a> {
+pub struct Icon {
     glyph: Glyph,
     color: Option<Color>,
-    theme: Option<&'a Theme>,
 }
 
-impl<'a> Icon<'a> {
-    pub fn new(glyph: Glyph) -> Icon<'a> {
-        Icon {
-            glyph,
-            color: None,
-            theme: None,
-        }
+impl Icon {
+    pub fn new(glyph: Glyph) -> Icon {
+        Icon { glyph, color: None }
     }
 
     pub fn color(mut self, color: Color) -> Self {
         self.color = Some(color);
         self
     }
-
-    pub fn theme(mut self, theme: &'a Theme) -> Self {
-        self.theme = Some(theme);
-        self
-    }
 }
 
-impl Widget for Icon<'_> {
+impl Widget for Icon {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        if area.is_empty() {
-            return;
-        }
-        let t = &*resolve_theme(self.theme);
-        let color = self.color.unwrap_or(t.fg[1]);
-        buf.set_string(area.x, area.y, self.glyph.as_str(), Style::new().fg(color));
+        paint(area, |t| {
+            let color = self.color.unwrap_or(t.fg[1]);
+            buf.set_string(area.x, area.y, self.glyph.as_str(), Style::new().fg(color));
+        });
     }
 }

@@ -1,5 +1,5 @@
 use crate::text;
-use crate::theme::{resolve_theme, Theme};
+use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
@@ -11,7 +11,6 @@ use ratatui::widgets::Widget;
 pub struct PageHead<'a> {
     title: &'a str,
     description: Option<&'a str>,
-    theme: Option<&'a Theme>,
 }
 
 impl<'a> PageHead<'a> {
@@ -19,7 +18,6 @@ impl<'a> PageHead<'a> {
         PageHead {
             title,
             description: None,
-            theme: None,
         }
     }
 
@@ -27,32 +25,25 @@ impl<'a> PageHead<'a> {
         self.description = Some(description);
         self
     }
-
-    pub fn theme(mut self, theme: &'a Theme) -> Self {
-        self.theme = Some(theme);
-        self
-    }
 }
 
 impl Widget for PageHead<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        if area.is_empty() {
-            return;
-        }
-        let t = &*resolve_theme(self.theme);
-        buf.set_string(
-            area.x,
-            area.y,
-            text::truncate(self.title, area.width as usize),
-            Style::new().fg(t.fg[0]).add_modifier(Modifier::BOLD),
-        );
-        if let (Some(desc), true) = (self.description, area.height >= 2) {
+        paint(area, |t| {
             buf.set_string(
                 area.x,
-                area.y + 1,
-                text::truncate(desc, area.width as usize),
-                Style::new().fg(t.fg[2]),
+                area.y,
+                text::truncate(self.title, area.width as usize),
+                Style::new().fg(t.fg[0]).add_modifier(Modifier::BOLD),
             );
-        }
+            if let (Some(desc), true) = (self.description, area.height >= 2) {
+                buf.set_string(
+                    area.x,
+                    area.y + 1,
+                    text::truncate(desc, area.width as usize),
+                    Style::new().fg(t.fg[2]),
+                );
+            }
+        });
     }
 }

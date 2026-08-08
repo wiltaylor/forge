@@ -1,6 +1,6 @@
 use crate::event::{in_area, is_press, left_down, scroll_delta, Outcome};
 use crate::text;
-use crate::theme::{resolve_theme, Theme};
+use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
 use ratatui::layout::Rect;
@@ -189,23 +189,17 @@ impl JsonViewerState {
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct JsonViewer<'a> {
+pub struct JsonViewer {
     focused: bool,
-    theme: Option<&'a Theme>,
 }
 
-impl<'a> JsonViewer<'a> {
-    pub fn new() -> JsonViewer<'a> {
+impl JsonViewer {
+    pub fn new() -> JsonViewer {
         JsonViewer::default()
     }
 
     pub fn focused(mut self, focused: bool) -> Self {
         self.focused = focused;
-        self
-    }
-
-    pub fn theme(mut self, theme: &'a Theme) -> Self {
-        self.theme = Some(theme);
         self
     }
 }
@@ -223,7 +217,7 @@ fn preview(value: &Value, open: bool) -> String {
 
 /// Render a JSON tree. The `value` is passed at render time (widget borrows
 /// nothing between frames).
-impl<'a> JsonViewer<'a> {
+impl JsonViewer {
     pub fn render_value(
         self,
         value: &Value,
@@ -235,89 +229,87 @@ impl<'a> JsonViewer<'a> {
     }
 }
 
-struct ValueViewer<'a, 'v> {
-    inner: JsonViewer<'a>,
+struct ValueViewer<'v> {
+    inner: JsonViewer,
     value: &'v Value,
 }
 
-impl StatefulWidget for ValueViewer<'_, '_> {
+impl StatefulWidget for ValueViewer<'_> {
     type State = JsonViewerState;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut JsonViewerState) {
         state.view_h = area.height as usize;
         state.area = area;
-        if area.is_empty() {
-            return;
-        }
-        let t = &*resolve_theme(self.inner.theme);
-        let mut rows = Vec::new();
-        flatten(self.value, None, "$".into(), 0, &state.expanded, &mut rows);
-        if rows.is_empty() {
-            return;
-        }
-        state.cursor = state.cursor.min(rows.len() - 1);
-        state.cursor_path = rows[state.cursor].path.clone();
-        if state.cursor < state.offset {
-            state.offset = state.cursor;
-        } else if state.cursor >= state.offset + state.view_h {
-            state.offset = state.cursor + 1 - state.view_h;
-        }
-        for vis in 0..state.view_h {
-            let ri = state.offset + vis;
-            let Some(row) = rows.get(ri) else { break };
-            let y = area.y + vis as u16;
-            let is_cursor = ri == state.cursor;
-            if is_cursor {
-                let mut s = Style::new().bg(t.bg[3]);
-                if self.inner.focused {
-                    s = s.add_modifier(Modifier::BOLD);
+        paint(area, |t| {
+            let mut rows = Vec::new();
+            flatten(self.value, None, "$".into(), 0, &state.expanded, &mut rows);
+            if rows.is_empty() {
+                return;
+            }
+            state.cursor = state.cursor.min(rows.len() - 1);
+            state.cursor_path = rows[state.cursor].path.clone();
+            if state.cursor < state.offset {
+                state.offset = state.cursor;
+            } else if state.cursor >= state.offset + state.view_h {
+                state.offset = state.cursor + 1 - state.view_h;
+            }
+            for vis in 0..state.view_h {
+                let ri = state.offset + vis;
+                let Some(row) = rows.get(ri) else { break };
+                let y = area.y + vis as u16;
+                let is_cursor = ri == state.cursor;
+                if is_cursor {
+                    let mut s = Style::new().bg(t.bg[3]);
+                    if self.inner.focused {
+                        s = s.add_modifier(Modifier::BOLD);
+                    }
+                    buf.set_style(Rect::new(area.x, y, area.width, 1), s);
                 }
-                buf.set_style(Rect::new(area.x, y, area.width, 1), s);
-            }
-            let bg = if is_cursor { Some(t.bg[3]) } else { None };
-            let paint = |style: Style| match bg {
-                Some(b) => style.bg(b),
-                None => style,
-            };
-            let indent = (row.depth * 2) as u16;
-            let mut x = area.x + indent;
-            let right = area.x + area.width;
-            if x + 2 > right {
-                continue;
-            }
-            let open = state.expanded.contains(&row.path);
-            let marker = if !row.expandable {
-                " "
-            } else if open {
-                "▾"
-            } else {
-                "▸"
-            };
-            buf.set_string(x, y, marker, paint(Style::new().fg(t.fg[2])));
-            x += 2;
-            if let Some(key) = &row.key {
-                let k = text::truncate(key, (right - x) as usize);
-                buf.set_string(x, y, &k, paint(Style::new().fg(t.info.fg)));
-                x += text::width(&k) as u16;
-                if x + 2 <= right {
-                    buf.set_string(x, y, ": ", paint(Style::new().fg(t.fg[2])));
-                    x += 2;
-                }
-            }
-            if x < right {
-                let pv = preview(row.value, open);
-                let color = match row.value {
-                    Value::String(_) => t.success.fg,
-                    Value::Number(_) | Value::Bool(_) | Value::Null => t.info.fg,
-                    _ => t.fg[2],
+                let bg = if is_cursor { Some(t.bg[3]) } else { None };
+                let tint = |style: Style| match bg {
+                    Some(b) => style.bg(b),
+                    None => style,
                 };
-                buf.set_string(
-                    x,
-                    y,
-                    text::truncate(&pv, (right - x) as usize),
-                    paint(Style::new().fg(color)),
-                );
+                let indent = (row.depth * 2) as u16;
+                let mut x = area.x + indent;
+                let right = area.x + area.width;
+                if x + 2 > right {
+                    continue;
+                }
+                let open = state.expanded.contains(&row.path);
+                let marker = if !row.expandable {
+                    " "
+                } else if open {
+                    "▾"
+                } else {
+                    "▸"
+                };
+                buf.set_string(x, y, marker, tint(Style::new().fg(t.fg[2])));
+                x += 2;
+                if let Some(key) = &row.key {
+                    let k = text::truncate(key, (right - x) as usize);
+                    buf.set_string(x, y, &k, tint(Style::new().fg(t.info.fg)));
+                    x += text::width(&k) as u16;
+                    if x + 2 <= right {
+                        buf.set_string(x, y, ": ", tint(Style::new().fg(t.fg[2])));
+                        x += 2;
+                    }
+                }
+                if x < right {
+                    let pv = preview(row.value, open);
+                    let color = match row.value {
+                        Value::String(_) => t.success.fg,
+                        Value::Number(_) | Value::Bool(_) | Value::Null => t.info.fg,
+                        _ => t.fg[2],
+                    };
+                    buf.set_string(
+                        x,
+                        y,
+                        text::truncate(&pv, (right - x) as usize),
+                        tint(Style::new().fg(color)),
+                    );
+                }
             }
-        }
+        });
     }
 }
