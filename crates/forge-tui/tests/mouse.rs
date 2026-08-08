@@ -40,10 +40,12 @@ fn hover(x: u16, y: u16) -> MouseEvent {
 #[test]
 fn checkbox_and_toggle_click() {
     let mut cb = CheckboxState::new(false);
+    // Before the first render the control has no geometry: clicks miss.
+    assert_eq!(cb.handle_mouse(&click(2, 0)), Outcome::Ignored);
     let mut buf = Buffer::empty(Rect::new(0, 0, 20, 1));
     Checkbox::new("agree").render(Rect::new(0, 0, 20, 1), &mut buf, &mut cb);
     assert_eq!(cb.handle_mouse(&click(2, 0)), Outcome::Changed);
-    assert!(cb.checked);
+    assert!(cb.on);
     // Outside the control: ignored.
     assert_eq!(cb.handle_mouse(&click(5, 3)), Outcome::Ignored);
 }
@@ -90,15 +92,40 @@ fn table_header_click_sorts_row_click_moves_cursor() {
     assert_eq!(s.cursor, 2);
 }
 
+/// The click-to-select protocol shared by Tabs, RadioGroup, ToggleGroup and
+/// the shell nav — tested once on [`RectCache`], which replaced their four
+/// identical per-widget mouse handlers.
 #[test]
-fn tabs_and_pagination_click() {
+fn rect_cache_click_selects() {
+    let mut cache = RectCache::default();
+    let mut selected = 0usize;
+    // Rects are captured during render, so an event dispatched before the
+    // first render finds an empty cache and misses.
+    assert_eq!(cache.select(&click(1, 0), &mut selected), Outcome::Ignored);
+    // What a render records: one rect per item, in item order.
+    cache.push(Rect::new(0, 0, 3, 1));
+    cache.push(Rect::new(4, 0, 3, 1));
+    assert_eq!(cache.select(&click(5, 0), &mut selected), Outcome::Changed);
+    assert_eq!(selected, 1);
+    // Clicking the already-selected item is consumed, not changed.
+    assert_eq!(cache.select(&click(5, 0), &mut selected), Outcome::Consumed);
+    // A miss keeps routing.
+    assert_eq!(cache.select(&click(20, 0), &mut selected), Outcome::Ignored);
+    // A relayout starts from clear: stale geometry never survives a render.
+    cache.clear();
+    assert_eq!(cache.select(&click(5, 0), &mut selected), Outcome::Ignored);
+
+    // One end-to-end witness that a widget's render populates the cache
+    // where it painted: "two" starts at x = 3 + 3 = 6.
     let mut tabs = TabsState::new(0);
     let mut buf = Buffer::empty(Rect::new(0, 0, 40, 2));
     Tabs::new(&["one", "two", "three"]).render(Rect::new(0, 0, 40, 2), &mut buf, &mut tabs);
-    // "two" starts at x = 3 + 3 = 6.
     assert_eq!(tabs.handle_mouse(&click(7, 0)), Outcome::Changed);
     assert_eq!(tabs.selected, 1);
+}
 
+#[test]
+fn pagination_click() {
     let mut pages = PaginationState::new(0, 5);
     let mut buf = Buffer::empty(Rect::new(0, 0, 40, 1));
     Pagination::new().render(Rect::new(0, 0, 40, 1), &mut buf, &mut pages);
@@ -189,8 +216,11 @@ fn menu_hover_highlights_click_submits_away_cancels() {
     assert_eq!(s.handle_mouse(&click(39, 11)), Outcome::Cancelled);
 }
 
+/// Shell-specific wiring only: render must push one nav rect per item at
+/// the row it painted. The click protocol itself is covered once, in
+/// [`rect_cache_click_selects`].
 #[test]
-fn shell_nav_click_switches_section() {
+fn shell_render_places_nav_rects() {
     let sections = [NavSection::new(Some("A"), &["one", "two", "three"])];
     let mut s = ShellState::new();
     let mut buf = Buffer::empty(Rect::new(0, 0, 80, 20));
@@ -200,8 +230,6 @@ fn shell_nav_click_switches_section() {
     // Items start after brand(1) + subtitle(2) + gap(3) + section title(4): rows 5..7.
     assert_eq!(s.handle_mouse(&click(3, 6)), Outcome::Changed);
     assert_eq!(s.selected, 1);
-    // Clicking the already-active item is consumed, not changed.
-    assert_eq!(s.handle_mouse(&click(3, 6)), Outcome::Consumed);
 }
 
 #[test]

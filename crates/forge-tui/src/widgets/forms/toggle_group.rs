@@ -1,6 +1,7 @@
-use crate::event::{clicked, is_press, Outcome};
+use crate::event::{is_press, Outcome};
 use crate::text;
 use crate::theme::{Surface, TextRole};
+use crate::widgets::hit::RectCache;
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
@@ -12,7 +13,7 @@ use ratatui::widgets::StatefulWidget;
 pub struct ToggleGroupState {
     pub selected: usize,
     len: usize,
-    item_rects: Vec<Rect>,
+    item_rects: RectCache,
 }
 
 impl ToggleGroupState {
@@ -25,18 +26,7 @@ impl ToggleGroupState {
 
     /// Click a segment to select it.
     pub fn handle_mouse(&mut self, ev: &MouseEvent) -> Outcome {
-        for (i, rect) in self.item_rects.iter().enumerate() {
-            if clicked(ev, *rect) {
-                let changed = self.selected != i;
-                self.selected = i;
-                return if changed {
-                    Outcome::Changed
-                } else {
-                    Outcome::Consumed
-                };
-            }
-        }
-        Outcome::Ignored
+        self.item_rects.select(ev, &mut self.selected)
     }
 
     pub fn handle_key(&mut self, key: KeyEvent) -> Outcome {
