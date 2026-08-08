@@ -11,6 +11,11 @@
 //! literal fixtures. Editors in forge-tui and forge-egui build on [`ops`] and
 //! [`Address`] so every platform shares one keyboard/editing model.
 //!
+//! [`resolve_key`] is that keyboard model: a [`Key`], an [`Address`], a
+//! [`Mode`] and a [`Document`] resolve to the [`Op`] to perform. A kit
+//! adapts its own key type onto [`Key`] and performs the ops — it does not
+//! decide what a key means.
+//!
 //! [`KINDS`] is the registry: one entry per kind, carrying the label, the
 //! data-ness, the starter payload, the markdown form, the wire fields and the
 //! slash-palette rows. Read it — or [`palette_rows`] — to enumerate the kinds
@@ -19,6 +24,7 @@
 mod address;
 mod emoji;
 mod id;
+mod keys;
 mod ops;
 mod registry;
 mod schema;
@@ -36,6 +42,7 @@ pub mod sample;
 pub use address::{flatten_addresses, next_address, prev_address, Address};
 pub use emoji::{emoji, resolve_shortcodes, search_emoji, EMOJI};
 pub use id::new_id;
+pub use keys::{resolve_key, Key, Mode, Op};
 pub use ops::{
     add_column, indent_list, insert_after, line_start_shortcut, merge_with_previous, move_block,
     remove, remove_column, set_column_ratios, set_kind, split, table_insert_col, table_insert_row,

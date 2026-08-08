@@ -21,6 +21,11 @@ use forge_blocks::{new_id, Address, Block, Document, DOCUMENT_VERSION};
 use serde::Deserialize;
 use serde_json::Value;
 
+/// One keypress, in the shared normalised shape — the same [`Key`] the block
+/// crate's resolver reads, so a driver adapts its kit's key type once and the
+/// corpus and the resolver both accept it.
+pub use forge_blocks::Key;
+
 /// The corpus as authored, verbatim.
 pub const CORPUS_JSON: &str = include_str!("../../../contract/blocks/corpus.json");
 
@@ -159,55 +164,6 @@ impl At {
             ));
         }
         Ok(())
-    }
-}
-
-/// One keypress in the browser `KeyboardEvent` vocabulary this repo already
-/// uses for its remote-protocol keymaps (`crates/forge-core/src/widgets/keymap`):
-/// a layout-independent `code`, plus the produced character in `key` when the
-/// key is printable.
-#[derive(Debug, Clone, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Key {
-    /// `KeyboardEvent.code` — `"Enter"`, `"Backspace"`, `"KeyA"`, `"Slash"`, …
-    pub code: String,
-    /// `KeyboardEvent.key` for printables — the character to insert.
-    #[serde(default)]
-    pub key: Option<String>,
-    #[serde(default)]
-    pub shift: bool,
-    #[serde(default)]
-    pub ctrl: bool,
-    #[serde(default)]
-    pub alt: bool,
-}
-
-impl Key {
-    /// The character this key produces, when it produces one.
-    pub fn char(&self) -> Option<char> {
-        let key = self.key.as_deref()?;
-        let mut chars = key.chars();
-        let c = chars.next()?;
-        chars.next().is_none().then_some(c)
-    }
-
-    /// How the key reads in a failure report: `Shift+Tab`, `KeyA "a"`.
-    pub fn label(&self) -> String {
-        let mut out = String::new();
-        for (on, name) in [
-            (self.ctrl, "Ctrl+"),
-            (self.alt, "Alt+"),
-            (self.shift, "Shift+"),
-        ] {
-            if on {
-                out.push_str(name);
-            }
-        }
-        out.push_str(&self.code);
-        if let Some(key) = &self.key {
-            out.push_str(&format!(" {key:?}"));
-        }
-        out
     }
 }
 

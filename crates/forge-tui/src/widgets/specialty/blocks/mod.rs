@@ -1,7 +1,12 @@
 //! Block page editor (cargo feature `blocks`): a Notion-style editor over
 //! the shared `forge-blocks` document model — the terminal sibling of the
-//! web and egui editors, driven by the same [`forge_blocks::ops`] keyboard
-//! model.
+//! web and egui editors, driven by the same keyboard model.
+//!
+//! That model is not implemented here. [`normalize`] adapts crossterm's key
+//! events onto the shared [`Key`] shape, [`forge_blocks::resolve_key`] says
+//! which [`Op`] the key means, and [`BlockEditorState::apply_op`] performs
+//! it. What is left in this file is the kit's own work: the wrapped text
+//! buffer, the caret, the scroll, the popups and the paint.
 //!
 //! Focus is two-level: a block is *selected* (accent tint, structural keys)
 //! or *entered* (text caret in the raw markdown source, code buffer, table
@@ -23,9 +28,9 @@ mod wrap_edit;
 use std::collections::HashMap;
 
 use forge_blocks::{
-    flatten_addresses, indent_list, insert_after, line_start_shortcut, merge_with_previous,
-    move_block, next_address, prev_address, remove, set_kind, split, table_insert_col,
-    table_insert_row, table_remove_col, wrap_in_columns, Address, BlockKind, Document, ListStyle,
+    flatten_addresses, indent_list, insert_after, merge_with_previous, move_block, next_address,
+    prev_address, remove, resolve_key, set_kind, split, table_insert_col, table_insert_row,
+    table_remove_col, wrap_in_columns, Address, BlockKind, Document, Key, ListStyle, Mode, Op,
     PaletteAction, Tone,
 };
 use ratatui::buffer::Buffer;
@@ -93,6 +98,47 @@ pub(crate) enum Editing {
         err: Option<String>,
         dirty_since_err: bool,
     },
+}
+
+/// A crossterm key event in the shared browser-code vocabulary — this kit's
+/// half of the adapter onto [`forge_blocks::resolve_key`].
+///
+/// `None` names a key the vocabulary has no code for (function keys, media
+/// keys, the modifiers themselves): the editor binds none of them, so the
+/// kit's own handling takes it. Shift+Tab arrives as `BackTab` on a terminal,
+/// which is why the code alone cannot name the key.
+fn normalize(ev: KeyEvent) -> Option<Key> {
+    let key = match ev.code {
+        KeyCode::Char(c) => Key::typed(c),
+        KeyCode::Enter => Key::new("Enter"),
+        KeyCode::Backspace => Key::new("Backspace"),
+        KeyCode::Delete => Key::new("Delete"),
+        KeyCode::Esc => Key::new("Escape"),
+        KeyCode::Tab => Key::new("Tab"),
+        KeyCode::BackTab => Key::new("Tab").shift(),
+        KeyCode::Up => Key::new("ArrowUp"),
+        KeyCode::Down => Key::new("ArrowDown"),
+        KeyCode::Left => Key::new("ArrowLeft"),
+        KeyCode::Right => Key::new("ArrowRight"),
+        KeyCode::Home => Key::new("Home"),
+        KeyCode::End => Key::new("End"),
+        KeyCode::PageUp => Key::new("PageUp"),
+        KeyCode::PageDown => Key::new("PageDown"),
+        _ => return None,
+    };
+    // The event's modifiers add to the ones the key already implies: a typed
+    // `#` is shifted whether or not the terminal says so, and so is BackTab.
+    let mut key = key;
+    if ev.modifiers.contains(KeyModifiers::SHIFT) {
+        key = key.shift();
+    }
+    if ev.modifiers.contains(KeyModifiers::CONTROL) {
+        key = key.ctrl();
+    }
+    if ev.modifiers.contains(KeyModifiers::ALT) {
+        key = key.alt();
+    }
+    Some(key)
 }
 
 pub(crate) fn tone_severity(tone: Tone) -> Severity {
@@ -675,12 +721,7 @@ impl BlockEditorState {
         if let Some(BlockKind::Admonition { tone, .. }) =
             self.doc.block_mut(addr).map(|b| &mut b.kind)
         {
-            *tone = match tone {
-                Tone::Info => Tone::Success,
-                Tone::Success => Tone::Warning,
-                Tone::Warning => Tone::Danger,
-                Tone::Danger => Tone::Info,
-            };
+            *tone = tone.next();
             return Outcome::Changed;
         }
         Outcome::Ignored
@@ -690,147 +731,44 @@ impl BlockEditorState {
         let Some(addr) = self.focus else {
             return Outcome::Ignored;
         };
-        let alt = key.modifiers.contains(KeyModifiers::ALT);
-        let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
-        let shift = key.modifiers.contains(KeyModifiers::SHIFT);
+        let caret = self.caret().unwrap_or(0);
+        let mode = Mode::Text { caret };
+        match normalize(key).and_then(|k| resolve_key(&self.doc, addr, mode, &k)) {
+            Some(op) => self.apply_op(addr, op),
+            None => self.caret_key(key),
+        }
+    }
+
+    /// The keys the resolver leaves to the kit while a caret is up, in a text
+    /// block or a table cell: editing the buffer and moving the caret, both of
+    /// which need the wrapped geometry only [`WrapEdit`] has.
+    fn caret_key(&mut self, key: KeyEvent) -> Outcome {
         match key.code {
-            KeyCode::Esc => {
-                self.editing = Editing::None;
-                self.popup = Popup::None;
-                Outcome::Consumed
-            }
-            KeyCode::Enter if shift || alt => {
-                if let Editing::Text(we) = &mut self.editing {
-                    we.insert("\n");
-                }
+            KeyCode::Backspace | KeyCode::Delete => {
+                let back = key.code == KeyCode::Backspace;
+                let deleted = match &mut self.editing {
+                    Editing::Text(we) | Editing::Cell(we) => {
+                        if back {
+                            we.backspace()
+                        } else {
+                            we.delete()
+                        }
+                    }
+                    _ => false,
+                };
                 self.sync_source();
-                self.popup = Popup::None;
-                Outcome::Changed
-            }
-            KeyCode::Enter => {
-                self.popup = Popup::None;
-                let caret = self.caret().unwrap_or(0);
-                match split(&mut self.doc, addr, caret) {
-                    Some(next) => {
-                        let width = self.active_width();
-                        let md = self
-                            .doc
-                            .block(next)
-                            .and_then(|b| b.kind.md())
-                            .unwrap_or_default()
-                            .to_string();
-                        let mut we = WrapEdit::new(md, 0);
-                        we.set_width(width);
-                        self.focus = Some(next);
-                        self.editing = Editing::Text(we);
-                        Outcome::Changed
-                    }
-                    None => Outcome::Consumed,
-                }
-            }
-            KeyCode::Backspace => {
-                let deleted = match &mut self.editing {
-                    Editing::Text(we) => we.backspace(),
-                    _ => false,
-                };
+                self.refresh_emoji();
                 if deleted {
-                    self.sync_source();
-                    self.refresh_emoji();
-                    return Outcome::Changed;
-                }
-                // Caret at byte 0: demote non-paragraph text kinds first,
-                // then merge paragraphs into the previous block.
-                let kind_is_paragraph = matches!(
-                    self.doc.block(addr).map(|b| &b.kind),
-                    Some(BlockKind::Paragraph { .. })
-                );
-                if !kind_is_paragraph {
-                    let md = match &self.editing {
-                        Editing::Text(we) => we.src().to_string(),
-                        _ => String::new(),
-                    };
-                    set_kind(&mut self.doc, addr, BlockKind::Paragraph { md });
-                    return Outcome::Changed;
-                }
-                match merge_with_previous(&mut self.doc, addr) {
-                    Some(res) => {
-                        let width = self.active_width();
-                        let md = self
-                            .doc
-                            .block(res.focus)
-                            .and_then(|b| b.kind.md())
-                            .unwrap_or_default()
-                            .to_string();
-                        let mut we = WrapEdit::new(md, res.caret);
-                        we.set_width(width);
-                        self.focus = Some(res.focus);
-                        self.editing = Editing::Text(we);
-                        Outcome::Changed
-                    }
-                    None => Outcome::Consumed,
-                }
-            }
-            KeyCode::Delete => {
-                let deleted = match &mut self.editing {
-                    Editing::Text(we) => we.delete(),
-                    _ => false,
-                };
-                if deleted {
-                    self.sync_source();
-                    self.refresh_emoji();
-                    return Outcome::Changed;
-                }
-                // Caret at the end: pull the next paragraph in. The merge
-                // only fires when the navigation-order next block really is
-                // our next sibling (merge target = its previous sibling).
-                let Some(next) = next_address(&self.doc, addr) else {
-                    return Outcome::Consumed;
-                };
-                match merge_with_previous(&mut self.doc, next) {
-                    Some(res) => {
-                        let width = self.active_width();
-                        let md = self
-                            .doc
-                            .block(res.focus)
-                            .and_then(|b| b.kind.md())
-                            .unwrap_or_default()
-                            .to_string();
-                        let mut we = WrapEdit::new(md, res.caret);
-                        we.set_width(width);
-                        self.focus = Some(res.focus);
-                        self.editing = Editing::Text(we);
-                        Outcome::Changed
-                    }
-                    None => Outcome::Consumed,
-                }
-            }
-            KeyCode::Tab | KeyCode::BackTab => {
-                let delta = if key.code == KeyCode::BackTab || shift {
-                    -1
-                } else {
-                    1
-                };
-                if indent_list(&mut self.doc, addr, delta) {
                     Outcome::Changed
-                } else if matches!(
-                    self.doc.block(addr).map(|b| &b.kind),
-                    Some(BlockKind::ListItem { .. })
-                ) {
-                    Outcome::Consumed
                 } else {
-                    Outcome::Ignored
+                    // Nothing to delete: the caret is at an edge the resolver
+                    // has no merge for (a cell's), so the key stops here.
+                    Outcome::Consumed
                 }
             }
-            KeyCode::Up | KeyCode::Down if alt => {
-                let dir = if key.code == KeyCode::Up { -1 } else { 1 };
-                match move_block(&mut self.doc, addr, dir) {
-                    Some(a) => {
-                        self.focus = Some(a);
-                        Outcome::Changed
-                    }
-                    None => Outcome::Consumed,
-                }
-            }
+            // Only a text block leaves itself by arrow: a cell's own arrows
+            // come back from the resolver, and a cell with a modifier held is
+            // not the editor's key at all.
             KeyCode::Up | KeyCode::Down => {
                 let up = key.code == KeyCode::Up;
                 let (moved, desired) = match &mut self.editing {
@@ -838,7 +776,7 @@ impl BlockEditorState {
                         let moved = if up { we.up() } else { we.down() };
                         (moved, we.desired())
                     }
-                    _ => (false, 0),
+                    _ => return Outcome::Ignored,
                 };
                 if moved {
                     Outcome::Consumed
@@ -847,7 +785,7 @@ impl BlockEditorState {
                 }
             }
             KeyCode::Left | KeyCode::Right | KeyCode::Home | KeyCode::End => {
-                if let Editing::Text(we) = &mut self.editing {
+                if let Editing::Text(we) | Editing::Cell(we) = &mut self.editing {
                     match key.code {
                         KeyCode::Left => we.left(),
                         KeyCode::Right => we.right(),
@@ -857,65 +795,177 @@ impl BlockEditorState {
                 }
                 Outcome::Consumed
             }
-            KeyCode::Char('t') if ctrl => self.cycle_tone(),
-            KeyCode::Char(c) if !ctrl && !alt => {
-                let empty = match &self.editing {
-                    Editing::Text(we) => we.src().is_empty(),
-                    _ => false,
-                };
-                if c == '/' && empty {
-                    self.open_slash();
-                    return Outcome::Consumed;
-                }
-                if let Editing::Text(we) = &mut self.editing {
-                    let mut b = [0u8; 4];
-                    we.insert(c.encode_utf8(&mut b));
-                }
-                self.sync_source();
-                if self.apply_shortcut(addr) {
-                    return Outcome::Changed;
-                }
-                self.refresh_emoji();
-                Outcome::Changed
-            }
             _ => Outcome::Ignored,
         }
     }
 
-    /// Run the markdown line-start shortcut on a paragraph after an edit.
-    /// True when the block converted (the caret pulls back by the prefix).
-    fn apply_shortcut(&mut self, addr: Address) -> bool {
-        if !matches!(
-            self.doc.block(addr).map(|b| &b.kind),
-            Some(BlockKind::Paragraph { .. })
-        ) {
-            return false;
-        }
-        let (src, cursor, width) = match &self.editing {
-            Editing::Text(we) => (we.src().to_string(), we.cursor(), we.width()),
-            _ => return false,
-        };
-        let Some(sc) = line_start_shortcut(&src) else {
-            return false;
-        };
-        let caret = cursor.saturating_sub(sc.prefix_len);
-        if !set_kind(&mut self.doc, addr, sc.kind) {
-            return false;
-        }
-        self.popup = Popup::None;
-        match self.doc.block(addr).map(|b| &b.kind) {
-            Some(BlockKind::Code { code, .. }) => {
-                self.editing = Editing::Code(TextareaState::with_value(code));
+    /* ---------------- performing a resolved op --------------------------- */
+
+    /// Perform the [`Op`] the shared resolver returned, and re-seat the kit's
+    /// own state around it — the caret, the table cell, the popups. The
+    /// editing decision was made in `forge-blocks`; this is the bookkeeping.
+    fn apply_op(&mut self, addr: Address, op: Op) -> Outcome {
+        match op {
+            Op::Nothing => Outcome::Consumed,
+            Op::Insert(c) => {
+                let mut b = [0u8; 4];
+                match &mut self.editing {
+                    Editing::Text(we) | Editing::Cell(we) => we.insert(c.encode_utf8(&mut b)),
+                    // No buffer to type into: the key was bound all the same.
+                    _ => return Outcome::Consumed,
+                }
+                self.sync_source();
+                self.refresh_emoji();
+                Outcome::Changed
             }
-            Some(BlockKind::Divider) => self.editing = Editing::None,
-            Some(kind) if kind.is_text() => {
-                let mut we = WrapEdit::new(kind.md().unwrap_or_default().to_string(), caret);
-                we.set_width(width);
-                self.editing = Editing::Text(we);
+            Op::Split { caret } => {
+                self.popup = Popup::None;
+                match split(&mut self.doc, addr, caret) {
+                    Some(next) => {
+                        self.enter_text(next, 0);
+                        Outcome::Changed
+                    }
+                    None => Outcome::Consumed,
+                }
             }
-            _ => self.editing = Editing::None,
+            // The markdown comes off the document, not the buffer: every edit
+            // writes through (`sync_source`), so they are the same string.
+            Op::Demote { addr } => {
+                let md = self
+                    .doc
+                    .block(addr)
+                    .and_then(|b| b.kind.md())
+                    .unwrap_or_default()
+                    .to_string();
+                set_kind(&mut self.doc, addr, BlockKind::Paragraph { md });
+                Outcome::Changed
+            }
+            Op::Merge { addr } => match merge_with_previous(&mut self.doc, addr) {
+                Some(res) => {
+                    self.enter_text(res.focus, res.caret);
+                    Outcome::Changed
+                }
+                None => Outcome::Consumed,
+            },
+            Op::Convert { kind, caret } => {
+                let to_code = matches!(kind, BlockKind::Code { .. });
+                let takes_caret = kind.is_text();
+                if !set_kind(&mut self.doc, addr, kind) {
+                    return Outcome::Consumed;
+                }
+                self.popup = Popup::None;
+                if to_code {
+                    let code = match self.doc.block(addr).map(|b| &b.kind) {
+                        Some(BlockKind::Code { code, .. }) => code.clone(),
+                        _ => String::new(),
+                    };
+                    self.editing = Editing::Code(TextareaState::with_value(&code));
+                } else if takes_caret {
+                    self.enter_text(addr, caret);
+                } else {
+                    // A divider has no caret of any sort: the block stays
+                    // selected instead.
+                    self.editing = Editing::None;
+                }
+                Outcome::Changed
+            }
+            Op::Indent { delta } => {
+                if indent_list(&mut self.doc, addr, delta) {
+                    Outcome::Changed
+                } else {
+                    Outcome::Consumed
+                }
+            }
+            Op::MoveBlock { dir } => match move_block(&mut self.doc, addr, dir) {
+                Some(a) => {
+                    self.focus = Some(a);
+                    Outcome::Changed
+                }
+                None => Outcome::Consumed,
+            },
+            Op::Remove => match remove(&mut self.doc, addr) {
+                Some(a) => {
+                    self.focus = Some(a);
+                    Outcome::Changed
+                }
+                None => Outcome::Consumed,
+            },
+            Op::CycleTone => self.cycle_tone(),
+            Op::WrapColumns { n } => match wrap_in_columns(&mut self.doc, addr, n) {
+                Some(f) => {
+                    self.select(f);
+                    Outcome::Changed
+                }
+                None => Outcome::Consumed,
+            },
+            Op::Select { addr } => {
+                self.sync_source();
+                self.select(addr);
+                Outcome::Consumed
+            }
+            Op::Blur => {
+                self.focus = None;
+                Outcome::Cancelled
+            }
+            Op::Enter => {
+                let _ = self.edit(addr, usize::MAX);
+                Outcome::Consumed
+            }
+            Op::OpenPalette => {
+                self.open_slash();
+                Outcome::Consumed
+            }
+            Op::FocusCell { row, col } => {
+                self.sync_source();
+                self.load_cell(addr, row, col);
+                Outcome::Consumed
+            }
+            Op::InsertRow { at, focus } => {
+                self.sync_source();
+                if !table_insert_row(&mut self.doc, addr, at) {
+                    return Outcome::Consumed;
+                }
+                if let Some((row, col)) = focus {
+                    self.load_cell(addr, row, col);
+                }
+                Outcome::Changed
+            }
+            Op::InsertCol { at } => {
+                if table_insert_col(&mut self.doc, addr, at) {
+                    self.sync_source();
+                    Outcome::Changed
+                } else {
+                    Outcome::Consumed
+                }
+            }
+            Op::RemoveCol { at } => {
+                let Some((row, col)) = self.table_cell else {
+                    return Outcome::Consumed;
+                };
+                if !table_remove_col(&mut self.doc, addr, at) {
+                    return Outcome::Consumed;
+                }
+                let (ncols, _) = table_dims(&self.doc, addr).unwrap_or((1, 0));
+                self.load_cell(addr, row, col.min(ncols - 1));
+                Outcome::Changed
+            }
         }
-        true
+    }
+
+    /// Put the text caret at `caret` in the block at `addr`, keeping the
+    /// content width the previous buffer measured.
+    fn enter_text(&mut self, addr: Address, caret: usize) {
+        let width = self.active_width();
+        let md = self
+            .doc
+            .block(addr)
+            .and_then(|b| b.kind.md())
+            .unwrap_or_default()
+            .to_string();
+        let mut we = WrapEdit::new(md, caret);
+        we.set_width(width);
+        self.focus = Some(addr);
+        self.editing = Editing::Text(we);
     }
 
     /* ---------------- code editing -------------------------------------- */
@@ -924,20 +974,10 @@ impl BlockEditorState {
         let Some(addr) = self.focus else {
             return Outcome::Ignored;
         };
-        let alt = key.modifiers.contains(KeyModifiers::ALT);
-        if key.code == KeyCode::Esc {
-            self.editing = Editing::None;
-            return Outcome::Consumed;
-        }
-        if alt && matches!(key.code, KeyCode::Up | KeyCode::Down) {
-            let dir = if key.code == KeyCode::Up { -1 } else { 1 };
-            return match move_block(&mut self.doc, addr, dir) {
-                Some(a) => {
-                    self.focus = Some(a);
-                    Outcome::Changed
-                }
-                None => Outcome::Consumed,
-            };
+        if let Some(op) =
+            normalize(key).and_then(|k| resolve_key(&self.doc, addr, Mode::Buffer, &k))
+        {
+            return self.apply_op(addr, op);
         }
         // Leave the buffer across the first/last line.
         if let Editing::Code(ts) = &self.editing {
@@ -976,16 +1016,14 @@ impl BlockEditorState {
         let Some(addr) = self.focus else {
             return Outcome::Ignored;
         };
-        let alt = key.modifiers.contains(KeyModifiers::ALT);
-        if alt && matches!(key.code, KeyCode::Up | KeyCode::Down) {
-            let dir = if key.code == KeyCode::Up { -1 } else { 1 };
-            return match move_block(&mut self.doc, addr, dir) {
-                Some(a) => {
-                    self.focus = Some(a);
-                    Outcome::Changed
-                }
-                None => Outcome::Consumed,
-            };
+        // A JSON draft owns Esc — it validates and commits, or discards on a
+        // second press — so that one key never reaches the block key model.
+        if key.code != KeyCode::Esc {
+            if let Some(op) =
+                normalize(key).and_then(|k| resolve_key(&self.doc, addr, Mode::Buffer, &k))
+            {
+                return self.apply_op(addr, op);
+            }
         }
         let Editing::Data {
             ts,
@@ -1040,139 +1078,13 @@ impl BlockEditorState {
         let Some(addr) = self.focus else {
             return Outcome::Ignored;
         };
-        let Some((r, c)) = self.table_cell else {
+        let Some((row, col)) = self.table_cell else {
             return Outcome::Ignored;
         };
-        let Some((ncols, nrows)) = table_dims(&self.doc, addr) else {
-            return Outcome::Ignored;
-        };
-        let alt = key.modifiers.contains(KeyModifiers::ALT);
-        let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
-        match key.code {
-            KeyCode::Esc => {
-                self.sync_source();
-                self.table_cell = None;
-                self.editing = Editing::None;
-                self.popup = Popup::None;
-                Outcome::Consumed
-            }
-            KeyCode::Tab => {
-                self.sync_source();
-                let (nr, nc) = if c + 1 < ncols {
-                    (r, c + 1)
-                } else if r < nrows {
-                    (r + 1, 0)
-                } else {
-                    (0, 0)
-                };
-                self.load_cell(addr, nr, nc);
-                Outcome::Consumed
-            }
-            KeyCode::BackTab => {
-                self.sync_source();
-                let (nr, nc) = if c > 0 {
-                    (r, c - 1)
-                } else if r > 0 {
-                    (r - 1, ncols - 1)
-                } else {
-                    (nrows, ncols - 1)
-                };
-                self.load_cell(addr, nr, nc);
-                Outcome::Consumed
-            }
-            KeyCode::Up if !alt => {
-                self.sync_source();
-                self.load_cell(addr, r.saturating_sub(1), c);
-                Outcome::Consumed
-            }
-            KeyCode::Down if !alt => {
-                self.sync_source();
-                self.load_cell(addr, (r + 1).min(nrows), c);
-                Outcome::Consumed
-            }
-            KeyCode::Enter if ctrl => {
-                let at = if r == 0 { 0 } else { r };
-                if table_insert_row(&mut self.doc, addr, at) {
-                    Outcome::Changed
-                } else {
-                    Outcome::Consumed
-                }
-            }
-            KeyCode::Enter => {
-                self.sync_source();
-                if r < nrows {
-                    self.load_cell(addr, r + 1, c);
-                    Outcome::Consumed
-                } else if table_insert_row(&mut self.doc, addr, nrows) {
-                    self.load_cell(addr, r + 1, c);
-                    Outcome::Changed
-                } else {
-                    Outcome::Consumed
-                }
-            }
-            KeyCode::Char('=') if alt => {
-                if table_insert_col(&mut self.doc, addr, c + 1) {
-                    self.sync_source();
-                    Outcome::Changed
-                } else {
-                    Outcome::Consumed
-                }
-            }
-            KeyCode::Char('-') if alt => {
-                if table_remove_col(&mut self.doc, addr, c) {
-                    let (ncols, _) = table_dims(&self.doc, addr).unwrap_or((1, 0));
-                    self.load_cell(addr, r, c.min(ncols - 1));
-                    Outcome::Changed
-                } else {
-                    Outcome::Consumed
-                }
-            }
-            KeyCode::Backspace => {
-                let deleted = match &mut self.editing {
-                    Editing::Cell(we) => we.backspace(),
-                    _ => false,
-                };
-                self.sync_source();
-                self.refresh_emoji();
-                if deleted {
-                    Outcome::Changed
-                } else {
-                    Outcome::Consumed
-                }
-            }
-            KeyCode::Delete => {
-                let deleted = match &mut self.editing {
-                    Editing::Cell(we) => we.delete(),
-                    _ => false,
-                };
-                self.sync_source();
-                if deleted {
-                    Outcome::Changed
-                } else {
-                    Outcome::Consumed
-                }
-            }
-            KeyCode::Left | KeyCode::Right | KeyCode::Home | KeyCode::End => {
-                if let Editing::Cell(we) = &mut self.editing {
-                    match key.code {
-                        KeyCode::Left => we.left(),
-                        KeyCode::Right => we.right(),
-                        KeyCode::Home => we.home(),
-                        _ => we.end(),
-                    }
-                }
-                Outcome::Consumed
-            }
-            KeyCode::Char(ch) if !ctrl && !alt => {
-                if let Editing::Cell(we) = &mut self.editing {
-                    let mut b = [0u8; 4];
-                    we.insert(ch.encode_utf8(&mut b));
-                }
-                self.sync_source();
-                self.refresh_emoji();
-                Outcome::Changed
-            }
-            _ => Outcome::Ignored,
+        let mode = Mode::Cell { row, col };
+        match normalize(key).and_then(|k| resolve_key(&self.doc, addr, mode, &k)) {
+            Some(op) => self.apply_op(addr, op),
+            None => self.caret_key(key),
         }
     }
 
@@ -1200,43 +1112,7 @@ impl BlockEditorState {
 
     /* ---------------- block selection ------------------------------------ */
 
-    fn select_step(&mut self, dir: i32) {
-        let flat = flatten_addresses(&self.doc);
-        if flat.is_empty() {
-            return;
-        }
-        let Some(cur) = self.focus else {
-            self.focus = flat.first().copied();
-            return;
-        };
-        let next = match flat.iter().position(|a| *a == cur) {
-            Some(p) => {
-                let np = p as i64 + dir as i64;
-                if np < 0 || np as usize >= flat.len() {
-                    return;
-                }
-                flat[np as usize]
-            }
-            None => {
-                // A columns container: step to the block just outside it.
-                let root = cur.root();
-                let pos = if dir < 0 {
-                    flat.iter().rposition(|a| a.root() < root)
-                } else {
-                    flat.iter().position(|a| a.root() > root)
-                };
-                match pos {
-                    Some(p) => flat[p],
-                    None => return,
-                }
-            }
-        };
-        self.focus = Some(next);
-    }
-
     fn select_key(&mut self, key: KeyEvent) -> Outcome {
-        let alt = key.modifiers.contains(KeyModifiers::ALT);
-        let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
         if self.focus.is_none() {
             return match key.code {
                 KeyCode::Up | KeyCode::Down | KeyCode::Enter => {
@@ -1247,59 +1123,9 @@ impl BlockEditorState {
             };
         }
         let addr = self.focus.expect("checked above");
-        match key.code {
-            KeyCode::Up | KeyCode::Down if alt => {
-                let dir = if key.code == KeyCode::Up { -1 } else { 1 };
-                match move_block(&mut self.doc, addr, dir) {
-                    Some(a) => {
-                        self.focus = Some(a);
-                        Outcome::Changed
-                    }
-                    None => Outcome::Consumed,
-                }
-            }
-            KeyCode::Up => {
-                self.select_step(-1);
-                Outcome::Consumed
-            }
-            KeyCode::Down => {
-                self.select_step(1);
-                Outcome::Consumed
-            }
-            KeyCode::Enter => {
-                let _ = self.edit(addr, usize::MAX);
-                Outcome::Consumed
-            }
-            KeyCode::Delete | KeyCode::Backspace => match remove(&mut self.doc, addr) {
-                Some(a) => {
-                    self.focus = Some(a);
-                    Outcome::Changed
-                }
-                None => Outcome::Consumed,
-            },
-            KeyCode::Char('/') => {
-                self.open_slash();
-                Outcome::Consumed
-            }
-            KeyCode::Char('c') if !ctrl && !alt => match wrap_in_columns(&mut self.doc, addr, 2) {
-                Some(f) => {
-                    self.select(f);
-                    Outcome::Changed
-                }
-                None => Outcome::Consumed,
-            },
-            KeyCode::Char('t') if ctrl => self.cycle_tone(),
-            KeyCode::Esc => match addr {
-                Address::Cell { root, .. } => {
-                    self.focus = Some(Address::Root(root));
-                    Outcome::Consumed
-                }
-                Address::Root(_) => {
-                    self.focus = None;
-                    Outcome::Cancelled
-                }
-            },
-            _ => Outcome::Ignored,
+        match normalize(key).and_then(|k| resolve_key(&self.doc, addr, Mode::Select, &k)) {
+            Some(op) => self.apply_op(addr, op),
+            None => Outcome::Ignored,
         }
     }
 

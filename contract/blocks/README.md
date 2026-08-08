@@ -30,10 +30,12 @@ from `onChange`, so it asserts on what the editor tells its owner.
 
 ## Why a corpus and not shared code
 
-The editing policy is moving into `forge-blocks` so the two Rust kits share one
-implementation (issues #31 and #32). The web kit cannot call Rust, so it keeps
-its own. This file is how the third implementation stays honest: both languages
-run the same table, and a divergence in either fails a test.
+The editing policy lives in `forge-blocks`: `resolve_key` turns a keypress, an
+address and a document into the operation to perform, and a Rust kit adapts its
+own key type onto the shared key shape (the ratatui kit does, issue #31; the
+egui kit follows in #32). The web kit cannot call Rust, so it keeps its own
+implementation. This file is how that third implementation stays honest: both
+languages run the same table, and a divergence in either fails a test.
 
 ## A case asserts on documents
 
@@ -97,6 +99,9 @@ already uses for its remote-protocol keymaps, in
 `code` is required. `key` carries the produced character for printables, and a
 driver types it rather than synthesising a key event — that is what a focused
 text field reads. `shift`, `ctrl` and `alt` default to false.
+
+That shape is `forge_blocks::Key`, the one `resolve_key` reads, so a Rust kit
+adapts its key type once and speaks to the corpus and the resolver with it.
 
 Each driver adapts `code` to its own key type. A code the driver has no key
 for is a hard error, not a skip: a corpus that could silently drop a key would

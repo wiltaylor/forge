@@ -144,6 +144,34 @@ fn a_key_reads_back_in_the_browser_vocabulary() {
     assert_eq!(case.keys_label(), "Shift+Tab");
 }
 
+/// Every printable the corpus types names the code `Key::typed` gives it.
+///
+/// A kit whose key type reports the character but not the physical key builds
+/// its `Key` with `Key::typed`. That table and the codes authored here are two
+/// statements of one layout, and this is what stops them drifting apart.
+#[test]
+fn the_authored_codes_agree_with_the_shared_layout_table() {
+    let corpus = corpus();
+    let mut checked = 0;
+    for case in &corpus.cases {
+        for key in &case.keys {
+            let Some(c) = key.char() else { continue };
+            let typed = forge_blocks::Key::typed(c);
+            assert_eq!(
+                typed.code,
+                key.code,
+                "{}: the corpus types {c:?} as {code:?}, Key::typed as {typed:?}",
+                case.id,
+                code = key.code,
+                typed = typed.code,
+            );
+            assert_eq!(typed.shift, key.shift, "{}: {c:?} shift", case.id);
+            checked += 1;
+        }
+    }
+    assert!(checked > 0, "no corpus case types a character");
+}
+
 /* ---------------- the rules, against corpora authored to break them ------ */
 
 /// A corpus of one case, with `patch` merged over a case that would otherwise

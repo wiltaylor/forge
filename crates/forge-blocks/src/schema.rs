@@ -305,6 +305,20 @@ pub enum Tone {
     Danger,
 }
 
+impl Tone {
+    /// The tone after this one, wrapping — the order the editors cycle an
+    /// admonition through with Ctrl+T. Shared so the kits cannot cycle it in
+    /// two different orders.
+    pub fn next(self) -> Tone {
+        match self {
+            Tone::Info => Tone::Success,
+            Tone::Success => Tone::Warning,
+            Tone::Warning => Tone::Danger,
+            Tone::Danger => Tone::Info,
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Column {
     pub ratio: f32,
