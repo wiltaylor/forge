@@ -9,7 +9,8 @@
  * object in key order, so it must stay sorted here too.
  */
 import { bannerLines } from './banner.mjs';
-import { EMOJI_PATH, EMOJI_SOURCE_PATH, emoji, quote, via } from './blocks-source.mjs';
+import { EMOJI_PATH, EMOJI_SOURCE_PATH, emoji, via } from './blocks-source.mjs';
+import { quote } from './ts.mjs';
 
 /** The whole file. */
 export function renderBlocksEmoji() {

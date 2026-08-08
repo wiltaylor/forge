@@ -2,15 +2,13 @@
    Source:     packages/tokens/tokens.source.mjs
    Regenerate: just generate   (`just check` fails while this file is stale) */
 
-/**
- * The Forge tokens as a typed value.
- *
- * Every token the web kit declares is a field of `Theme`, and `themeToVars`
- * turns a theme back into the custom properties the stylesheets read. The
- * engine that applies one — `defineTheme` and `applyTheme` — is behaviour
- * rather than values, so it lives in `./theme.ts`, which re-exports this
- * module.
- */
+/** The Forge tokens as a typed value.
+
+    Every token the web kit declares is a field of `Theme`, and `themeToVars`
+    turns a theme back into the custom properties the stylesheets read. The
+    engine that applies one — `defineTheme` and `applyTheme` — is behaviour
+    rather than values, so it lives in `./theme.ts`, which re-exports this
+    module. */
 
 /** Border strengths, subtle → strong. */
 export interface ThemeBorder {
@@ -192,13 +190,11 @@ export interface ThemeShell {
   topbarH: string;
 }
 
-/**
- * A complete theme: every token the web kit declares, as a typed value.
- *
- * A theme is applied whole. `defineTheme` derives one from another with a
- * partial override, which is how a brand changes the accent without
- * restating the rest of the set.
- */
+/** A complete theme: every token the web kit declares, as a typed value.
+
+    A theme is applied whole. `defineTheme` derives one from another with a
+    partial override, which is how a brand changes the accent without
+    restating the rest of the set. */
 export interface Theme {
   /** Distinguishes one theme from another in a picker. Not read by the engine. */
   name: string;
@@ -244,13 +240,11 @@ export interface Theme {
   control: ThemeControl;
   /** Shell dimensions. */
   shell: ThemeShell;
-  /**
-   * Escape hatch: custom properties written verbatim, after the tokens.
-   *
-   * Every declared token has a typed field above, so this is for the
-   * per-instance properties the token source does not declare — a value one
-   * component computes for itself, not a token every kit shares.
-   */
+  /** Escape hatch: custom properties written verbatim, after the tokens.
+
+      Every declared token has a typed field above, so this is for the
+      per-instance properties the token source does not declare — a value one
+      component computes for itself, not a token every kit shares. */
   vars?: Record<`--${string}`, string>;
 }
 
@@ -398,13 +392,11 @@ export const lightTheme: Theme = {
   shell: { sidebarW: '240px', topbarH: '48px' },
 };
 
-/**
- * Flatten a theme into the custom properties the stylesheets read.
- *
- * Every declared token is emitted, so the result overrides the whole of
- * the `[data-theme]` block it is written over rather than a subset of it.
- * Anything in `vars` is written last and thus wins.
- */
+/** Flatten a theme into the custom properties the stylesheets read.
+
+    Every declared token is emitted, so the result overrides the whole of
+    the `[data-theme]` block it is written over rather than a subset of it.
+    Anything in `vars` is written last and thus wins. */
 export function themeToVars(t: Theme): Record<string, string> {
   const vars: Record<string, string> = {
     '--bg-0': t.bg[0],

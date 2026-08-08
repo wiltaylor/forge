@@ -378,7 +378,9 @@ applyTheme(defineTheme(darkTheme, {             // custom brand
 `Theme` covers every declared token, not the colours alone: radii, spacing, the
 type scale, control heights, durations and easings are typed fields too, and
 `applyTheme` writes the whole set. The untyped `vars` record is left for the
-per-instance properties the token source does not declare.
+per-instance properties the token source does not declare. Every field is
+required, `fonts` included, so build a custom theme with `defineTheme` — it
+fills in whatever you do not override.
 
 Per-control overrides are CSS vars too: `style={{ '--accent': '…' }}` on any
 component recolors just that control. Because custom properties inherit into

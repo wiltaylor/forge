@@ -20,12 +20,10 @@
 import { SOURCE_PATH, inKit, tokenNamed, tokens, valueFor } from '../../packages/tokens/tokens.source.mjs';
 import { bannerLines } from './banner.mjs';
 import { formatValue } from './tokens-css.mjs';
+import { PRINT_WIDTH, docComment, propertyKey, quote } from './ts.mjs';
 
 /** The kit the stylesheet and the typed theme share. */
 const KIT = 'web';
-
-/** The path this generator writes, for the message a layout hole fails with. */
-const LAYOUT_PATH = 'scripts/generate/theme-ts.mjs';
 
 /**
  * The two index ramps. They stay tuples: `bg[2]` is the hover surface, and the
@@ -254,39 +252,24 @@ const SCHEMES = [
 
 /* ------------------------------------------------------------ TypeScript text */
 
-/** A string as a TypeScript literal, in whichever quote needs no escape. */
-export function quote(text) {
-  const escaped = String(text).replace(/\\/g, '\\\\');
-  if (escaped.includes("'") && !escaped.includes('"')) return `"${escaped}"`;
-  return `'${escaped.replace(/'/g, "\\'")}'`;
-}
-
-const IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
-const INDEX = /^\d+$/;
-
-/** A field as it is written where a property name goes. */
-const property = (field) => (IDENTIFIER.test(field) || INDEX.test(field) ? field : quote(field));
+const IDENTIFIER = /^[A-Za-z_$][\w$]*$/;
 
 /** A field as it is written where the property is read back off its group. */
-const lookup = (field) =>
-  IDENTIFIER.test(field) ? `.${field}` : `[${INDEX.test(field) ? field : quote(field)}]`;
-
-/** A doc comment: one line when it fits on one, a block when it does not. */
-function doc(lines, indent) {
-  if (lines.length === 1) return [`${indent}/** ${lines[0]} */`];
-  return [`${indent}/**`, ...lines.map((line) => `${indent} *${line ? ` ${line}` : ''}`), `${indent} */`];
-}
+const lookup = (field) => (IDENTIFIER.test(field) ? `.${field}` : `[${propertyKey(field)}]`);
 
 /**
- * The column an emitted literal wraps at. Wider than the 80 columns prose runs
- * to: a font stack is one unbreakable value and reads worse split.
+ * `label[a, b, c],` on one line, or one entry per line when that overruns.
+ *
+ * The block generators wrap their literals with `valueLines` and `entryLines`,
+ * which do the same for arbitrary JSON. Those live in a module that loads the
+ * block registry the moment it is imported, and they spell a starter's `$id`
+ * placeholder as a call. The theme has neither, so the two shapes it does need
+ * are written out here — over the column that module wraps at, so the two
+ * generated files break alike.
  */
-const WIDTH = 100;
-
-/** `label[a, b, c],` on one line, or one entry per line when that overruns. */
 function list(label, entries, indent) {
   const oneLine = `${indent}${label}[${entries.join(', ')}],`;
-  if (oneLine.length <= WIDTH) return [oneLine];
+  if (oneLine.length <= PRINT_WIDTH) return [oneLine];
   return [`${indent}${label}[`, ...entries.map((e) => `${indent}  ${e},`), `${indent}],`];
 }
 
@@ -294,7 +277,7 @@ function list(label, entries, indent) {
 function object(label, entries, indent) {
   const pairs = entries.map(([key, value]) => `${key}: ${value}`);
   const oneLine = `${indent}${label}{ ${pairs.join(', ')} },`;
-  if (oneLine.length <= WIDTH) return [oneLine];
+  if (oneLine.length <= PRINT_WIDTH) return [oneLine];
   return [`${indent}${label}{`, ...pairs.map((p) => `${indent}  ${p},`), `${indent}},`];
 }
 
@@ -314,9 +297,9 @@ export const themeTokens = () => [
  * the state this generator exists to end — and `just check` would stay green,
  * because the committed file would still match what this module emits.
  *
- * @param {string[]} [claimed] the tokens the layout names, in emission order.
+ * @param {string[]} claimed the tokens the layout names, in emission order.
  */
-export function checkCoverage(claimed = themeTokens()) {
+export function checkCoverage(claimed) {
   const twice = claimed.filter((name, i) => claimed.indexOf(name) !== i);
   if (twice.length) {
     throw new Error(`${twice.map((n) => `--${n}`).join(', ')} fills more than one field of the typed theme`);
@@ -325,7 +308,7 @@ export function checkCoverage(claimed = themeTokens()) {
   if (missing.length) {
     throw new Error(
       `the typed theme has no field for ${missing.map((t) => `--${t.name}`).join(', ')}, declared in ` +
-        `${SOURCE_PATH}. Add each to GROUPS in ${LAYOUT_PATH}, or scope the token to another kit.`,
+        `${SOURCE_PATH}. Add each to the GROUPS layout above, or scope the token to another kit.`,
     );
   }
 }
@@ -345,43 +328,46 @@ function fieldDoc([, name, authored]) {
 /** One group's interface. */
 function declaration(group) {
   return [
-    ...doc(group.typeDoc, ''),
+    ...docComment(group.typeDoc, ''),
     `export interface ${group.type} {`,
     ...group.fields.flatMap((field) => [
-      ...doc([fieldDoc(field)], '  '),
-      `  ${property(field[0])}: string;`,
+      ...docComment([fieldDoc(field)], '  '),
+      `  ${propertyKey(field[0])}: string;`,
     ]),
     '}',
   ];
 }
 
 /**
- * Every interface, emitted once each.
+ * The group each interface is emitted from: the first one to claim its type.
  *
  * The four semantic tones share `SemanticTriple`. A second group claiming a
  * type it does not match would emit one of the two shapes and type-check the
  * other against it, so refuse instead.
+ *
+ * @param {object[]} groups the layout to read.
+ * @returns {object[]} one group per type, in emission order.
  */
-function declarations() {
-  const emitted = new Map();
-  const lines = [];
-  for (const group of GROUPS) {
+export function typeDeclarations(groups) {
+  const claimed = new Map();
+  const first = [];
+  for (const group of groups) {
     const shape = JSON.stringify([group.typeDoc, group.fields.map((f) => [f[0], fieldDoc(f)])]);
-    const seen = emitted.get(group.type);
+    const seen = claimed.get(group.type);
     if (seen === undefined) {
-      emitted.set(group.type, shape);
-      lines.push('', ...declaration(group));
+      claimed.set(group.type, shape);
+      first.push(group);
     } else if (seen !== shape) {
       throw new Error(`${group.field} and an earlier group both declare ${group.type}, with different fields`);
     }
   }
-  return lines;
+  return first;
 }
 
 /** The `Theme` interface: the ramps, every group, then the escape hatch. */
 function themeInterface() {
   const lines = [
-    ...doc(
+    ...docComment(
       [
         'A complete theme: every token the web kit declares, as a typed value.',
         '',
@@ -402,7 +388,7 @@ function themeInterface() {
     const first = tokenNamed(ramp.names[0], KIT);
     const last = tokenNamed(ramp.names[ramp.names.length - 1], KIT);
     lines.push(
-      ...doc(
+      ...docComment(
         [`${ramp.doc}, \`--${first.name}\` (${first.note}) → \`--${last.name}\` (${last.note}).`],
         '  ',
       ),
@@ -411,11 +397,11 @@ function themeInterface() {
   }
 
   for (const group of GROUPS) {
-    lines.push(...doc([group.doc], '  '), `  ${group.field}: ${group.type};`);
+    lines.push(...docComment([group.doc], '  '), `  ${group.field}: ${group.type};`);
   }
 
   lines.push(
-    ...doc(
+    ...docComment(
       [
         'Escape hatch: custom properties written verbatim, after the tokens.',
         '',
@@ -434,7 +420,7 @@ function themeInterface() {
 /** One built-in theme, as the literal that satisfies `Theme`. */
 function themeLiteral({ scheme, name, doc: prose }) {
   const lines = [
-    ...doc([`The built-in ${prose} of \`css/tokens.css\`, as a value.`], ''),
+    ...docComment([`The built-in ${prose} of \`css/tokens.css\`, as a value.`], ''),
     `export const ${scheme}Theme: Theme = {`,
     `  name: ${quote(name)},`,
     `  scheme: ${quote(scheme)},`,
@@ -443,7 +429,7 @@ function themeLiteral({ scheme, name, doc: prose }) {
     lines.push(...list(`${ramp.field}: `, ramp.names.map((n) => quote(css(n, scheme))), '  '));
   }
   for (const group of GROUPS) {
-    const entries = group.fields.map(([field, token]) => [property(field), quote(css(token, scheme))]);
+    const entries = group.fields.map(([field, token]) => [propertyKey(field), quote(css(token, scheme))]);
     lines.push(...object(`${group.field}: `, entries, '  '));
   }
   lines.push('};');
@@ -461,7 +447,7 @@ function toVars() {
     ),
   ];
   return [
-    ...doc(
+    ...docComment(
       [
         'Flatten a theme into the custom properties the stylesheets read.',
         '',
@@ -483,12 +469,12 @@ function toVars() {
 
 /** @returns {string} the full text of `packages/tokens/src/theme.gen.ts`. */
 export function renderThemeTs() {
-  checkCoverage();
+  checkCoverage(themeTokens());
 
   const lines = [
     `/* ${bannerLines().join('\n   ')} */`,
     '',
-    ...doc(
+    ...docComment(
       [
         'The Forge tokens as a typed value.',
         '',
@@ -500,7 +486,7 @@ export function renderThemeTs() {
       ],
       '',
     ),
-    ...declarations(),
+    ...typeDeclarations(GROUPS).flatMap((group) => ['', ...declaration(group)]),
     '',
     ...themeInterface(),
   ];

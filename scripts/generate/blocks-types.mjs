@@ -12,17 +12,15 @@
  */
 import { bannerLines } from './banner.mjs';
 import {
-  PRINT_WIDTH,
   REGISTRY_PATH,
   REGISTRY_SOURCE_PATH,
-  docComment,
   entryLines,
   helperTypes,
   kinds,
   payloadEntries,
-  quote,
   via,
 } from './blocks-source.mjs';
+import { PRINT_WIDTH, docComment, quote } from './ts.mjs';
 
 const INDENT = '  ';
 

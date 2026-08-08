@@ -14,6 +14,8 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { PRINT_WIDTH, propertyKey, quote } from './ts.mjs';
+
 const REPO = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 
 /** The authored registry, for the banner. */
@@ -94,12 +96,6 @@ export function helperTypes(fields) {
   return names;
 }
 
-/** A TypeScript string literal, single-quoted like the rest of the kit. */
-export const quote = (text) => `'${text.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
-
-/** Whether `key` needs quoting to be an object key. */
-const plainKey = (key) => /^[A-Za-z_$][\w$]*$/.test(key);
-
 /**
  * A JSON value as the TypeScript expression that builds it, on one line.
  *
@@ -113,7 +109,7 @@ export function expression(value) {
   if (typeof value === 'number' || typeof value === 'boolean') return String(value);
   if (Array.isArray(value)) return `[${value.map(expression).join(', ')}]`;
   const pairs = Object.entries(value).map(
-    ([key, item]) => `${plainKey(key) ? key : quote(key)}: ${expression(item)}`,
+    ([key, item]) => `${propertyKey(key)}: ${expression(item)}`,
   );
   return `{ ${pairs.join(', ')} }`;
 }
@@ -138,9 +134,6 @@ export function orderedPayload(payload, fields, head = {}) {
 export function payloadEntries(payload, fields) {
   return Object.entries(orderedPayload(payload, fields)).map(([key, value]) => ({ key, value }));
 }
-
-/** The width the emitted TypeScript wraps at. */
-export const PRINT_WIDTH = 100;
 
 /**
  * Render a value as TypeScript, on one line while it fits and broken over
@@ -179,7 +172,7 @@ export function valueLines(value, indent, prefix = '', suffix = '', width = PRIN
  *   its one-line form and a function from indent to its broken-out lines.
  */
 export function entryLines(entries, indent, prefix = '', suffix = '', width = PRINT_WIDTH) {
-  const keyOf = (entry) => (plainKey(entry.key) ? entry.key : quote(entry.key));
+  const keyOf = (entry) => propertyKey(entry.key);
   const inlineOf = (entry) =>
     entry.shorthand ?? entry.inline ?? `${keyOf(entry)}: ${expression(entry.value)}`;
 
@@ -194,11 +187,3 @@ export function entryLines(entries, indent, prefix = '', suffix = '', width = PR
   return [`${indent}${prefix}{`, ...body, `${indent}}${suffix}`];
 }
 
-/** Wrap `lines` in a block comment at `indent`, in the kit's JSDoc style. */
-export function docComment(lines, indent = '') {
-  if (!lines.length) return [];
-  if (lines.length === 1) return [`${indent}/** ${lines[0]} */`];
-  const body = lines.map((line, i) => (i === 0 ? `${indent}/** ${line}` : `${indent}    ${line}`));
-  body[body.length - 1] += ' */';
-  return body;
-}

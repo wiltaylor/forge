@@ -19,9 +19,9 @@ import {
   GROUPS,
   RAMPS,
   checkCoverage,
-  quote,
   renderThemeTs,
   themeTokens,
+  typeDeclarations,
 } from './theme-ts.mjs';
 import { formatValue } from './tokens-css.mjs';
 import { SOURCE_PATH, inKit, tokenNamed, tokens, valueFor } from '../../packages/tokens/tokens.source.mjs';
@@ -172,8 +172,19 @@ test('every group is declared as a type, and the semantic tones share one', () =
   assert.equal(ts.match(/export interface SemanticTriple \{/g).length, 1);
 });
 
-test('a string is quoted in whichever quote it needs no escape in', () => {
-  assert.equal(quote('12px'), "'12px'");
-  assert.equal(quote("'IBM Plex Sans', sans-serif"), '"\'IBM Plex Sans\', sans-serif"');
-  assert.equal(quote('a "b"'), `'a "b"'`);
+test('one type is declared once, from the first group that claims it', () => {
+  const claimants = typeDeclarations(GROUPS).map((group) => group.type);
+  assert.equal(new Set(claimants).size, claimants.length);
+  assert.equal(claimants.length, new Set(GROUPS.map((group) => group.type)).size);
+});
+
+test('two groups claiming one type with different fields is refused, not emitted twice', () => {
+  const imposter = {
+    field: 'imposter',
+    type: 'SemanticTriple',
+    typeDoc: ['A tone of another shape.'],
+    doc: 'An imposter.',
+    fields: [['only', 'accent', 'Not what the tones declare.']],
+  };
+  assert.throws(() => typeDeclarations([...GROUPS, imposter]), /both declare SemanticTriple/);
 });
