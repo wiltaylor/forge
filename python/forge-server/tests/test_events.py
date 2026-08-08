@@ -3,6 +3,7 @@ import json
 
 import pytest
 from fastapi.testclient import TestClient
+from starlette.testclient import WebSocketDenialResponse
 
 from forge_server import ForgeApp
 from forge_server.events import QUEUE_SIZE, EventBus
@@ -63,13 +64,17 @@ def test_ws_default_subscription_is_all_topics():
 
 
 def test_ws_rejected_without_token_when_auth_enabled():
+    """Refused with a response, not a bare close: an unauthorised upgrade
+    reads as the contract's 401 envelope, the same as every other endpoint."""
     from conftest import SECRET
 
     app = ForgeApp("ev").auth(secret=SECRET, users={"admin": "admin"}).with_events()
     client = TestClient(app.fastapi)
-    with pytest.raises(Exception):
-        with client.websocket_connect("/api/ws") as ws:
-            ws.receive_json()
+    with pytest.raises(WebSocketDenialResponse) as refusal:
+        with client.websocket_connect("/api/ws"):
+            pass
+    assert refusal.value.status_code == 401
+    assert refusal.value.json() == {"ok": False, "error": "missing token"}
 
 
 def test_ws_accepts_query_token_when_auth_enabled():

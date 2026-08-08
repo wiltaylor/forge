@@ -48,7 +48,11 @@ def register_routes(
         data["app"] = app_name
         return ok(data)
 
-    @app.get("/api/components/{file}")
+    # `{file:path}` rather than `{file}`: the ASGI server percent-decodes the
+    # request path before routing, so an encoded separator would otherwise
+    # make the request miss this route entirely. The filename rule is what
+    # must reject a traversal, and it cannot reject what it never sees.
+    @app.get("/api/components/{file:path}")
     async def bundle(file: str, claims: dict = Depends(require_claims)):
         validate_filename(file)
         path = directory / file
