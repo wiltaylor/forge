@@ -81,6 +81,23 @@ test('stripComments does not read a URL as a line comment', () => {
   assert.equal(stripComments(text, { lineComments: true }).trimEnd(), "const u = 'https://example.test/x';");
 });
 
+test('a quote in a character class does not swallow the comment after it', () => {
+  const text = "const re = /['\"]+$/;\n/* prose about var(--imaginary) */\n";
+  assert.deepEqual(references(text, { lineComments: true }), []);
+});
+
+test('an apostrophe in prose does not swallow the comment after it', () => {
+  const text = "<p>don't</p>\n/* prose about var(--imaginary) */\n";
+  assert.deepEqual(references(text, { lineComments: true }), []);
+});
+
+test('a template literal still spans lines', () => {
+  const text = 'const s = `one\ncolor: var(--border)\n`;\n';
+  assert.deepEqual(references(text, { lineComments: true }), [
+    { name: '--border', fallback: false, line: 2 },
+  ]);
+});
+
 test('an undeclared name is a violation', () => {
   const found = violations([css('a.css', 'a { color: var(--nope); }')], DECLARED);
   assert.equal(found[0].name, '--nope');
@@ -128,12 +145,17 @@ test('an exemption nothing needs is itself a violation', () => {
   );
 });
 
-test('only stylesheets and TypeScript are scanned', () => {
-  assert.ok(isScanned('a/b.css'));
-  assert.ok(isScanned('a/b.ts'));
-  assert.ok(isScanned('a/b.tsx'));
-  assert.ok(!isScanned('a/b.rs'));
-  assert.ok(!isScanned('README'));
+test('stylesheets and every web source extension are scanned', () => {
+  for (const path of ['a/b.css', 'a/b.ts', 'a/b.tsx', 'a/b.js', 'a/b.jsx']) {
+    assert.ok(isScanned(path), path);
+  }
+  for (const path of ['a/b.rs', 'a/b.mjs', 'README']) assert.ok(!isScanned(path), path);
+});
+
+test('the two extractors read the same names', () => {
+  const [fromVar] = references('a { color: var(--Odd); }');
+  const [fromQuote] = references("style({ '--Odd': 1 })", { lineComments: true });
+  assert.equal(fromVar.name, fromQuote.name);
 });
 
 /** One file that references every allowlisted property, so the rot check rests. */

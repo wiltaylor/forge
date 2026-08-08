@@ -255,11 +255,12 @@
 
 /* ---------------- Grid helper ---------------------------------------------- */
 /* Intrinsically responsive tile grid (stat rows, card grids) — columns pack
-   at ≥180px and collapse to one column on narrow screens, no media query. */
+   at ≥180px and collapse to one column on narrow screens, no media query.
+   One grid may set --fgrid-min to pack at another width. */
 .fgrid {
   display: grid;
   gap: var(--sp-4);
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(var(--fgrid-min, 180px), 1fr));
 }
 
 /* ---------------- Misc ----------------------------------------------------- */

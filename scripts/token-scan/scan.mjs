@@ -20,49 +20,60 @@
  * property through a probe element or writes one through an inline style.
  */
 
+/** Where this module lives, for the report that names a rotten entry in it. */
+const THIS_FILE = 'scripts/token-scan/scan.mjs';
+
 /** A `var()` reference. The trailing comma, if any, opens the fallback. */
 const VAR_REF = /var\(\s*(--[A-Za-z0-9_-]+)\s*(,)?/g;
 
 /**
- * A quoted property name, and — without consuming it, so that the next name is
- * still matched — the argument after it. Another property name there is the
- * second half of a `color-mix()`, not a fallback.
+ * A quoted property name, then the argument after it. The lookahead does not
+ * consume that argument, so a second name there still matches on its own turn.
+ * Such a second name is the other half of a `color-mix()`, not a fallback.
+ *
+ * The first character after the dashes must be a letter, so that Markdown's
+ * `'---'` is not a property name.
  */
-const QUOTED_REF = /(['"])(--[a-z][A-Za-z0-9_-]*)\1(?=(?:\s*,\s*(['"])([^'"]*)\3)?)/g;
+const QUOTED_REF = /(['"])(--[A-Za-z][A-Za-z0-9_-]*)\1(?=(?:\s*,\s*(['"])([^'"]*)\3)?)/g;
 
 /**
  * Custom properties that carry a value per instance rather than a token value.
- * Each is written by the source named here, and read with a fallback that is
- * its default, so the rules above would otherwise call it undeclared.
+ * `writer` says who sets one. Each is read with a fallback that is its default,
+ * so the rules above would otherwise call it undeclared.
  */
 export const PER_INSTANCE = [
   {
     name: '--fbk-indent',
-    set: 'packages/blocks/src/render.tsx',
+    writer: 'packages/blocks/src/render.tsx',
     why: 'the nesting depth of one list item',
   },
   {
     name: '--fbk-cols',
-    set: 'packages/blocks/src/tableedit.tsx',
+    writer: 'packages/blocks/src/tableedit.tsx',
     why: 'the column count of one table',
   },
   {
     name: '--fslider-fill',
-    set: 'packages/ui/src/forms.tsx',
+    writer: 'packages/ui/src/forms.tsx',
     why: 'the filled fraction of one slider',
   },
   {
+    name: '--fgrid-min',
+    writer: 'the app that lays out one grid',
+    why: 'the narrowest a tile of that grid may pack to',
+  },
+  {
     name: '--fgraph-node-w',
-    set: 'the consuming app',
-    why: 'the node width of one graph, documented as an override in the graph kit',
+    writer: 'the app that lays out one graph',
+    why: 'the node width of that graph, documented as an override in the graph kit',
   },
 ];
 
 /**
  * The files whose token references keep a hand-written fallback on purpose.
  *
- * Deliberate divergences are declared here rather than discovered by the next
- * reader, who would otherwise "fix" one into drift.
+ * This table declares each deliberate divergence, so that the next reader does
+ * not find one and "fix" it into drift.
  */
 export const FALLBACK_EXEMPT = [
   {
@@ -75,11 +86,31 @@ export const FALLBACK_EXEMPT = [
 ];
 
 /**
+ * The offset just past the string that opens at `open`, or -1 when no string
+ * opens there.
+ *
+ * A quote inside a string hides a comment, so the scan must step over strings —
+ * `content: "// "` and a URL both rely on that. But an apostrophe also appears
+ * in prose and in a character class such as `/['"]+$/`, and reading one of
+ * those as a quote would hide every comment after it. Only a backtick opens a
+ * string that spans lines, so a `'` or `"` with no partner on its own line is
+ * not a quote at all.
+ */
+function stringEnd(text, open) {
+  const quote = text[open];
+  for (let i = open + 1; i < text.length; i++) {
+    if (text[i] === '\\') i++;
+    else if (text[i] === quote) return i + 1;
+    else if (text[i] === '\n' && quote !== '`') return -1;
+  }
+  return -1;
+}
+
+/**
  * Blank out comments, so that a token name written in prose is not a reference.
  *
- * Every newline survives, so line numbers still hold. A quote opens a string,
- * where `/*` and `//` are text rather than a comment — `content: "// "` and a
- * URL both rely on that.
+ * Every newline survives, so line numbers still hold. String contents survive
+ * too: a style string holds real references.
  *
  * @param {string} text
  * @param {{ lineComments?: boolean }} options `//` runs to the end of the line.
@@ -101,15 +132,14 @@ export function stripComments(text, { lineComments = false } = {}) {
       continue;
     }
     if (lineComments && two === '//') {
-      let end = text.indexOf('\n', i);
-      if (end === -1) end = text.length;
-      blank(i, end);
-      i = end - 1;
+      const end = text.indexOf('\n', i);
+      blank(i, end === -1 ? text.length : end);
+      i = (end === -1 ? text.length : end) - 1;
       continue;
     }
     if (text[i] === "'" || text[i] === '"' || text[i] === '`') {
-      const quote = text[i];
-      for (i++; i < text.length && text[i] !== quote; i++) if (text[i] === '\\') i++;
+      const end = stringEnd(text, i);
+      if (end !== -1) i = end - 1;
     }
   }
   return out.join('');
@@ -161,9 +191,17 @@ export const extensionOf = (path) => {
 
 /**
  * The file types that hold token references, and whether `//` opens a comment
- * in each. Everything else in the tree holds none.
+ * in each. These are the web kit's authored source. The generator toolchain in
+ * `scripts/` is `.mjs`, and it writes token names as data and as test
+ * fixtures rather than as references, so it stays out.
  */
-export const SCANNED = { '.css': false, '.ts': true, '.tsx': true };
+export const SCANNED = {
+  '.css': false,
+  '.ts': true,
+  '.tsx': true,
+  '.js': true,
+  '.jsx': true,
+};
 
 /** True when a file of this path is worth scanning. */
 export const isScanned = (path) => extensionOf(path) in SCANNED;
@@ -206,23 +244,14 @@ export function violations(files, declared) {
     }
   }
 
-  for (const entry of PER_INSTANCE) {
-    if (usedNames.has(entry.name)) continue;
-    found.push({
-      path: 'scripts/token-scan/scan.mjs',
-      line: 0,
-      name: entry.name,
-      problem: 'nothing references this per-instance property; drop the allowlist entry',
-    });
-  }
-  for (const entry of FALLBACK_EXEMPT) {
-    if (usedExemptions.has(entry.file)) continue;
-    found.push({
-      path: 'scripts/token-scan/scan.mjs',
-      line: 0,
-      name: entry.file,
-      problem: 'this file carries no fallback any more; drop the exemption',
-    });
-  }
-  return found;
+  const rot = (entries, key, used, problem) =>
+    entries
+      .filter((entry) => !used.has(entry[key]))
+      .map((entry) => ({ path: THIS_FILE, line: 0, name: entry[key], problem }));
+
+  return [
+    ...found,
+    ...rot(PER_INSTANCE, 'name', usedNames, 'nothing references this property; drop the entry'),
+    ...rot(FALLBACK_EXEMPT, 'file', usedExemptions, 'nothing here needs a fallback; drop the entry'),
+  ];
 }

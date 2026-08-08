@@ -9,9 +9,9 @@
    danger+accent / info+success, and the gray slots reuse bg/fg shades.
 
    Each read below names a fallback for the case where that resolution fails.
-   The accent stand-in is hand-picked and INTENTIONALLY not the token value —
-   do not "fix" it into agreement. The declared-token scan exempts this file
-   for exactly that reason; see FALLBACK_EXEMPT in scripts/token-scan/scan.mjs. */
+   The accent stand-in is hand-picked and is deliberately not the token value.
+   Do not "fix" it into agreement. The declared-token scan exempts this file
+   for that reason; see FALLBACK_EXEMPT in scripts/token-scan/scan.mjs. */
 import type { ITheme } from '@xterm/xterm';
 
 let probe: HTMLSpanElement | undefined;

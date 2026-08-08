@@ -25,7 +25,7 @@ const REPO = dirname(dirname(fileURLToPath(import.meta.url)));
 /** Directories that hold no authored source. */
 const SKIP = new Set(['.git', 'node_modules', 'dist', 'target', 'vendor', '.turbo', '.venv']);
 
-/** Every scannable file under `dir`, repo-relative and sorted. */
+/** Every scannable file under `dir`, repo-relative and in walk order. */
 async function walk(dir) {
   const found = [];
   for (const entry of await readdir(dir, { withFileTypes: true })) {
@@ -33,16 +33,17 @@ async function walk(dir) {
     if (entry.isDirectory()) {
       if (SKIP.has(entry.name)) continue;
       found.push(...(await walk(path)));
-    } else if (entry.isFile() && isScanned(entry.name)) {
+    } else if (isScanned(entry.name)) {
+      // Not `isFile()`: a symlink to a stylesheet is still a stylesheet.
       found.push(relative(REPO, path));
     }
   }
-  return found.sort();
+  return found;
 }
 
 async function main() {
   const declared = new Set(tokens.filter((t) => inKit(t, 'web')).map((t) => `--${t.name}`));
-  const paths = await walk(REPO);
+  const paths = (await walk(REPO)).sort();
   const files = await Promise.all(
     paths.map(async (path) => ({ path, text: await readFile(join(REPO, path), 'utf8') })),
   );
