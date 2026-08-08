@@ -1,13 +1,25 @@
 import { For, Show } from 'solid-js';
 import type { JSX } from 'solid-js';
-import type { Accessor, Setter } from 'solid-js';
 import { Icon } from '../primitives';
+import { createRoving } from '../overlay';
+import type { Roving } from '../overlay';
 import type { MenuItem } from '../types';
+
+/** Can this item be picked? A separator and a disabled item cannot. */
+export function menuSelectable(items: MenuItem[], i: number): boolean {
+  const it = items[i];
+  return !!it && !it.separator && !it.disabled;
+}
+
+/** The roving index of a menu: it moves over the items a click could pick. */
+export function menuRoving(items: () => MenuItem[]): Roving {
+  return createRoving({ count: () => items().length, enabled: (i) => menuSelectable(items(), i) });
+}
 
 export interface MenuListProps {
   items: MenuItem[];
-  activeIdx: Accessor<number>;
-  setActiveIdx: Setter<number>;
+  /** The menu's roving index: which item is active, and how a pointer moves it. */
+  roving: Roving;
   onCommit: (idx: number) => void;
 }
 
@@ -19,11 +31,11 @@ export function MenuList(props: MenuListProps): JSX.Element {
         <Show when={!item.separator} fallback={<div class="fmenu-sep" role="separator" />}>
           <button type="button" class="fmenu-item" role="menuitem" disabled={item.disabled}
                   classList={{
-                    'is-active': i() === props.activeIdx(),
+                    'is-active': i() === props.roving.active(),
                     'is-danger': !!item.danger,
                     'is-disabled': !!item.disabled,
                   }}
-                  onPointerEnter={() => !item.disabled && props.setActiveIdx(i())}
+                  onPointerEnter={() => !item.disabled && props.roving.setActive(i())}
                   onClick={() => !item.disabled && props.onCommit(i())}>
             <Show when={item.icon}>
               <Icon of={item.icon!} size={14} />

@@ -1,9 +1,18 @@
 import { For, Show, createEffect, createSignal, createUniqueId, mergeProps, splitProps } from 'solid-js';
 import type { JSX } from 'solid-js';
 import { CheckDash, CheckMark, ChevronDown, SearchSvg } from './internal/icons';
-import { useOverlay } from './overlay';
+import { createRoving, useOverlay } from './overlay';
+import type { Roving } from './overlay';
 import { Icon } from './primitives';
 import type { IconComponent, Option } from './types';
+
+/** The roving index of an option list: it moves over the options a user can pick. */
+function optionRoving<T>(options: () => Option<T>[] | undefined): Roving {
+  return createRoving({
+    count: () => options()?.length ?? 0,
+    enabled: (i) => !options()?.[i]?.disabled,
+  });
+}
 
 /* ---------------- Input ---------------------------------------------------- */
 export interface InputProps extends JSX.InputHTMLAttributes<HTMLInputElement> {
@@ -169,19 +178,15 @@ export function Select<T = string>(props: SelectProps<T>): JSX.Element {
   const [local, rest] = splitProps(props,
     ['options', 'value', 'onChange', 'placeholder', 'label', 'help', 'error', 'children']);
   const [open, setOpen] = createSignal(false);
-  const [activeIdx, setActiveIdx] = createSignal(-1);
+  const roving = optionRoving(() => local.options);
   let root!: HTMLDivElement;
   useOverlay({ open, surface: () => root, onDismiss: () => setOpen(false) });
 
   const selected = () => local.options?.find((o) => o.value === local.value);
-  const enabledIdx = (from: number, dir: number) => {
-    const opts = local.options ?? [];
-    for (let i = from; i >= 0 && i < opts.length; i += dir) if (!opts[i]?.disabled) return i;
-    return -1;
-  };
   const openAt = () => {
     const cur = local.options?.findIndex((o) => o.value === local.value) ?? -1;
-    setActiveIdx(cur >= 0 ? cur : enabledIdx(0, 1));
+    if (cur >= 0) roving.setActive(cur);
+    else roving.first();
     setOpen(true);
   };
   const commit = (idx: number) => {
@@ -193,11 +198,8 @@ export function Select<T = string>(props: SelectProps<T>): JSX.Element {
       if (['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(e.key)) { e.preventDefault(); openAt(); }
       return;
     }
-    if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIdx((i) => { const n = enabledIdx(Math.min(i + 1, local.options.length - 1), 1); return n >= 0 ? n : i; }); }
-    else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIdx((i) => { const n = enabledIdx(Math.max(i - 1, 0), -1); return n >= 0 ? n : i; }); }
-    else if (e.key === 'Home') { e.preventDefault(); setActiveIdx(enabledIdx(0, 1)); }
-    else if (e.key === 'End') { e.preventDefault(); setActiveIdx(enabledIdx(local.options.length - 1, -1)); }
-    else if (e.key === 'Enter') { e.preventDefault(); commit(activeIdx()); }
+    if (roving.onKeyDown(e)) return;
+    if (e.key === 'Enter') { e.preventDefault(); commit(roving.active()); }
   };
 
   return (
@@ -219,11 +221,11 @@ export function Select<T = string>(props: SelectProps<T>): JSX.Element {
               {(opt, i) => (
                 <div class="fselect-opt" role="option" aria-selected={opt.value === local.value}
                      classList={{
-                       'is-active': i() === activeIdx(),
+                       'is-active': i() === roving.active(),
                        'is-selected': opt.value === local.value,
                        'is-disabled': !!opt.disabled,
                      }}
-                     onPointerEnter={() => !opt.disabled && setActiveIdx(i())}
+                     onPointerEnter={() => !opt.disabled && roving.setActive(i())}
                      onClick={() => commit(i())}>
                   {opt.label}
                   <Show when={opt.value === local.value}>
@@ -256,7 +258,7 @@ export interface ListBoxProps<T = string> {
 export function ListBox<T = string>(props: ListBoxProps<T> & Omit<JSX.HTMLAttributes<HTMLDivElement>, 'onChange'>): JSX.Element {
   const [local, rest] = splitProps(props,
     ['options', 'value', 'values', 'onChange', 'multiple', 'label']);
-  const [activeIdx, setActiveIdx] = createSignal(-1);
+  const roving = optionRoving(() => local.options);
   const emit = (v: T | T[]) => (local.onChange as ((v: T | T[]) => void) | undefined)?.(v);
 
   const isSelected = (opt: Option<T>) =>
@@ -271,12 +273,12 @@ export function ListBox<T = string>(props: ListBoxProps<T> & Omit<JSX.HTMLAttrib
     }
   };
   const onKeyDown = (e: KeyboardEvent) => {
-    const opts = local.options ?? [];
-    if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIdx((i) => Math.min(i + 1, opts.length - 1)); }
-    else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIdx((i) => Math.max(i - 1, 0)); }
-    else if (e.key === 'Home') { e.preventDefault(); setActiveIdx(0); }
-    else if (e.key === 'End') { e.preventDefault(); setActiveIdx(opts.length - 1); }
-    else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); const opt = opts[activeIdx()]; if (opt) pick(opt); }
+    if (roving.onKeyDown(e)) return;
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      const opt = (local.options ?? [])[roving.active()];
+      if (opt) pick(opt);
+    }
   };
 
   return (
@@ -289,8 +291,8 @@ export function ListBox<T = string>(props: ListBoxProps<T> & Omit<JSX.HTMLAttrib
         <For each={local.options}>
           {(opt, i) => (
             <div class="flistbox-opt" role="option" aria-selected={isSelected(opt)}
-                 classList={{ 'is-selected': isSelected(opt), 'is-active': i() === activeIdx(), 'is-disabled': !!opt.disabled }}
-                 onClick={() => { setActiveIdx(i()); pick(opt); }}>
+                 classList={{ 'is-selected': isSelected(opt), 'is-active': i() === roving.active(), 'is-disabled': !!opt.disabled }}
+                 onClick={() => { roving.setActive(i()); pick(opt); }}>
               <Show when={local.multiple}>
                 <span class="flistbox-check"><CheckMark /></span>
               </Show>
@@ -378,7 +380,6 @@ export interface ComboboxProps<T = string> {
 export function Combobox<T = string>(props: ComboboxProps<T>): JSX.Element {
   const [open, setOpen] = createSignal(false);
   const [query, setQuery] = createSignal<string | null>(null);  // null = show selected label
-  const [activeIdx, setActiveIdx] = createSignal(-1);
   let root!: HTMLDivElement;
   let input!: HTMLInputElement;
   useOverlay({ open, surface: () => root, onDismiss: () => { setOpen(false); setQuery(null); } });
@@ -389,6 +390,8 @@ export function Combobox<T = string>(props: ComboboxProps<T>): JSX.Element {
     const opts = props.options ?? [];
     return q ? opts.filter((o) => String(o.label).toLowerCase().includes(q)) : opts;
   };
+  /* The index moves over what the query left, not over every option. */
+  const roving = optionRoving(filtered);
   const commit = (opt: Option<T> | undefined) => {
     if (!opt || opt.disabled) return;
     props.onChange?.(opt.value);
@@ -396,9 +399,9 @@ export function Combobox<T = string>(props: ComboboxProps<T>): JSX.Element {
     setQuery(null);
   };
   const onKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'ArrowDown') { e.preventDefault(); setOpen(true); setActiveIdx((i) => Math.min(i + 1, filtered().length - 1)); }
-    else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIdx((i) => Math.max(i - 1, 0)); }
-    else if (e.key === 'Enter') { e.preventDefault(); commit(filtered()[activeIdx()]); }
+    if (e.key === 'ArrowDown') setOpen(true);
+    if (roving.onKeyDown(e)) return;
+    if (e.key === 'Enter') { e.preventDefault(); commit(filtered()[roving.active()]); }
   };
 
   return (
@@ -412,7 +415,7 @@ export function Combobox<T = string>(props: ComboboxProps<T>): JSX.Element {
           <input ref={input} role="combobox" aria-expanded={open()} disabled={props.disabled}
                  placeholder={props.placeholder}
                  value={query() ?? String(selected()?.label ?? '')}
-                 onInput={(e) => { setQuery(e.currentTarget.value); setOpen(true); setActiveIdx(0); }}
+                 onInput={(e) => { setQuery(e.currentTarget.value); setOpen(true); roving.first(); }}
                  onFocus={() => { setOpen(true); input.select(); }}
                  onKeyDown={onKeyDown} />
           <ChevronDown />
@@ -424,11 +427,11 @@ export function Combobox<T = string>(props: ComboboxProps<T>): JSX.Element {
                 {(opt, i) => (
                   <div class="fselect-opt" role="option" aria-selected={opt.value === props.value}
                        classList={{
-                         'is-active': i() === activeIdx(),
+                         'is-active': i() === roving.active(),
                          'is-selected': opt.value === props.value,
                          'is-disabled': !!opt.disabled,
                        }}
-                       onPointerEnter={() => !opt.disabled && setActiveIdx(i())}
+                       onPointerEnter={() => !opt.disabled && roving.setActive(i())}
                        onPointerDown={(e) => e.preventDefault()}
                        onClick={() => commit(opt)}>
                     {opt.label}
