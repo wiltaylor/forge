@@ -38,6 +38,7 @@ pub use actions::ActionCtx;
 pub use app::ForgeApp;
 pub use auth::extract::{OptionalClaims, RequireClaims};
 pub use auth::{Auth, AuthConfig, AuthUser, Claims, Hs256Validator, LoginResponse, TokenValidator};
+pub use components::Components;
 pub use docstore::DocStore;
 pub use envelope::{err, ok, ok_empty};
 pub use error::ForgeError;

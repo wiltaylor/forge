@@ -15,6 +15,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from .core.error import ForgeError
+
 _UNSET = object()
 
 
@@ -33,7 +35,13 @@ def fail(message: str, status: int = 400, headers: dict | None = None) -> JSONRe
 
 
 def install_handlers(app: FastAPI) -> None:
-    """Convert HTTPExceptions and request-validation errors to the envelope."""
+    """Convert domain errors, HTTPExceptions and validation errors to the envelope.
+
+    This is where a core rule's verdict becomes a status."""
+
+    @app.exception_handler(ForgeError)
+    async def _forge_error(request: Request, exc: ForgeError):
+        return fail(exc.message, status=exc.status)
 
     @app.exception_handler(StarletteHTTPException)
     async def _http_exception(request: Request, exc: StarletteHTTPException):

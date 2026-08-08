@@ -16,6 +16,7 @@ use tower_http::trace::TraceLayer;
 
 use crate::actions::{box_action, ActionCtx, BoxedAction};
 use crate::auth::{Auth, AuthConfig, TokenValidator};
+use crate::components::Components;
 use crate::docstore::DocStore;
 use crate::error::ForgeError;
 use crate::events::EventBus;
@@ -47,7 +48,7 @@ pub struct ForgeApp {
     events: EventBus,
     events_enabled: bool,
     docstore: Option<DocStore>,
-    components_dir: Option<PathBuf>,
+    components: Option<Components>,
     actions: BTreeMap<String, BoxedAction>,
     routes: Vec<(String, MethodRouter<ForgeState>)>,
     frontend: Frontend,
@@ -73,7 +74,7 @@ impl ForgeApp {
             events: EventBus::new(),
             events_enabled: false,
             docstore: None,
-            components_dir: None,
+            components: None,
             actions: BTreeMap::new(),
             routes: Vec::new(),
             frontend: Frontend::None,
@@ -142,9 +143,10 @@ impl ForgeApp {
         self
     }
 
-    /// Enable component federation from `dir` (must contain `manifest.json`).
+    /// Enable component federation from `dir` (`manifest.json` plus the
+    /// bundle files beside it).
     pub fn with_components(mut self, dir: impl Into<PathBuf>) -> Self {
-        self.components_dir = Some(dir.into());
+        self.components = Some(Components::new(dir.into()));
         self
     }
 
@@ -313,7 +315,7 @@ impl ForgeApp {
                 events: self.events,
                 docstore: self.docstore,
                 actions: self.actions,
-                components_dir: self.components_dir,
+                components: self.components,
                 frontend: self.frontend,
                 #[cfg(feature = "term")]
                 term: self.term,
@@ -338,7 +340,7 @@ impl ForgeApp {
                 .route("/api/events", get(events::sse::sse_handler))
                 .route("/api/ws", get(events::ws::ws_handler));
         }
-        if state.inner.components_dir.is_some() {
+        if state.inner.components.is_some() {
             protected = protected.merge(components::routes());
         }
         #[cfg(feature = "term")]

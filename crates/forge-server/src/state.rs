@@ -1,7 +1,6 @@
 //! Shared application state (cheaply cloneable `Arc` handle).
 
 use std::collections::BTreeMap;
-use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -9,6 +8,7 @@ use axum::extract::FromRef;
 
 use crate::actions::BoxedAction;
 use crate::auth::Auth;
+use crate::components::Components;
 use crate::docstore::DocStore;
 use crate::events::EventBus;
 use crate::frontend::Frontend;
@@ -20,7 +20,7 @@ pub(crate) struct StateInner {
     pub events: EventBus,
     pub docstore: Option<DocStore>,
     pub actions: BTreeMap<String, BoxedAction>,
-    pub components_dir: Option<PathBuf>,
+    pub components: Option<Components>,
     pub frontend: Frontend,
     #[cfg(feature = "term")]
     pub term: Option<Arc<crate::widgets::TermConfig>>,
@@ -62,6 +62,11 @@ impl ForgeState {
     /// Doc store, when configured.
     pub fn docstore(&self) -> Option<&DocStore> {
         self.inner.docstore.as_ref()
+    }
+
+    /// Component federation, when configured.
+    pub fn components(&self) -> Option<&Components> {
+        self.inner.components.as_ref()
     }
 
     /// Sorted registered action names.
