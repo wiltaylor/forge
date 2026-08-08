@@ -1,6 +1,9 @@
 //! Curated emoji shortcode table — gemoji-compatible names, sorted by
-//! shortcode for binary search. Generated together with
-//! `packages/blocks/src/emoji.ts`; keep the two lists identical.
+//! shortcode for binary search.
+//!
+//! This table is the author. `packages/blocks/src/emoji.gen.ts` is generated
+//! from it through `contract/emoji.json` — run `just generate-blocks` after
+//! adding an entry here, or `cargo test -p forge-blocks` says so.
 
 use std::borrow::Cow;
 

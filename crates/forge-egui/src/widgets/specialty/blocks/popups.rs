@@ -7,7 +7,7 @@ use super::{byte_of_char, Action, BlockEditorState, Ecx};
 use crate::theme::{FontWeight, Surface, TextRole, Theme};
 use egui::text::{CCursor, CCursorRange};
 use egui::{CornerRadius, Frame, Margin, Popup, PopupAnchor, Pos2, Rect, Sense, Stroke, Ui, Vec2};
-use forge_blocks::{search_emoji, Address, BlockKind, Document, ListStyle, Tone};
+use forge_blocks::{palette_rows, search_emoji, Address, BlockKind, Document, PaletteAction};
 
 pub(super) const EMOJI_LIMIT: usize = 8;
 
@@ -21,126 +21,25 @@ pub(crate) enum SlashChoice {
 }
 
 /// Built-ins plus registered custom kinds, filtered by `query` (lowercase).
+///
+/// The built-ins come from the shared kind registry, which every kit reads:
+/// one list of rows, in one order, making one starter payload per kind.
 pub(super) fn slash_choices(
     st: &BlockEditorState,
     in_column: bool,
     query: &str,
 ) -> Vec<(String, SlashChoice)> {
-    let text = |md: &str| md.to_owned();
-    let mut all: Vec<(String, SlashChoice)> = vec![
-        (
-            "Text".into(),
-            SlashChoice::Kind(BlockKind::Paragraph { md: text("") }),
-        ),
-        (
-            "Heading 1".into(),
-            SlashChoice::Kind(BlockKind::Heading {
-                level: 1,
-                md: text(""),
-            }),
-        ),
-        (
-            "Heading 2".into(),
-            SlashChoice::Kind(BlockKind::Heading {
-                level: 2,
-                md: text(""),
-            }),
-        ),
-        (
-            "Heading 3".into(),
-            SlashChoice::Kind(BlockKind::Heading {
-                level: 3,
-                md: text(""),
-            }),
-        ),
-        (
-            "Heading 4".into(),
-            SlashChoice::Kind(BlockKind::Heading {
-                level: 4,
-                md: text(""),
-            }),
-        ),
-        (
-            "Bullet list".into(),
-            SlashChoice::Kind(BlockKind::ListItem {
-                style: ListStyle::Bullet,
-                checked: None,
-                indent: 0,
-                md: text(""),
-            }),
-        ),
-        (
-            "Numbered list".into(),
-            SlashChoice::Kind(BlockKind::ListItem {
-                style: ListStyle::Number,
-                checked: None,
-                indent: 0,
-                md: text(""),
-            }),
-        ),
-        (
-            "Todo list".into(),
-            SlashChoice::Kind(BlockKind::ListItem {
-                style: ListStyle::Todo,
-                checked: Some(false),
-                indent: 0,
-                md: text(""),
-            }),
-        ),
-        (
-            "Quote".into(),
-            SlashChoice::Kind(BlockKind::Quote { md: text("") }),
-        ),
-        ("Divider".into(), SlashChoice::Kind(BlockKind::Divider)),
-        (
-            "Code".into(),
-            SlashChoice::Kind(BlockKind::Code {
-                lang: String::new(),
-                code: String::new(),
-            }),
-        ),
-        (
-            "Table".into(),
-            SlashChoice::Kind(BlockKind::Table {
-                header: vec![String::new(); 3],
-                rows: vec![vec![String::new(); 3], vec![String::new(); 3]],
-            }),
-        ),
-        (
-            "Callout".into(),
-            SlashChoice::Kind(BlockKind::Admonition {
-                tone: Tone::Info,
-                title: String::new(),
-                md: String::new(),
-            }),
-        ),
-    ];
-    // Data kinds share the cross-kit starter payloads so a fresh block
-    // renders something immediately.
-    for (type_name, label) in [
-        ("image", "Image"),
-        ("video", "Video"),
-        ("math", "Math"),
-        ("bar_chart", "Bar chart"),
-        ("line_chart", "Line chart"),
-        ("pie_chart", "Pie chart"),
-        ("diagram", "Diagram"),
-        ("sequence_diagram", "Sequence diagram"),
-        ("state_diagram", "State diagram"),
-        ("node_table", "Node table"),
-        ("tree", "Tree"),
-        ("timeline", "Timeline"),
-        ("chapter_header", "Chapter header"),
-        ("footnote", "Footnote"),
-    ] {
-        if let Some(kind) = forge_blocks::starter_kind(type_name) {
-            all.push((label.to_owned(), SlashChoice::Kind(kind)));
-        }
-    }
-    if !in_column {
-        all.push(("2 columns".into(), SlashChoice::Columns(2)));
-        all.push(("3 columns".into(), SlashChoice::Columns(3)));
-    }
+    let mut all: Vec<(String, SlashChoice)> = palette_rows()
+        .into_iter()
+        .filter(|row| !(in_column && matches!(row.action, PaletteAction::WrapColumns(_))))
+        .map(|row| {
+            let choice = match row.action {
+                PaletteAction::Insert(make) => SlashChoice::Kind(make()),
+                PaletteAction::WrapColumns(n) => SlashChoice::Columns(n as usize),
+            };
+            (row.label.to_owned(), choice)
+        })
+        .collect();
     for custom in &st.custom {
         all.push((
             custom.label().to_owned(),

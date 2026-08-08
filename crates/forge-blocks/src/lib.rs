@@ -12,8 +12,9 @@
 //! [`Address`] so every platform shares one keyboard/editing model.
 //!
 //! [`KINDS`] is the registry: one entry per kind, carrying the label, the
-//! data-ness, the starter payload and the markdown form. Read it to enumerate
-//! the kinds rather than reading a kit's palette.
+//! data-ness, the starter payload, the markdown form, the wire fields and the
+//! slash-palette rows. Read it — or [`palette_rows`] — to enumerate the kinds
+//! rather than reading a kit's palette.
 
 mod address;
 mod emoji;
@@ -21,6 +22,8 @@ mod id;
 mod ops;
 mod registry;
 mod schema;
+
+pub mod export;
 
 #[cfg(feature = "md")]
 mod convert;
@@ -38,7 +41,10 @@ pub use ops::{
     remove, remove_column, set_column_ratios, set_kind, split, table_insert_col, table_insert_row,
     table_remove_col, table_remove_row, wrap_in_columns, MergeResult, Shortcut,
 };
-pub use registry::{kind_entry, starter_kind, KindEntry, MarkdownForm, KINDS};
+pub use registry::{
+    kind_entry, palette_rows, starter_kind, KindEntry, MarkdownForm, PaletteAction, PaletteRow,
+    WireField, KINDS,
+};
 pub use schema::{
     Block, BlockKind, ChartPoint, ChartSeries, Column, DiagramDirection, DiagramEdge,
     DiagramEdgeKind, DiagramNode, DiagramNodeKind, Document, ListStyle, MessageKind, NodeTableRow,

@@ -3,7 +3,7 @@
 //! Both render last with `Clear` + `place()` anchored near the focused
 //! block.
 
-use forge_blocks::{BlockKind, ListStyle, Tone};
+use forge_blocks::palette_rows;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
@@ -36,93 +36,13 @@ pub(super) struct EmojiState {
     pub start: usize,
 }
 
-/// Built-in slash entries: (command id, palette label).
-pub(super) const BUILTINS: &[(&str, &str)] = &[
-    ("text", "Text"),
-    ("h1", "Heading 1"),
-    ("h2", "Heading 2"),
-    ("h3", "Heading 3"),
-    ("bullet", "Bullet list"),
-    ("number", "Numbered list"),
-    ("todo", "To-do list"),
-    ("quote", "Quote"),
-    ("divider", "Divider"),
-    ("code", "Code"),
-    ("table", "Table"),
-    ("callout", "Callout"),
-    ("image", "Image"),
-    ("video", "Video"),
-    ("math", "Math"),
-    ("bar_chart", "Bar chart"),
-    ("line_chart", "Line chart"),
-    ("pie_chart", "Pie chart"),
-    ("diagram", "Diagram"),
-    ("sequence_diagram", "Sequence diagram"),
-    ("state_diagram", "State diagram"),
-    ("node_table", "Node table"),
-    ("tree", "Tree"),
-    ("timeline", "Timeline"),
-    ("chapter_header", "Chapter header"),
-    ("footnote", "Footnote"),
-    ("col2", "2 columns"),
-    ("col3", "3 columns"),
-];
-
-/// The fresh block kind a built-in command id creates. Columns ids are
-/// handled by the caller (they wrap rather than replace).
-pub(super) fn builtin_kind(id: &str) -> Option<BlockKind> {
-    let kind = match id {
-        "text" => BlockKind::Paragraph { md: String::new() },
-        "h1" | "h2" | "h3" => BlockKind::Heading {
-            level: id.as_bytes()[1] - b'0',
-            md: String::new(),
-        },
-        "bullet" => BlockKind::ListItem {
-            style: ListStyle::Bullet,
-            checked: None,
-            indent: 0,
-            md: String::new(),
-        },
-        "number" => BlockKind::ListItem {
-            style: ListStyle::Number,
-            checked: None,
-            indent: 0,
-            md: String::new(),
-        },
-        "todo" => BlockKind::ListItem {
-            style: ListStyle::Todo,
-            checked: Some(false),
-            indent: 0,
-            md: String::new(),
-        },
-        "quote" => BlockKind::Quote { md: String::new() },
-        "divider" => BlockKind::Divider,
-        "code" => BlockKind::Code {
-            lang: String::new(),
-            code: String::new(),
-        },
-        "table" => BlockKind::Table {
-            header: vec![String::new(), String::new()],
-            rows: vec![vec![String::new(), String::new()]],
-        },
-        "callout" => BlockKind::Admonition {
-            tone: Tone::Info,
-            title: String::new(),
-            md: String::new(),
-        },
-        // Data kinds share the cross-kit starter payloads so a fresh block
-        // renders something immediately.
-        other => return forge_blocks::starter_kind(other),
-    };
-    Some(kind)
-}
-
-/// The full palette command list: built-ins followed by the registered
-/// custom kinds (in registration order).
+/// The full palette command list: the built-in rows from the shared kind
+/// registry — the list every kit reads, so none can offer a kind the others do
+/// not — followed by the registered custom kinds, in registration order.
 pub(super) fn slash_commands(custom: &[Box<dyn CustomBlock>]) -> Vec<Command<'static>> {
-    let mut out: Vec<Command<'static>> = BUILTINS
-        .iter()
-        .map(|(id, label)| Command::new(id, label))
+    let mut out: Vec<Command<'static>> = palette_rows()
+        .into_iter()
+        .map(|row| Command::new(row.id, row.label))
         .collect();
     for c in custom {
         out.push(Command::new(c.kind(), c.label()));

@@ -340,6 +340,11 @@ per token per scheme, plus the derivation metadata for the translucent tints.
 installing Forge never runs a generator. Change a token there, then run
 `just generate`; `just check` fails while a generated file is stale.
 
+The block editor's kind list works the same way, from the other direction: the
+registry is authored in Rust (`crates/forge-blocks/src/registry.rs`) and the web
+kit's kind union, starter constructors, slash palette and emoji table are
+generated from it. See [`contract/README.md`](contract/README.md).
+
 Everything routes through CSS custom properties (`--bg-0`, `--accent`, …),
 dark by default, light via `prefers-color-scheme` or `data-theme`. Programmatic:
 

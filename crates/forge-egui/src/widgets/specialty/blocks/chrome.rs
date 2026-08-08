@@ -135,7 +135,7 @@ fn menu_entries(doc: &Document, addr: Address) -> (Vec<MenuItem>, Vec<Action>) {
                 },
             ),
             turn(
-                "Todo list",
+                "To-do list",
                 BlockKind::ListItem {
                     style: ListStyle::Todo,
                     checked: Some(false),

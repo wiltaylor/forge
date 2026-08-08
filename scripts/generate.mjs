@@ -1,14 +1,21 @@
 #!/usr/bin/env node
 /**
- * Regenerate every artifact derived from the token source, or check that the
+ * Regenerate every artifact derived from an authored source, or check that the
  * committed ones are up to date.
  *
  *   node scripts/generate.mjs           write every artifact  (`just generate`)
  *   node scripts/generate.mjs --check   fail if any differs   (`just check`)
  *
  * The check compares file contents. It does not ask git. Thus it fails only for
- * a file that no longer matches the source. It ignores every other edit in the
+ * a file that no longer matches its source. It ignores every other edit in the
  * tree, staged or not.
+ *
+ * Two sources feed it. The design tokens are authored in JavaScript and read
+ * directly. The block kind registry is Rust, so `just generate-blocks` dumps it
+ * to `contract/*.json` first and these generators read that — which keeps this
+ * script, and `just check` with it, a Node-only job that installing the web kit
+ * never needs a Rust toolchain to reproduce. A dump states a digest of its Rust
+ * source, so a stale one fails here rather than quietly generating from it.
  *
  * To add an output, add one entry to `ARTIFACTS`.
  */
@@ -16,12 +23,20 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { renderBlocksEmoji } from './generate/blocks-emoji.mjs';
+import { renderBlocksSlash } from './generate/blocks-slash.mjs';
+import { renderBlocksTypes } from './generate/blocks-types.mjs';
 import { renderTokensCss } from './generate/tokens-css.mjs';
 
 const REPO = dirname(dirname(fileURLToPath(import.meta.url)));
 
 /** Every generated file: repo-relative path, and the function that emits its text. */
-const ARTIFACTS = [{ path: 'packages/tokens/css/tokens.css', render: renderTokensCss }];
+const ARTIFACTS = [
+  { path: 'packages/tokens/css/tokens.css', render: renderTokensCss },
+  { path: 'packages/blocks/src/types.gen.ts', render: renderBlocksTypes },
+  { path: 'packages/blocks/src/slash.gen.ts', render: renderBlocksSlash },
+  { path: 'packages/blocks/src/emoji.gen.ts', render: renderBlocksEmoji },
+];
 
 async function currentText(path) {
   try {
@@ -49,7 +64,7 @@ async function main(check) {
     for (const path of stale) console.log(`wrote ${path}`);
     return 0;
   }
-  console.error('These generated files do not match the token source:\n');
+  console.error('These generated files no longer match their source:\n');
   for (const path of stale) console.error(`  ${path}`);
   console.error('\nRun `just generate` and commit the result.');
   return 1;

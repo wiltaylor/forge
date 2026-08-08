@@ -1,0 +1,1203 @@
+{
+  "generated_from": "crates/forge-blocks/src/registry.rs",
+  "kinds": [
+    {
+      "doc": [],
+      "fields": [
+        {
+          "name": "md",
+          "optional": false,
+          "ts": "string"
+        }
+      ],
+      "is_data": false,
+      "starter": {
+        "md": "",
+        "type": "paragraph"
+      },
+      "type": "paragraph"
+    },
+    {
+      "doc": [],
+      "fields": [
+        {
+          "name": "level",
+          "optional": false,
+          "ts": "1 | 2 | 3 | 4"
+        },
+        {
+          "name": "md",
+          "optional": false,
+          "ts": "string"
+        }
+      ],
+      "is_data": false,
+      "starter": {
+        "level": 1,
+        "md": "",
+        "type": "heading"
+      },
+      "type": "heading"
+    },
+    {
+      "doc": [],
+      "fields": [
+        {
+          "name": "style",
+          "optional": false,
+          "ts": "ListStyle"
+        },
+        {
+          "name": "checked",
+          "optional": true,
+          "ts": "boolean"
+        },
+        {
+          "name": "indent",
+          "optional": false,
+          "ts": "number"
+        },
+        {
+          "name": "md",
+          "optional": false,
+          "ts": "string"
+        }
+      ],
+      "is_data": false,
+      "starter": {
+        "indent": 0,
+        "md": "",
+        "style": "bullet",
+        "type": "list_item"
+      },
+      "type": "list_item"
+    },
+    {
+      "doc": [],
+      "fields": [
+        {
+          "name": "md",
+          "optional": false,
+          "ts": "string"
+        }
+      ],
+      "is_data": false,
+      "starter": {
+        "md": "",
+        "type": "quote"
+      },
+      "type": "quote"
+    },
+    {
+      "doc": [],
+      "fields": [],
+      "is_data": false,
+      "starter": {
+        "type": "divider"
+      },
+      "type": "divider"
+    },
+    {
+      "doc": [],
+      "fields": [
+        {
+          "name": "lang",
+          "optional": false,
+          "ts": "string"
+        },
+        {
+          "name": "code",
+          "optional": false,
+          "ts": "string"
+        }
+      ],
+      "is_data": false,
+      "starter": {
+        "code": "",
+        "lang": "",
+        "type": "code"
+      },
+      "type": "code"
+    },
+    {
+      "doc": [
+        "Cells are inline-markdown strings."
+      ],
+      "fields": [
+        {
+          "name": "header",
+          "optional": false,
+          "ts": "string[]"
+        },
+        {
+          "name": "rows",
+          "optional": false,
+          "ts": "string[][]"
+        }
+      ],
+      "is_data": false,
+      "starter": {
+        "header": [
+          "",
+          "",
+          ""
+        ],
+        "rows": [
+          [
+            "",
+            "",
+            ""
+          ],
+          [
+            "",
+            "",
+            ""
+          ]
+        ],
+        "type": "table"
+      },
+      "type": "table"
+    },
+    {
+      "doc": [],
+      "fields": [
+        {
+          "name": "tone",
+          "optional": false,
+          "ts": "AdmonitionTone"
+        },
+        {
+          "name": "title",
+          "optional": false,
+          "ts": "string"
+        },
+        {
+          "name": "md",
+          "optional": false,
+          "ts": "string"
+        }
+      ],
+      "is_data": false,
+      "starter": {
+        "md": "",
+        "title": "",
+        "tone": "info",
+        "type": "admonition"
+      },
+      "type": "admonition"
+    },
+    {
+      "doc": [
+        "One level only — column cells never contain another `columns` block."
+      ],
+      "fields": [
+        {
+          "name": "columns",
+          "optional": false,
+          "ts": "BlockColumn[]"
+        }
+      ],
+      "is_data": false,
+      "starter": {
+        "columns": [
+          {
+            "blocks": [
+              {
+                "id": "$id",
+                "md": "",
+                "type": "paragraph"
+              }
+            ],
+            "ratio": 0.5
+          },
+          {
+            "blocks": [
+              {
+                "id": "$id",
+                "md": "",
+                "type": "paragraph"
+              }
+            ],
+            "ratio": 0.5
+          }
+        ],
+        "type": "columns"
+      },
+      "type": "columns"
+    },
+    {
+      "doc": [
+        "Consumer-defined block; `kind` selects the implementation the host registered."
+      ],
+      "fields": [
+        {
+          "name": "kind",
+          "optional": false,
+          "ts": "string"
+        },
+        {
+          "name": "data",
+          "optional": false,
+          "ts": "unknown"
+        }
+      ],
+      "is_data": false,
+      "starter": {
+        "data": null,
+        "kind": "",
+        "type": "custom"
+      },
+      "type": "custom"
+    },
+    {
+      "doc": [],
+      "fields": [
+        {
+          "name": "src",
+          "optional": false,
+          "ts": "string"
+        },
+        {
+          "name": "alt",
+          "optional": false,
+          "ts": "string"
+        },
+        {
+          "name": "width",
+          "optional": true,
+          "ts": "number"
+        },
+        {
+          "name": "height",
+          "optional": true,
+          "ts": "number"
+        }
+      ],
+      "is_data": true,
+      "starter": {
+        "alt": "",
+        "src": "",
+        "type": "image"
+      },
+      "type": "image"
+    },
+    {
+      "doc": [
+        "`src` is a local/remote file path or a YouTube/Vimeo URL."
+      ],
+      "fields": [
+        {
+          "name": "src",
+          "optional": false,
+          "ts": "string"
+        },
+        {
+          "name": "poster",
+          "optional": true,
+          "ts": "string"
+        },
+        {
+          "name": "title",
+          "optional": true,
+          "ts": "string"
+        },
+        {
+          "name": "width",
+          "optional": true,
+          "ts": "number"
+        },
+        {
+          "name": "height",
+          "optional": true,
+          "ts": "number"
+        }
+      ],
+      "is_data": true,
+      "starter": {
+        "src": "",
+        "type": "video"
+      },
+      "type": "video"
+    },
+    {
+      "doc": [
+        "LaTeX source; renderers typeset it if they can, else show the source."
+      ],
+      "fields": [
+        {
+          "name": "tex",
+          "optional": false,
+          "ts": "string"
+        }
+      ],
+      "is_data": true,
+      "starter": {
+        "tex": "",
+        "type": "math"
+      },
+      "type": "math"
+    },
+    {
+      "doc": [],
+      "fields": [
+        {
+          "name": "title",
+          "optional": true,
+          "ts": "string"
+        },
+        {
+          "name": "x_label",
+          "optional": true,
+          "ts": "string"
+        },
+        {
+          "name": "y_label",
+          "optional": true,
+          "ts": "string"
+        },
+        {
+          "name": "categories",
+          "optional": false,
+          "ts": "string[]"
+        },
+        {
+          "name": "series",
+          "optional": false,
+          "ts": "ChartSeries[]"
+        },
+        {
+          "name": "y_min",
+          "optional": true,
+          "ts": "number"
+        },
+        {
+          "name": "y_max",
+          "optional": true,
+          "ts": "number"
+        }
+      ],
+      "is_data": true,
+      "starter": {
+        "categories": [
+          "A",
+          "B",
+          "C"
+        ],
+        "series": [
+          {
+            "name": "Series 1",
+            "values": [
+              3.0,
+              5.0,
+              4.0
+            ]
+          }
+        ],
+        "type": "bar_chart"
+      },
+      "type": "bar_chart"
+    },
+    {
+      "doc": [],
+      "fields": [
+        {
+          "name": "title",
+          "optional": true,
+          "ts": "string"
+        },
+        {
+          "name": "x_label",
+          "optional": true,
+          "ts": "string"
+        },
+        {
+          "name": "y_label",
+          "optional": true,
+          "ts": "string"
+        },
+        {
+          "name": "categories",
+          "optional": false,
+          "ts": "string[]"
+        },
+        {
+          "name": "series",
+          "optional": false,
+          "ts": "ChartSeries[]"
+        },
+        {
+          "name": "y_min",
+          "optional": true,
+          "ts": "number"
+        },
+        {
+          "name": "y_max",
+          "optional": true,
+          "ts": "number"
+        },
+        {
+          "name": "points",
+          "optional": true,
+          "ts": "ChartPoint[]"
+        },
+        {
+          "name": "point_labels",
+          "optional": true,
+          "ts": "boolean"
+        }
+      ],
+      "is_data": true,
+      "starter": {
+        "categories": [
+          "A",
+          "B",
+          "C"
+        ],
+        "series": [
+          {
+            "name": "Series 1",
+            "values": [
+              3.0,
+              5.0,
+              4.0
+            ]
+          }
+        ],
+        "type": "line_chart"
+      },
+      "type": "line_chart"
+    },
+    {
+      "doc": [],
+      "fields": [
+        {
+          "name": "title",
+          "optional": true,
+          "ts": "string"
+        },
+        {
+          "name": "slices",
+          "optional": false,
+          "ts": "PieSlice[]"
+        }
+      ],
+      "is_data": true,
+      "starter": {
+        "slices": [
+          {
+            "label": "A",
+            "value": 3.0
+          },
+          {
+            "label": "B",
+            "value": 5.0
+          }
+        ],
+        "type": "pie_chart"
+      },
+      "type": "pie_chart"
+    },
+    {
+      "doc": [
+        "Auto-laid-out flowchart graph."
+      ],
+      "fields": [
+        {
+          "name": "direction",
+          "optional": true,
+          "ts": "DiagramDirection"
+        },
+        {
+          "name": "nodes",
+          "optional": false,
+          "ts": "DiagramNode[]"
+        },
+        {
+          "name": "edges",
+          "optional": false,
+          "ts": "DiagramEdge[]"
+        }
+      ],
+      "is_data": true,
+      "starter": {
+        "edges": [
+          {
+            "from": "start",
+            "to": "work"
+          },
+          {
+            "from": "work",
+            "to": "done"
+          }
+        ],
+        "nodes": [
+          {
+            "id": "start",
+            "kind": "terminator",
+            "text": "Start"
+          },
+          {
+            "id": "work",
+            "kind": "process",
+            "text": "Work"
+          },
+          {
+            "id": "done",
+            "kind": "terminator",
+            "text": "Done"
+          }
+        ],
+        "type": "diagram"
+      },
+      "type": "diagram"
+    },
+    {
+      "doc": [],
+      "fields": [
+        {
+          "name": "participants",
+          "optional": false,
+          "ts": "SeqParticipant[]"
+        },
+        {
+          "name": "messages",
+          "optional": false,
+          "ts": "SeqMessage[]"
+        },
+        {
+          "name": "notes",
+          "optional": true,
+          "ts": "SeqNote[]"
+        }
+      ],
+      "is_data": true,
+      "starter": {
+        "messages": [
+          {
+            "from": "a",
+            "text": "request",
+            "to": "b"
+          },
+          {
+            "from": "b",
+            "kind": "reply",
+            "text": "response",
+            "to": "a"
+          }
+        ],
+        "participants": [
+          {
+            "id": "a",
+            "name": "Client"
+          },
+          {
+            "id": "b",
+            "name": "Server"
+          }
+        ],
+        "type": "sequence_diagram"
+      },
+      "type": "sequence_diagram"
+    },
+    {
+      "doc": [],
+      "fields": [
+        {
+          "name": "states",
+          "optional": false,
+          "ts": "StateNode[]"
+        },
+        {
+          "name": "transitions",
+          "optional": false,
+          "ts": "StateTransition[]"
+        }
+      ],
+      "is_data": true,
+      "starter": {
+        "states": [
+          {
+            "id": "idle",
+            "initial": true,
+            "name": "Idle"
+          },
+          {
+            "final": true,
+            "id": "done",
+            "name": "Done"
+          }
+        ],
+        "transitions": [
+          {
+            "from": "idle",
+            "to": "done",
+            "trigger": "finish"
+          }
+        ],
+        "type": "state_diagram"
+      },
+      "type": "state_diagram"
+    },
+    {
+      "doc": [
+        "DB/class-diagram style row table; an empty `title` means headerless."
+      ],
+      "fields": [
+        {
+          "name": "title",
+          "optional": false,
+          "ts": "string"
+        },
+        {
+          "name": "rows",
+          "optional": false,
+          "ts": "NodeTableRow[]"
+        }
+      ],
+      "is_data": true,
+      "starter": {
+        "rows": [
+          {
+            "md": "row"
+          }
+        ],
+        "title": "Table",
+        "type": "node_table"
+      },
+      "type": "node_table"
+    },
+    {
+      "doc": [],
+      "fields": [
+        {
+          "name": "nodes",
+          "optional": false,
+          "ts": "TreeNode[]"
+        }
+      ],
+      "is_data": true,
+      "starter": {
+        "nodes": [
+          {
+            "children": [
+              {
+                "title": "child"
+              }
+            ],
+            "title": "root"
+          }
+        ],
+        "type": "tree"
+      },
+      "type": "tree"
+    },
+    {
+      "doc": [],
+      "fields": [
+        {
+          "name": "title",
+          "optional": true,
+          "ts": "string"
+        },
+        {
+          "name": "direction",
+          "optional": true,
+          "ts": "TimelineDirection"
+        },
+        {
+          "name": "phases",
+          "optional": true,
+          "ts": "TimelinePhase[]"
+        },
+        {
+          "name": "items",
+          "optional": false,
+          "ts": "TimelineItem[]"
+        }
+      ],
+      "is_data": true,
+      "starter": {
+        "items": [
+          {
+            "label": "Start",
+            "on": "2026-01-01"
+          }
+        ],
+        "type": "timeline"
+      },
+      "type": "timeline"
+    },
+    {
+      "doc": [],
+      "fields": [
+        {
+          "name": "title",
+          "optional": false,
+          "ts": "string"
+        },
+        {
+          "name": "kicker",
+          "optional": true,
+          "ts": "string"
+        },
+        {
+          "name": "reading_time",
+          "optional": true,
+          "ts": "string"
+        },
+        {
+          "name": "updated",
+          "optional": true,
+          "ts": "string"
+        },
+        {
+          "name": "version",
+          "optional": true,
+          "ts": "string"
+        }
+      ],
+      "is_data": true,
+      "starter": {
+        "title": "Title",
+        "type": "chapter_header"
+      },
+      "type": "chapter_header"
+    },
+    {
+      "doc": [
+        "Footnote definition; inline `[^label]` references link to it.",
+        "(`label`, not `id` — the block's `id` sits beside these fields.)"
+      ],
+      "fields": [
+        {
+          "name": "label",
+          "optional": false,
+          "ts": "string"
+        },
+        {
+          "name": "md",
+          "optional": false,
+          "ts": "string"
+        }
+      ],
+      "is_data": false,
+      "starter": {
+        "label": "note-1",
+        "md": "",
+        "type": "footnote"
+      },
+      "type": "footnote"
+    }
+  ],
+  "palette": [
+    {
+      "hint": null,
+      "id": "text",
+      "insert": {
+        "md": "",
+        "type": "paragraph"
+      },
+      "label": "Text"
+    },
+    {
+      "hint": "#",
+      "id": "h1",
+      "insert": {
+        "level": 1,
+        "md": "",
+        "type": "heading"
+      },
+      "label": "Heading 1"
+    },
+    {
+      "hint": "##",
+      "id": "h2",
+      "insert": {
+        "level": 2,
+        "md": "",
+        "type": "heading"
+      },
+      "label": "Heading 2"
+    },
+    {
+      "hint": "###",
+      "id": "h3",
+      "insert": {
+        "level": 3,
+        "md": "",
+        "type": "heading"
+      },
+      "label": "Heading 3"
+    },
+    {
+      "hint": "####",
+      "id": "h4",
+      "insert": {
+        "level": 4,
+        "md": "",
+        "type": "heading"
+      },
+      "label": "Heading 4"
+    },
+    {
+      "hint": "-",
+      "id": "bullet",
+      "insert": {
+        "indent": 0,
+        "md": "",
+        "style": "bullet",
+        "type": "list_item"
+      },
+      "label": "Bullet list"
+    },
+    {
+      "hint": "1.",
+      "id": "number",
+      "insert": {
+        "indent": 0,
+        "md": "",
+        "style": "number",
+        "type": "list_item"
+      },
+      "label": "Numbered list"
+    },
+    {
+      "hint": "[]",
+      "id": "todo",
+      "insert": {
+        "checked": false,
+        "indent": 0,
+        "md": "",
+        "style": "todo",
+        "type": "list_item"
+      },
+      "label": "To-do list"
+    },
+    {
+      "hint": ">",
+      "id": "quote",
+      "insert": {
+        "md": "",
+        "type": "quote"
+      },
+      "label": "Quote"
+    },
+    {
+      "hint": "---",
+      "id": "divider",
+      "insert": {
+        "type": "divider"
+      },
+      "label": "Divider"
+    },
+    {
+      "hint": "```",
+      "id": "code",
+      "insert": {
+        "code": "",
+        "lang": "",
+        "type": "code"
+      },
+      "label": "Code"
+    },
+    {
+      "hint": null,
+      "id": "table",
+      "insert": {
+        "header": [
+          "",
+          "",
+          ""
+        ],
+        "rows": [
+          [
+            "",
+            "",
+            ""
+          ],
+          [
+            "",
+            "",
+            ""
+          ]
+        ],
+        "type": "table"
+      },
+      "label": "Table"
+    },
+    {
+      "hint": ":::",
+      "id": "callout",
+      "insert": {
+        "md": "",
+        "title": "",
+        "tone": "info",
+        "type": "admonition"
+      },
+      "label": "Callout"
+    },
+    {
+      "hint": "![]",
+      "id": "image",
+      "insert": {
+        "alt": "",
+        "src": "",
+        "type": "image"
+      },
+      "label": "Image"
+    },
+    {
+      "hint": "embed",
+      "id": "video",
+      "insert": {
+        "src": "",
+        "type": "video"
+      },
+      "label": "Video"
+    },
+    {
+      "hint": "$$",
+      "id": "math",
+      "insert": {
+        "tex": "",
+        "type": "math"
+      },
+      "label": "Math"
+    },
+    {
+      "hint": null,
+      "id": "bar_chart",
+      "insert": {
+        "categories": [
+          "A",
+          "B",
+          "C"
+        ],
+        "series": [
+          {
+            "name": "Series 1",
+            "values": [
+              3.0,
+              5.0,
+              4.0
+            ]
+          }
+        ],
+        "type": "bar_chart"
+      },
+      "label": "Bar chart"
+    },
+    {
+      "hint": null,
+      "id": "line_chart",
+      "insert": {
+        "categories": [
+          "A",
+          "B",
+          "C"
+        ],
+        "series": [
+          {
+            "name": "Series 1",
+            "values": [
+              3.0,
+              5.0,
+              4.0
+            ]
+          }
+        ],
+        "type": "line_chart"
+      },
+      "label": "Line chart"
+    },
+    {
+      "hint": null,
+      "id": "pie_chart",
+      "insert": {
+        "slices": [
+          {
+            "label": "A",
+            "value": 3.0
+          },
+          {
+            "label": "B",
+            "value": 5.0
+          }
+        ],
+        "type": "pie_chart"
+      },
+      "label": "Pie chart"
+    },
+    {
+      "hint": "flow",
+      "id": "diagram",
+      "insert": {
+        "edges": [
+          {
+            "from": "start",
+            "to": "work"
+          },
+          {
+            "from": "work",
+            "to": "done"
+          }
+        ],
+        "nodes": [
+          {
+            "id": "start",
+            "kind": "terminator",
+            "text": "Start"
+          },
+          {
+            "id": "work",
+            "kind": "process",
+            "text": "Work"
+          },
+          {
+            "id": "done",
+            "kind": "terminator",
+            "text": "Done"
+          }
+        ],
+        "type": "diagram"
+      },
+      "label": "Diagram"
+    },
+    {
+      "hint": null,
+      "id": "sequence_diagram",
+      "insert": {
+        "messages": [
+          {
+            "from": "a",
+            "text": "request",
+            "to": "b"
+          },
+          {
+            "from": "b",
+            "kind": "reply",
+            "text": "response",
+            "to": "a"
+          }
+        ],
+        "participants": [
+          {
+            "id": "a",
+            "name": "Client"
+          },
+          {
+            "id": "b",
+            "name": "Server"
+          }
+        ],
+        "type": "sequence_diagram"
+      },
+      "label": "Sequence diagram"
+    },
+    {
+      "hint": null,
+      "id": "state_diagram",
+      "insert": {
+        "states": [
+          {
+            "id": "idle",
+            "initial": true,
+            "name": "Idle"
+          },
+          {
+            "final": true,
+            "id": "done",
+            "name": "Done"
+          }
+        ],
+        "transitions": [
+          {
+            "from": "idle",
+            "to": "done",
+            "trigger": "finish"
+          }
+        ],
+        "type": "state_diagram"
+      },
+      "label": "State diagram"
+    },
+    {
+      "hint": null,
+      "id": "node_table",
+      "insert": {
+        "rows": [
+          {
+            "md": "row"
+          }
+        ],
+        "title": "Table",
+        "type": "node_table"
+      },
+      "label": "Node table"
+    },
+    {
+      "hint": null,
+      "id": "tree",
+      "insert": {
+        "nodes": [
+          {
+            "children": [
+              {
+                "title": "child"
+              }
+            ],
+            "title": "root"
+          }
+        ],
+        "type": "tree"
+      },
+      "label": "Tree"
+    },
+    {
+      "hint": null,
+      "id": "timeline",
+      "insert": {
+        "items": [
+          {
+            "label": "Start",
+            "on": "2026-01-01"
+          }
+        ],
+        "type": "timeline"
+      },
+      "label": "Timeline"
+    },
+    {
+      "hint": null,
+      "id": "chapter_header",
+      "insert": {
+        "title": "Title",
+        "type": "chapter_header"
+      },
+      "label": "Chapter header"
+    },
+    {
+      "hint": "[^]",
+      "id": "footnote",
+      "insert": {
+        "label": "note-1",
+        "md": "",
+        "type": "footnote"
+      },
+      "label": "Footnote"
+    },
+    {
+      "hint": null,
+      "id": "col2",
+      "label": "2 columns",
+      "wrap_columns": 2
+    },
+    {
+      "hint": null,
+      "id": "col3",
+      "label": "3 columns",
+      "wrap_columns": 3
+    }
+  ],
+  "source_digest": "fnv1a64:e0f4a10440e6ddb3"
+}

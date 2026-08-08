@@ -1,5 +1,11 @@
 # The contract corpus
 
+This directory holds the data that keeps Forge's languages in step.
+
+- `corpus.json` — the API contract, **authored**. Described below.
+- `blocks-registry.json`, `emoji.json` — the block kind registry, **generated**
+  from Rust. See [the block kind registry](#the-block-kind-registry) at the end.
+
 `corpus.json` is the Forge API contract as authored data. It states what a
 request is, what envelope and status come back, and which transports the case
 applies to. [`docs/api-contract.md`](../docs/api-contract.md) is the prose; this
@@ -202,3 +208,33 @@ than a description of whatever the server does today:
   exactly `echo` and `publish`, so the case names both, in order.
 - The `token` fixture asked for a non-empty string, which `{"$type": "string"}`
   does not say. It asserts `{"$min_length": 1}`.
+
+## The block kind registry
+
+`blocks-registry.json` and `emoji.json` are **generated**. Do not edit them.
+
+The block kind registry is Rust — `crates/forge-blocks/src/registry.rs`, beside
+the schema enum it describes. The two Rust editors read it directly. The web kit
+cannot, and `just check` must stay a Node-only job so that installing the web kit
+as a git dependency never needs a Rust toolchain. These two files are where the
+two halves meet:
+
+```
+crates/forge-blocks/src/registry.rs   the registry, authored
+  │  just generate-blocks   (cargo; `cargo test -p forge-blocks` fails while stale)
+  ▼
+contract/blocks-registry.json         the same thing, as data
+  │  just generate          (node; `just check` fails while stale)
+  ▼
+packages/blocks/src/types.gen.ts      the kind union, data-kind list, starters
+packages/blocks/src/slash.gen.ts      the slash palette rows
+packages/blocks/src/emoji.gen.ts      the emoji table
+```
+
+`emoji.json` carries `crates/forge-blocks/src/emoji.rs` the same way: 836
+`[shortcode, glyph]` pairs, one line each, in the table's own sorted order.
+
+Neither half can go stale quietly. Each dump records a digest of the Rust file it
+came from, so `just check` refuses a dump older than its source and says which
+recipe to run — Node compares the digest, and never has to read Rust.
+`cargo test -p forge-blocks` fails on the same mismatch from the other side.

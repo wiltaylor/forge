@@ -26,7 +26,7 @@ use forge_blocks::{
     flatten_addresses, indent_list, insert_after, line_start_shortcut, merge_with_previous,
     move_block, next_address, prev_address, remove, set_kind, split, table_insert_col,
     table_insert_row, table_remove_col, wrap_in_columns, Address, BlockKind, Document, ListStyle,
-    Tone,
+    PaletteAction, Tone,
 };
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent};
@@ -38,7 +38,7 @@ use crate::theme::{Severity, Theme};
 use crate::widgets::forms::TextareaState;
 use crate::widgets::paint;
 
-use popups::{builtin_kind, emoji_query, slash_commands, EmojiState, Popup, SlashState};
+use popups::{emoji_query, slash_commands, EmojiState, Popup, SlashState};
 use render::{layout, text_prefix_width, Hit, Painter, GUTTER};
 use wrap_edit::WrapEdit;
 
@@ -446,28 +446,22 @@ impl BlockEditorState {
         let Some(addr) = self.focus else {
             return Outcome::Consumed;
         };
-        let n_builtin = popups::BUILTINS.len();
-        let kind = if ci < n_builtin {
-            let id = popups::BUILTINS[ci].0;
-            if let Some(n) = match id {
-                "col2" => Some(2),
-                "col3" => Some(3),
-                _ => None,
-            } {
-                return match wrap_in_columns(&mut self.doc, addr, n) {
-                    Some(f) => {
-                        self.enter_block(f);
-                        Outcome::Changed
-                    }
-                    None => Outcome::Consumed,
-                };
-            }
-            match builtin_kind(id) {
-                Some(k) => k,
-                None => return Outcome::Consumed,
+        let builtins = forge_blocks::palette_rows();
+        let kind = if let Some(row) = builtins.get(ci) {
+            match row.action {
+                PaletteAction::WrapColumns(n) => {
+                    return match wrap_in_columns(&mut self.doc, addr, n as usize) {
+                        Some(f) => {
+                            self.enter_block(f);
+                            Outcome::Changed
+                        }
+                        None => Outcome::Consumed,
+                    };
+                }
+                PaletteAction::Insert(make) => make(),
             }
         } else {
-            match self.custom.get(ci - n_builtin) {
+            match self.custom.get(ci - builtins.len()) {
                 Some(c) => BlockKind::Custom {
                     kind: c.kind().to_string(),
                     data: c.default_data(),
