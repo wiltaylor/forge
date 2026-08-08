@@ -13,5 +13,6 @@ pub mod routes;
 // use keep working now that the implementation sits in forge-core.
 pub use forge_core::auth::{
     decode_token, encode_token, parse_users, unix_now, Auth, AuthConfig, AuthUser, Claims,
-    Hs256Validator, LoginResponse, TokenValidator, AUTH_DISABLED, DEFAULT_ISS, DEFAULT_TTL_SECS,
+    Hs256Validator, LoginResponse, MeResponse, TokenValidator, AUTH_DISABLED, DEFAULT_ISS,
+    DEFAULT_TTL_SECS,
 };

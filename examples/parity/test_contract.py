@@ -208,10 +208,13 @@ def test_spa_fallback_serves_html(client):
 # ---------------- components (federation) ----------------
 
 def test_components_manifest(client, auth):
+    # No skip here. Both example apps configure a components directory, and a
+    # directory with no manifest.json is an empty catalogue rather than a 404
+    # — see `components-absent-manifest-is-an-empty-catalogue` in the corpus.
+    # A conditional skip in a parity suite converts a real divergence into a
+    # green run, which is strictly worse than no test at all.
     r = client.get("/api/components", headers=auth)
-    if r.status_code == 404:
-        pytest.skip("components dir not configured on this server")
-    assert r.status_code == 200
+    assert r.status_code == 200, r.text
     data = r.json()["data"]
     assert "components" in data and isinstance(data["components"], list)
     if data["components"]:

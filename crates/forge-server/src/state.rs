@@ -18,6 +18,7 @@ pub(crate) struct StateInner {
     pub start: Instant,
     pub auth: Option<Auth>,
     pub events: EventBus,
+    pub events_heartbeat: std::time::Duration,
     pub docstore: Option<DocStore>,
     pub actions: BTreeMap<String, BoxedAction>,
     pub components: Option<Components>,
@@ -57,6 +58,11 @@ impl ForgeState {
     /// Event bus handle (always available; publishing with no listeners is a no-op).
     pub fn events(&self) -> &EventBus {
         &self.inner.events
+    }
+
+    /// Time between heartbeat comments on `/api/events`.
+    pub fn events_heartbeat(&self) -> std::time::Duration {
+        self.inner.events_heartbeat
     }
 
     /// Doc store, when configured.

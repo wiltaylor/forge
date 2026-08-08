@@ -6,7 +6,6 @@
 
 use std::collections::HashSet;
 use std::convert::Infallible;
-use std::time::Duration;
 
 use axum::extract::{Query, State};
 use axum::response::sse::{Event as SseEvent, KeepAlive, Sse};
@@ -14,7 +13,7 @@ use serde::Deserialize;
 use tokio_stream::wrappers::BroadcastStream;
 use tokio_stream::{Stream, StreamExt};
 
-use crate::events::EventBus;
+use crate::state::ForgeState;
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct EventsQuery {
@@ -38,11 +37,11 @@ pub(crate) fn parse_topics(raw: Option<&str>) -> Option<HashSet<String>> {
 }
 
 pub(crate) async fn sse_handler(
-    State(bus): State<EventBus>,
+    State(state): State<ForgeState>,
     Query(query): Query<EventsQuery>,
 ) -> Sse<impl Stream<Item = Result<SseEvent, Infallible>>> {
     let topics = parse_topics(query.topics.as_deref());
-    let rx = bus.subscribe();
+    let rx = state.events().subscribe();
 
     let stream = BroadcastStream::new(rx).filter_map(move |item| match item {
         Ok(ev) => {
@@ -58,7 +57,7 @@ pub(crate) async fn sse_handler(
 
     Sse::new(stream).keep_alive(
         KeepAlive::new()
-            .interval(Duration::from_secs(15))
+            .interval(state.events_heartbeat())
             .text("ping"),
     )
 }

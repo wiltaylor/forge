@@ -18,6 +18,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
+from .matcher import Vars, interpolate
+
 # corpus.py -> contract -> tests -> forge-server -> python -> the repo root
 CORPUS_PATH = Path(__file__).resolve().parents[4] / "contract" / "corpus.json"
 
@@ -27,6 +29,9 @@ ABSENT = object()
 
 #: Transport id of the Python HTTP driver.
 PYTHON_HTTP = "python-http"
+
+#: Name of the fixture a case runs against unless it names another.
+DEFAULT_FIXTURE = "default"
 
 
 class CorpusError(Exception):
@@ -52,9 +57,18 @@ class Auth(str, Enum):
 @dataclass(frozen=True)
 class FixtureUser:
     name: str
-    #: Plaintext. How a driver stores it is its own business.
+    #: The plaintext a login sends.
     password: str
+    #: How the backend stores the credential, in the ``FORGE_AUTH_USERS``
+    #: secret syntax: an argon2 PHC hash, or plaintext. ``None`` means the
+    #: password is stored as it stands.
+    secret: str | None
     roles: list[str]
+
+    @property
+    def stored_secret(self) -> str:
+        """:attr:`secret` when authored, otherwise the password itself."""
+        return self.password if self.secret is None else self.secret
 
 
 @dataclass(frozen=True)
@@ -65,8 +79,23 @@ class FixtureAuth:
 
 
 @dataclass(frozen=True)
+class FixtureEvents:
+    """The event bus and its two endpoints.
+
+    Both knobs default to the contract's own values; a case that would
+    otherwise wait on one tightens it.
+    """
+
+    #: Per-subscriber buffer depth. ``None`` = the backend's default.
+    buffer: int | None
+    #: Seconds between SSE heartbeat comments. ``None`` = the contract's 15.
+    heartbeat_s: float | None
+
+
+@dataclass(frozen=True)
 class FixtureComponents:
-    #: Written to ``manifest.json`` in the components directory.
+    #: Written to ``manifest.json`` in the components directory. ``None``
+    #: means the directory is configured and holds no manifest.
     manifest: Any
     #: Written beside it: filename to content.
     files: dict[str, str]
@@ -86,10 +115,30 @@ class Fixture:
     app: str
     auth: FixtureAuth
     docstore: bool
-    events: bool
+    #: ``None`` leaves the event endpoints unmounted.
+    events: FixtureEvents | None
     actions: list[str]
-    components: FixtureComponents
+    #: ``None`` leaves component federation unconfigured.
+    components: FixtureComponents | None
     frontend: FixtureFrontend
+
+
+def users_env(auth: FixtureAuth, variables: Vars) -> str:
+    """The fixture's users as ``FORGE_AUTH_USERS`` carries them: comma-separated
+    ``name:secret`` entries, the first colon splitting the two.
+
+    Every driver configures its backend through that variable's own parser
+    rather than handing the user store a name and a secret directly. The corpus
+    holds a user whose stored secret is an argon2 PHC hash, and a PHC hash
+    carries commas in its parameters — which is the separator the variable
+    uses, and the one place the two backends have already diverged in the
+    field.
+    """
+    return ",".join(
+        f"{interpolate(user.name, variables)}:"
+        f"{interpolate(user.stored_secret, variables)}"
+        for user in auth.users
+    )
 
 
 @dataclass(frozen=True)
@@ -172,7 +221,23 @@ class AwaitEventStep:
     data: Any
 
 
-Step = RequestStep | ConnectStep | SendStep | AwaitFrameStep | AwaitEventStep
+@dataclass(frozen=True)
+class AwaitHeartbeatStep:
+    """The next block on the stream must be a heartbeat comment, and its text
+    must match. A heartbeat is not an event, so ``await_event`` steps over one
+    and only this step can see it."""
+
+    matcher: Any
+
+
+Step = (
+    RequestStep
+    | ConnectStep
+    | SendStep
+    | AwaitFrameStep
+    | AwaitEventStep
+    | AwaitHeartbeatStep
+)
 
 
 @dataclass(frozen=True)
@@ -182,6 +247,8 @@ class Case:
     id: str
     title: str
     kind: Kind
+    #: The fixture this case runs against (``default`` unless named).
+    fixture: str
     #: Why the case is written the way it is. Not asserted on.
     note: str | None
     #: Transports that must run this case.
@@ -205,8 +272,9 @@ class Corpus:
     transports: list[str]
     #: Substitution table for ``${name}`` in paths, bodies and expectations.
     vars: dict[str, str]
-    #: The server every driver must build before running a case.
-    fixture: Fixture
+    #: The servers a driver builds, by name. ``default`` is the one a case runs
+    #: against unless it names another.
+    fixtures: dict[str, Fixture]
     #: The contract cases, in authored order.
     cases: list[Case]
 
@@ -234,6 +302,11 @@ class Corpus:
         """Cases a transport must run, in authored order."""
         return [case for case in self.cases if case.applies_to(transport)]
 
+    def fixture(self, case: Case) -> Fixture:
+        """The fixture a case runs against. Validation proves every case names
+        one that exists before anything else asks for it."""
+        return self.fixtures[case.fixture]
+
     def validate(self) -> None:
         """Reject a corpus that cannot be run honestly.
 
@@ -242,13 +315,29 @@ class Corpus:
         """
         if not self.transports:
             raise CorpusError("corpus declares no transports")
+        if DEFAULT_FIXTURE not in self.fixtures:
+            raise CorpusError(
+                f"corpus declares no {DEFAULT_FIXTURE!r} fixture — it is the one a "
+                "case runs against unless it names another"
+            )
         seen: set[str] = set()
+        used: set[str] = set()
         for case in self.cases:
             if case.id in seen:
                 raise CorpusError(f"duplicate case id {case.id!r}")
             seen.add(case.id)
+            if case.fixture not in self.fixtures:
+                raise CorpusError(
+                    f"case {case.id!r} runs against unknown fixture {case.fixture!r}"
+                )
+            used.add(case.fixture)
             self._validate_applicability(case)
             self._validate_steps(case)
+        # A fixture no case uses is a server every driver would build for
+        # nothing, and reads as coverage that is not there.
+        for name in self.fixtures:
+            if name not in used:
+                raise CorpusError(f"fixture {name!r} has no case")
 
     def _validate_applicability(self, case: Case) -> None:
         for transport in case.applies:
@@ -278,6 +367,11 @@ class Corpus:
         if not case.steps:
             raise CorpusError(f"case {case.id!r} has no steps")
         first = case.steps[0]
+        if case.kind is not Kind.HTTP and self.fixture(case).events is None:
+            raise CorpusError(
+                f"case {case.id!r} is kind `{case.kind.value}`, but its fixture "
+                f"{case.fixture!r} mounts no event bus"
+            )
         if case.kind is Kind.HTTP:
             for step in case.steps:
                 if not isinstance(step, RequestStep):
@@ -303,10 +397,12 @@ class Corpus:
                     "stream; only its status and headers can be checked"
                 )
             for step in case.steps:
-                if isinstance(step, (ConnectStep, SendStep)):
+                if not isinstance(
+                    step, (RequestStep, AwaitEventStep, AwaitHeartbeatStep)
+                ):
                     raise CorpusError(
                         f"case {case.id!r} is kind `sse`; a stream cannot be connected "
-                        "to or sent on"
+                        "to, sent on, or read a frame from"
                     )
         else:
             if not isinstance(first, ConnectStep):
@@ -314,10 +410,12 @@ class Corpus:
                     f"case {case.id!r} is kind `ws`, so its first step must be a connect"
                 )
             for step in case.steps[1:]:
-                if isinstance(step, (ConnectStep, AwaitEventStep)):
+                if isinstance(
+                    step, (ConnectStep, AwaitEventStep, AwaitHeartbeatStep)
+                ):
                     raise CorpusError(
                         f"case {case.id!r} connects once, and awaits frames rather "
-                        "than events"
+                        "than events or heartbeats"
                     )
 
 
@@ -379,66 +477,81 @@ def _enum(raw: Any, where: str, kind: type[Enum]) -> Any:
 
 
 def _corpus(raw: Any) -> Corpus:
-    obj = _fields(raw, "corpus", {"contract_version", "transports", "vars", "fixture", "cases"})
+    obj = _fields(raw, "corpus", {"contract_version", "transports", "vars", "fixtures", "cases"})
     cases = _required(obj, "cases", "corpus", list)
+    fixtures = _required(obj, "fixtures", "corpus", dict)
     return Corpus(
         contract_version=_required(obj, "contract_version", "corpus", str),
         transports=_str_list(_required(obj, "transports", "corpus", list), "corpus.transports"),
         vars=_str_map(_required(obj, "vars", "corpus", dict), "corpus.vars"),
-        fixture=_fixture(_required(obj, "fixture", "corpus", dict)),
+        fixtures={name: _fixture(item, name) for name, item in fixtures.items()},
         cases=[_case(item, i) for i, item in enumerate(cases)],
     )
 
 
-def _fixture(raw: Any) -> Fixture:
-    where = "fixture"
+def _fixture(raw: Any, name: str) -> Fixture:
+    where = f"fixtures.{name}"
     obj = _fields(
         raw, where, {"app", "auth", "docstore", "events", "actions", "components", "frontend"}
     )
-    components = _fields(
-        _required(obj, "components", where, dict), f"{where}.components", {"manifest", "files"}
-    )
     frontend = _fields(
-        _required(obj, "frontend", where, dict), f"{where}.frontend", {"files"}
+        _optional(obj, "frontend", where, dict, {}), f"{where}.frontend", {"files"}
     )
     return Fixture(
         app=_required(obj, "app", where, str),
-        auth=_fixture_auth(_required(obj, "auth", where, dict)),
-        docstore=_required(obj, "docstore", where, bool),
-        events=_required(obj, "events", where, bool),
-        actions=_str_list(_required(obj, "actions", where, list), f"{where}.actions"),
-        components=FixtureComponents(
-            manifest=_required(components, "manifest", f"{where}.components", Any),
-            files=_str_map(
-                _required(components, "files", f"{where}.components", dict),
-                f"{where}.components.files",
-            ),
-        ),
+        auth=_fixture_auth(_required(obj, "auth", where, dict), where),
+        docstore=_optional(obj, "docstore", where, bool, False),
+        events=_fixture_events(obj, where),
+        actions=_str_list(_optional(obj, "actions", where, list, []), f"{where}.actions"),
+        components=_fixture_components(obj, where),
         frontend=FixtureFrontend(
             files=_str_map(
-                _required(frontend, "files", f"{where}.frontend", dict),
+                _optional(frontend, "files", f"{where}.frontend", dict, {}),
                 f"{where}.frontend.files",
             )
         ),
     )
 
 
-def _fixture_auth(raw: Any) -> FixtureAuth:
-    where = "fixture.auth"
-    obj = _fields(raw, where, {"enabled", "users"})
-    users = _required(obj, "users", where, list)
-    return FixtureAuth(
-        enabled=_required(obj, "enabled", where, bool),
-        users=[_fixture_user(user, i) for i, user in enumerate(users)],
+def _fixture_events(obj: dict, where: str) -> FixtureEvents | None:
+    if "events" not in obj:
+        return None
+    where = f"{where}.events"
+    events = _fields(_typed(obj["events"], where, dict), where, {"buffer", "heartbeat_s"})
+    return FixtureEvents(
+        buffer=_optional(events, "buffer", where, int, None),
+        heartbeat_s=_optional(events, "heartbeat_s", where, (int, float), None),
     )
 
 
-def _fixture_user(raw: Any, index: int) -> FixtureUser:
-    where = f"fixture.auth.users[{index}]"
-    obj = _fields(raw, where, {"name", "password", "roles"})
+def _fixture_components(obj: dict, where: str) -> FixtureComponents | None:
+    if "components" not in obj:
+        return None
+    where = f"{where}.components"
+    components = _fields(_typed(obj["components"], where, dict), where, {"manifest", "files"})
+    return FixtureComponents(
+        manifest=components.get("manifest"),
+        files=_str_map(_optional(components, "files", where, dict, {}), f"{where}.files"),
+    )
+
+
+def _fixture_auth(raw: Any, where: str) -> FixtureAuth:
+    where = f"{where}.auth"
+    obj = _fields(raw, where, {"enabled", "users"})
+    users = _optional(obj, "users", where, list, [])
+    return FixtureAuth(
+        enabled=_required(obj, "enabled", where, bool),
+        users=[_fixture_user(user, i, where) for i, user in enumerate(users)],
+    )
+
+
+def _fixture_user(raw: Any, index: int, where: str) -> FixtureUser:
+    where = f"{where}.users[{index}]"
+    obj = _fields(raw, where, {"name", "password", "secret", "roles"})
     return FixtureUser(
         name=_required(obj, "name", where, str),
         password=_required(obj, "password", where, str),
+        secret=_optional(obj, "secret", where, str, None),
         roles=_str_list(_optional(obj, "roles", where, list, []), f"{where}.roles"),
     )
 
@@ -446,7 +559,9 @@ def _fixture_user(raw: Any, index: int) -> FixtureUser:
 def _case(raw: Any, index: int) -> Case:
     where = f"cases[{index}]"
     obj = _fields(
-        raw, where, {"id", "title", "kind", "note", "applies", "inapplicable", "steps"}
+        raw,
+        where,
+        {"id", "title", "kind", "fixture", "note", "applies", "inapplicable", "steps"},
     )
     case_id = _required(obj, "id", where, str)
     steps = _required(obj, "steps", where, list)
@@ -454,6 +569,7 @@ def _case(raw: Any, index: int) -> Case:
         id=case_id,
         title=_required(obj, "title", where, str),
         kind=_enum(_optional(obj, "kind", where, str, "http"), f"{where}.kind", Kind),
+        fixture=_optional(obj, "fixture", where, str, DEFAULT_FIXTURE),
         note=_optional(obj, "note", where, str, None),
         applies=_str_list(_required(obj, "applies", where, list), f"{where}.applies"),
         inapplicable=_str_map(
@@ -491,9 +607,13 @@ def _step(raw: Any, where: str) -> Step:
             topic=_required(event, "topic", f"{where}.await_event", str),
             data=_required(event, "data", f"{where}.await_event", Any),
         )
+    if "await_heartbeat" in raw:
+        return AwaitHeartbeatStep(
+            matcher=_fields(raw, where, {"await_heartbeat"})["await_heartbeat"]
+        )
     raise CorpusError(
         f"{where}: not a step — expected one of `request`, `connect`, `send`, "
-        "`await_frame`, `await_event`"
+        "`await_frame`, `await_event`, `await_heartbeat`"
     )
 
 

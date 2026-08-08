@@ -103,7 +103,7 @@ def _check_operator(
     operator: str, operand: Any, actual: Any, variables: Mapping[str, str], path: str
 ) -> None:
     if operator == "$exact":
-        _equal(interpolate_value(operand, variables), actual, path)
+        _check_exact(operand, actual, variables, path)
     elif operator == "$min_length":
         wanted = _operand(operand, int, "$min_length takes a count", path)
         if not isinstance(actual, str):
@@ -183,6 +183,45 @@ TYPES = {
     "object": lambda value: isinstance(value, dict),
     "null": lambda value: value is None,
 }
+
+
+def _check_exact(
+    expected: Any, actual: Any, variables: Mapping[str, str], path: str
+) -> None:
+    """``$exact``: no extra keys, anywhere below this point.
+
+    Matchers still apply, so a payload whose shape is the point can still say
+    ``{"$type": "integer"}`` for the one field that moves.
+    """
+    if isinstance(expected, dict):
+        operator = _operator(expected, path)
+        if operator is not None:
+            _check_operator(*operator, actual, variables, path)
+            return
+        if not isinstance(actual, dict):
+            raise MatchError(f"at {path}: expected an object, got {_show(actual)}")
+        wanted = {interpolate(key, variables): want for key, want in expected.items()}
+        for key in actual:
+            if key not in wanted:
+                raise MatchError(f"at {path}.{key}: unexpected")
+        for key, want in wanted.items():
+            child = f"{path}.{key}"
+            if key not in actual:
+                raise MatchError(f"at {child}: missing")
+            _check_exact(want, actual[key], variables, child)
+    elif isinstance(expected, list):
+        if not isinstance(actual, list):
+            raise MatchError(f"at {path}: expected an array, got {_show(actual)}")
+        if len(expected) != len(actual):
+            raise MatchError(
+                f"at {path}: expected {len(expected)} elements, got {len(actual)}"
+            )
+        for index, (want, got) in enumerate(zip(expected, actual)):
+            _check_exact(want, got, variables, f"{path}[{index}]")
+    elif isinstance(expected, str):
+        _equal(interpolate(expected, variables), actual, path)
+    else:
+        _equal(expected, actual, path)
 
 
 def _check_subset(
