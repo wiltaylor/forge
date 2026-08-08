@@ -401,7 +401,6 @@ impl StatefulWidget for Terminal {
 mod tests {
     use super::*;
     use ratatui::crossterm::event::{MediaKeyCode, ModifierKeyCode};
-    use vt100::MouseProtocolMode as Mode;
 
     // The encoding tests (bytes per event, mode gating) live in forge-xterm's
     // corpora now. What is left to test here is the adapter: crossterm's key
@@ -556,27 +555,31 @@ mod tests {
         // stays live while we click.
         let mut cmd = CommandBuilder::new("/bin/sh");
         cmd.arg("-c");
-        cmd.arg("printf '\\033[?1000h\\033[?1006h'; sleep 5");
+        cmd.arg("printf '\\033[?1000h\\033[?1006h'; sleep 10");
         let mut term = TerminalState::spawn(cmd, 24, 80).unwrap();
-        term.last_area = Rect::new(0, 0, 80, 24);
 
-        // Before the program's DECSET is processed, tracking is off → ignored.
-        assert_eq!(term.parser.screen().mouse_protocol_mode(), Mode::None);
+        // Render once, the way an app does, so the pane knows its rectangle.
+        let area = Rect::new(0, 0, 80, 24);
+        let mut buf = Buffer::empty(area);
+        Terminal::new().render(area, &mut buf, &mut term);
+
+        // Nothing is drained yet, so the program's DECSET has not been
+        // processed: tracking is off → ignored.
         assert_eq!(term.handle_mouse(left_down(3, 2)), Outcome::Ignored);
 
-        // Pump PTY output until the DECSET flips the parser into tracking mode.
+        // Pump PTY output until the DECSET takes effect and the same click is
+        // forwarded.
         let deadline = Instant::now() + Duration::from_secs(10);
         loop {
             term.drain();
-            if term.parser.screen().mouse_protocol_mode() != Mode::None {
+            if term.handle_mouse(left_down(3, 2)) == Outcome::Consumed {
                 break;
             }
             assert!(Instant::now() < deadline, "mouse tracking never enabled");
             std::thread::sleep(Duration::from_millis(20));
         }
 
-        // Now the click is forwarded, and one outside the pane still isn't.
-        assert_eq!(term.handle_mouse(left_down(3, 2)), Outcome::Consumed);
+        // Tracking is on, but a click outside the pane still isn't forwarded.
         assert_eq!(term.handle_mouse(left_down(200, 200)), Outcome::Ignored);
     }
 }

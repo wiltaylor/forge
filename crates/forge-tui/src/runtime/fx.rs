@@ -601,80 +601,11 @@ fn intersect(rect: Rect, area: Rect) -> Option<Rect> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ratatui::backend::TestBackend;
-    use ratatui::widgets::Paragraph;
-    use ratatui::Terminal;
 
-    #[test]
-    fn recreate_particles_land_home() {
-        let theme = Theme::dark();
-        let mut fx = Fx::with_seed(9);
-        fx.configure(
-            Duration::from_millis(80),
-            Motion::Full,
-            ColorMode::TrueColor,
-        );
-        let rect = Rect::new(5, 5, 10, 3);
-        fx.handle().recreate(rect);
-
-        let mut terminal = Terminal::new(TestBackend::new(40, 20)).unwrap();
-        terminal
-            .draw(|f| {
-                f.render_widget(Paragraph::new("##########\n##########\n##########"), rect);
-                let area = f.area();
-                fx.draw(f, area, &theme);
-            })
-            .unwrap();
-        assert!(!fx.is_idle());
-        assert!(fx.active_in(rect));
-        let len = fx.active[0].len;
-        assert!(!fx.active[0].particles.is_empty());
-
-        // Advance to the last tick: every particle must be back home.
-        for _ in 0..len - 1 {
-            fx.tick();
-        }
-        let effect = &fx.active[0];
-        for p in &effect.particles {
-            assert_eq!((p.x, p.y), (p.home.0 as f32, p.home.1 as f32));
-        }
-        fx.tick();
-        assert!(fx.is_idle());
-    }
-
-    #[test]
-    fn explode_scatters_and_finishes() {
-        let theme = Theme::dark();
-        let mut fx = Fx::with_seed(3);
-        fx.configure(
-            Duration::from_millis(80),
-            Motion::Full,
-            ColorMode::TrueColor,
-        );
-        let rect = Rect::new(10, 8, 8, 2);
-        fx.handle().explode(rect);
-
-        let mut terminal = Terminal::new(TestBackend::new(40, 20)).unwrap();
-        terminal
-            .draw(|f| {
-                f.render_widget(Paragraph::new("########\n########"), rect);
-                let area = f.area();
-                fx.draw(f, area, &theme);
-            })
-            .unwrap();
-        for _ in 0..3 {
-            fx.tick();
-        }
-        // Some particles should have left the source region by now.
-        let outside = fx.active[0]
-            .particles
-            .iter()
-            .any(|p| !rect.contains(ratatui::layout::Position::new(p.x as u16, p.y as u16)));
-        assert!(outside);
-        while !fx.is_idle() {
-            fx.tick();
-        }
-    }
+    // The particle behaviors — sampling, scatter, convergence, effect length —
+    // are asserted on painted frames in `tests/fx.rs`, through the same
+    // interface an app drives. What is left here are the private helpers no
+    // public seam reaches: the RNG.
 
     #[test]
     fn rng_is_deterministic() {
@@ -692,18 +623,6 @@ mod tests {
             let v = r.f32();
             assert!((0.0..1.0).contains(&v), "{v}");
         }
-    }
-
-    #[test]
-    fn ticks_scale_with_tick_rate() {
-        let mut fx = Fx::new();
-        fx.tick_rate = Duration::from_millis(80);
-        assert_eq!(fx.ticks_for(800), 10);
-        fx.tick_rate = Duration::from_millis(200);
-        assert_eq!(fx.ticks_for(800), 4);
-        // Never below two ticks, even at glacial tick rates.
-        fx.tick_rate = Duration::from_millis(5000);
-        assert_eq!(fx.ticks_for(800), 2);
     }
 
     fn motion_env(motion: &str) -> TermEnv {
