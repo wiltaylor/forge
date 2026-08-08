@@ -334,11 +334,13 @@ fn table_edit(
     };
 
     // Cell navigation keys, judged against last frame's focused cell.
+    // Shift+Tab is consumed before Tab: `consume_key` ignores extra Shift, so
+    // the plainer binding would swallow it and step the wrong way.
     if let Some((r, c)) = st.cell {
-        let (tab, shift_tab, enter, esc) = ui.ctx().input_mut(|i| {
+        let (shift_tab, tab, enter, esc) = ui.ctx().input_mut(|i| {
             (
-                i.consume_key(Modifiers::NONE, Key::Tab),
                 i.consume_key(Modifiers::SHIFT, Key::Tab),
+                i.consume_key(Modifiers::NONE, Key::Tab),
                 i.consume_key(Modifiers::NONE, Key::Enter),
                 i.consume_key(Modifiers::NONE, Key::Escape),
             )

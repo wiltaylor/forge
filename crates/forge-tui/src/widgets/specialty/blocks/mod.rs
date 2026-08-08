@@ -331,6 +331,22 @@ impl BlockEditorState {
         }
     }
 
+    /// Enter the table at `addr` on one cell: display row 0 is the header,
+    /// body rows follow. Returns false when the block is not a table or the
+    /// cell is outside it.
+    pub fn edit_cell(&mut self, addr: Address, row: usize, col: usize) -> bool {
+        let Some((ncols, nrows)) = table_dims(&self.doc, addr) else {
+            return false;
+        };
+        if col >= ncols || row > nrows {
+            return false;
+        }
+        self.focus = Some(addr);
+        self.custom_active = false;
+        self.load_cell(addr, row, col);
+        true
+    }
+
     /// Paste into the focused editor (the terminal `Event::Paste` entry
     /// point).
     pub fn paste(&mut self, s: &str) -> Outcome {

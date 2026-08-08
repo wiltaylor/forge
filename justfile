@@ -74,7 +74,8 @@ generate-check:
 frontend-test: frontend-install
 	pnpm test
 
-# Run Rust tests (includes the contract corpus — see corpus-test)
+# Run Rust tests (includes the contract corpus and the block key corpus's
+# loader — see corpus-test and block-corpus-test)
 [group('test')]
 rust-test:
 	cargo test
@@ -87,6 +88,15 @@ corpus-test:
 	cargo test -p forge-contract
 	cargo test -p forge-server --test corpus
 	uv run --project python/forge-server --extra dev pytest python/forge-server/tests/test_contract.py python/forge-server/tests/test_corpus.py
+
+# Run the block key corpus (contract/blocks/corpus.json) against every kit
+# that has a driver. Each driver builds the document the corpus describes, so
+# nothing here needs an app or a server.
+[group('test')]
+block-corpus-test:
+	cargo test -p forge-block-corpus
+	cargo test -p forge-tui --features blocks --test block_corpus
+	cargo test -p forge-egui --features blocks --test block_corpus
 
 # Run Python package tests (includes the contract corpus — see corpus-test)
 [group('test')]
@@ -108,12 +118,14 @@ parity-test-local:
 tauri-test:
 	cargo test --manifest-path crates/forge-tauri/Cargo.toml --features widgets
 
-# Run forge-tui tests with all optional widgets compiled in
+# Run forge-tui tests with all optional widgets compiled in (includes the
+# block key corpus — see block-corpus-test)
 [group('test')]
 tui-test:
 	cargo test -p forge-tui --features full -p tui-gallery
 
-# Run forge-egui tests with all optional widgets compiled in
+# Run forge-egui tests with all optional widgets compiled in (includes the
+# block key corpus — see block-corpus-test)
 [group('test')]
 egui-test:
 	cargo test -p forge-egui --features full -p egui-gallery

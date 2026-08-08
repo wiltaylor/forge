@@ -2598,6 +2598,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "forge-block-corpus"
+version = "0.1.0"
+dependencies = [
+ "forge-blocks",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "forge-blocks"
 version = "0.1.0"
 dependencies = [
@@ -2647,6 +2656,7 @@ dependencies = [
  "egui",
  "egui_extras",
  "egui_kittest",
+ "forge-block-corpus",
  "forge-blocks",
  "forge-core",
  "image",
@@ -2691,6 +2701,7 @@ dependencies = [
 name = "forge-tui"
 version = "0.1.0"
 dependencies = [
+ "forge-block-corpus",
  "forge-blocks",
  "insta",
  "portable-pty",

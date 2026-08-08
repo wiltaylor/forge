@@ -1,0 +1,12 @@
+[package]
+name = "forge-block-corpus"
+description = "The Forge block key corpus (contract/blocks/corpus.json) plus the loader, validator and runner its Rust drivers share. Editor-free."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+forge-blocks = { workspace = true }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

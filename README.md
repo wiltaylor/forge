@@ -38,6 +38,12 @@ transports it applies to. `crates/forge-contract` reads it and matches against
 it, so the Rust drivers share one implementation. Run it with
 `just corpus-test`.
 
+The block editor's keyboard model as data:
+[`contract/blocks/corpus.json`](contract/blocks/README.md) — each case states a
+document, an address, the keys pressed and the document that must result, so
+the three editors (ratatui, egui, web) cannot drift apart. Run it with
+`just block-corpus-test`.
+
 Terminal UIs (no contract, standalone): `crates/forge-tui` — the design
 system as a ratatui widget kit, see [Terminal UIs](#terminal-uis-forge-tui).
 

@@ -163,6 +163,36 @@ impl BlockEditorState {
     pub fn focused(&self) -> Option<Address> {
         self.focus
     }
+
+    /// Select `addr` in block mode — structural keys, no text caret.
+    pub fn select(&mut self, addr: Address) {
+        select_block(self, addr);
+    }
+
+    /// Enter the block at `addr` for editing, with the text caret at `caret`
+    /// (a byte offset into its markdown source). Blocks that only support
+    /// selection fall back to it; the return says which happened.
+    pub fn edit(&mut self, addr: Address, caret: usize) -> bool {
+        let doc = std::mem::take(&mut self.doc);
+        focus_block(self, &doc, addr, CaretHint::Byte(caret));
+        self.doc = doc;
+        self.editing
+    }
+
+    /// Enter the table at `addr` on one cell: display row 0 is the header,
+    /// body rows follow. Returns false when the block is not a table or the
+    /// cell is outside it.
+    pub fn edit_cell(&mut self, addr: Address, row: usize, col: usize) -> bool {
+        let (ncols, nrows) = match self.doc.block(addr).map(|b| &b.kind) {
+            Some(BlockKind::Table { header, rows }) => (header.len().max(1), rows.len()),
+            _ => return false,
+        };
+        if col >= ncols || row > nrows {
+            return false;
+        }
+        enter_cell(self, addr, row, col);
+        true
+    }
 }
 
 /// Block page editor: `BlockEditor::new(&mut state).show(ui)`. The response
@@ -617,12 +647,7 @@ fn focus_block(st: &mut BlockEditorState, doc: &Document, addr: Address, hint: C
             st.editing = true;
             st.pending_code = Some(addr);
         }
-        Some(BlockKind::Table { .. }) => {
-            st.focus = Some(addr);
-            st.editing = true;
-            st.cell = Some((0, 0));
-            st.pending_cell = Some((0, 0));
-        }
+        Some(BlockKind::Table { .. }) => enter_cell(st, addr, 0, 0),
         Some(k) if k.is_data() => {
             st.focus = Some(addr);
             st.editing = true;
@@ -637,6 +662,17 @@ fn focus_block(st: &mut BlockEditorState, doc: &Document, addr: Address, hint: C
         Some(_) => select_block(st, addr),
         None => {}
     }
+}
+
+/// Enter a table's cell: display row 0 is the header, body rows follow. The
+/// one way in, so entering at (0, 0) and entering elsewhere cannot drift.
+fn enter_cell(st: &mut BlockEditorState, addr: Address, row: usize, col: usize) {
+    st.focus = Some(addr);
+    st.editing = true;
+    st.cell = Some((row, col));
+    st.pending_cell = Some((row, col));
+    st.slash = None;
+    st.pending_focus = None;
 }
 
 fn select_block(st: &mut BlockEditorState, addr: Address) {
