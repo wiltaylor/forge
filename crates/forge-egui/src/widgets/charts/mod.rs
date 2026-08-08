@@ -1,7 +1,7 @@
 //! Zero-dep charts on the locked CVD palette. Colors come from
 //! [`theme::series_color`](crate::theme::series_color) — `[accent, danger,
 //! success, warning, info]`, with everything past the fifth series folded
-//! into a `fg[2]` "Other" bucket (never cycled). Geometry mirrors
+//! into a tertiary-text "Other" bucket (never cycled). Geometry mirrors
 //! `packages/charts/src/charts.tsx`; every chart fills the available width,
 //! takes `.height(..)`, and shows a Forge-framed tooltip on hover.
 
@@ -21,7 +21,7 @@ pub use pie::{PieChart, PieSlice};
 pub use sparkline::Sparkline;
 pub use ticks::nice_ticks;
 
-use crate::theme::{FontWeight, Theme};
+use crate::theme::{FontWeight, Surface, TextRole, Theme};
 use egui::{Color32, CornerRadius, Margin, Rect, Sense, Stroke, Ui, Vec2};
 
 /// Plot padding shared by the axis charts — mirrors the web `PAD` constant.
@@ -74,11 +74,11 @@ fn y_axis(ui: &Ui, t: &Theme, plot: Rect, ticks: &[f64], y_of: impl Fn(f64) -> f
         );
         let g = ui
             .painter()
-            .layout_no_wrap(fmt(tick), font.clone(), t.fg[2]);
+            .layout_no_wrap(fmt(tick), font.clone(), t.text(TextRole::Tertiary));
         ui.painter().galley(
             egui::pos2(plot.min.x - 6.0 - g.size().x, y - g.size().y / 2.0),
             g,
-            t.fg[2],
+            t.text(TextRole::Tertiary),
         );
     }
 }
@@ -89,8 +89,9 @@ struct TipRow {
     pub text: String,
 }
 
-/// Forge-framed hover tooltip at the pointer: `bg[4]` surface, 1pt border,
-/// sm text. `title` renders Medium `fg[0]`; rows render `fg[1]`.
+/// Forge-framed hover tooltip at the pointer: [`Surface::Popover`], 1pt
+/// border, sm text. `title` renders Medium primary text; rows render
+/// secondary text.
 fn tooltip(ui: &Ui, id: egui::Id, title: Option<&str>, rows: &[TipRow]) {
     let ctx = ui.ctx();
     let Some(pos) = ctx.pointer_hover_pos() else {
@@ -104,7 +105,7 @@ fn tooltip(ui: &Ui, id: egui::Id, title: Option<&str>, rows: &[TipRow]) {
         .constrain(true)
         .show(ctx, |ui| {
             egui::Frame::new()
-                .fill(t.bg[4])
+                .fill(t.surface(Surface::Popover))
                 .stroke(Stroke::new(1.0, t.border.default))
                 .corner_radius(CornerRadius::same(t.radius.md as u8))
                 .inner_margin(Margin::symmetric(10, 8))
@@ -114,7 +115,7 @@ fn tooltip(ui: &Ui, id: egui::Id, title: Option<&str>, rows: &[TipRow]) {
                         ui.label(
                             egui::RichText::new(title)
                                 .font(t.font(ctx, FontWeight::Medium, t.type_scale.sm))
-                                .color(t.fg[0]),
+                                .color(t.text(TextRole::Primary)),
                         );
                     }
                     for row in rows {
@@ -128,7 +129,7 @@ fn tooltip(ui: &Ui, id: egui::Id, title: Option<&str>, rows: &[TipRow]) {
                             ui.label(
                                 egui::RichText::new(&row.text)
                                     .font(t.font(ctx, FontWeight::Regular, t.type_scale.sm))
-                                    .color(t.fg[1]),
+                                    .color(t.text(TextRole::Secondary)),
                             );
                         });
                     }

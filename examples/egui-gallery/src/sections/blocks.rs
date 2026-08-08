@@ -35,7 +35,11 @@ impl CustomBlock for CounterBlock {
             ui.label(
                 egui::RichText::new("Counter")
                     .font(t.mono(t.type_scale.sm))
-                    .color(if focused { t.fg[0] } else { t.fg[2] }),
+                    .color(if focused {
+                        t.text(TextRole::Primary)
+                    } else {
+                        t.text(TextRole::Tertiary)
+                    }),
             );
             if Button::new("−").small(true).show(ui).clicked() {
                 next -= 1;
@@ -87,6 +91,6 @@ pub fn draw(ui: &mut egui::Ui, state: &mut BlocksState) {
             forge_egui::theme::FontWeight::Regular,
             t.type_scale.xs,
         ))
-        .color(t.fg[2]),
+        .color(t.text(TextRole::Tertiary)),
     );
 }

@@ -3,7 +3,7 @@
 //! the state (unlike index-path keying).
 
 use crate::response::{ForgeResponse, Outcome};
-use crate::theme::{FontWeight, Theme};
+use crate::theme::{FontWeight, Surface, TextRole, Theme};
 use crate::widgets::primitives::Glyph;
 use crate::widgets::util;
 use egui::{Rect, Response, Sense, Stroke, Ui, Vec2, WidgetInfo, WidgetType};
@@ -143,7 +143,8 @@ fn node_ui(
         if selected {
             ui.painter().rect_filled(rect, radius, t.accent.bg);
         } else if resp.hovered() {
-            ui.painter().rect_filled(rect, radius, t.bg[2]);
+            ui.painter()
+                .rect_filled(rect, radius, t.surface(Surface::Hover));
         }
         // Indent guides: one vertical hairline per ancestor level.
         for d in 0..depth {
@@ -161,9 +162,9 @@ fn node_ui(
                 Glyph::ChevronRight
             };
             let color = if disc.as_ref().is_some_and(|d| d.hovered()) {
-                t.fg[0]
+                t.text(TextRole::Primary)
             } else {
-                t.fg[2]
+                t.text(TextRole::Tertiary)
             };
             let g = util::galley(ui, glyph.as_str(), font.clone(), color);
             ui.painter().galley(
@@ -177,7 +178,11 @@ fn node_ui(
         }
         x += DISC_W;
         if let Some(icon) = node.icon {
-            let color = if selected { t.accent.fg } else { t.fg[2] };
+            let color = if selected {
+                t.accent.fg
+            } else {
+                t.text(TextRole::Tertiary)
+            };
             let g = util::galley(ui, icon.as_str(), font.clone(), color);
             let gw = g.size().x;
             ui.painter()
@@ -187,9 +192,9 @@ fn node_ui(
         let color = if selected {
             t.accent.fg
         } else if resp.hovered() {
-            t.fg[0]
+            t.text(TextRole::Primary)
         } else {
-            t.fg[1]
+            t.text(TextRole::Secondary)
         };
         let g = util::galley(ui, &node.label, font, color);
         ui.painter()

@@ -2,7 +2,7 @@
 //! (egui's built-in `Button` derives its own tints, which drift off-palette).
 
 use crate::response::{ForgeResponse, Outcome};
-use crate::theme::{FontWeight, Theme};
+use crate::theme::{FontWeight, Surface, TextRole, Theme};
 use crate::widgets::primitives::Glyph;
 use crate::widgets::util;
 use egui::{Color32, CornerRadius, Sense, Stroke, Ui, Vec2, WidgetInfo, WidgetType};
@@ -75,7 +75,11 @@ impl<'a> Button<'a> {
         pressed: bool,
     ) -> (Color32, Color32, Option<Color32>) {
         if self.disabled {
-            return (t.bg[2], t.fg[3], Some(t.border.subtle));
+            return (
+                t.surface(Surface::Hover),
+                t.text(TextRole::Disabled),
+                Some(t.border.subtle),
+            );
         }
         match self.variant {
             Variant::Primary => {
@@ -100,15 +104,15 @@ impl<'a> Button<'a> {
             }
             Variant::Default => {
                 let fill = if pressed {
-                    t.bg[4]
+                    t.surface(Surface::Popover)
                 } else if hovered {
-                    t.bg[3]
+                    t.surface(Surface::Pressed)
                 } else {
-                    t.bg[2]
+                    t.surface(Surface::Hover)
                 };
                 (
                     fill,
-                    t.fg[0],
+                    t.text(TextRole::Primary),
                     Some(if hovered {
                         t.border.strong
                     } else {
@@ -118,13 +122,21 @@ impl<'a> Button<'a> {
             }
             Variant::Ghost => {
                 let fill = if pressed {
-                    t.bg[3]
+                    t.surface(Surface::Pressed)
                 } else if hovered {
-                    t.bg[2]
+                    t.surface(Surface::Hover)
                 } else {
                     Color32::TRANSPARENT
                 };
-                (fill, if hovered { t.fg[0] } else { t.fg[1] }, None)
+                (
+                    fill,
+                    if hovered {
+                        t.text(TextRole::Primary)
+                    } else {
+                        t.text(TextRole::Secondary)
+                    },
+                    None,
+                )
             }
         }
     }

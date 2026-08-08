@@ -1,6 +1,6 @@
 //! Centered empty state: icon, title, hint, optional action row.
 
-use crate::theme::{FontWeight, Theme};
+use crate::theme::{FontWeight, TextRole, Theme};
 use crate::widgets::primitives::Glyph;
 use egui::Ui;
 
@@ -42,20 +42,20 @@ impl<'a> Empty<'a> {
             ui.label(
                 egui::RichText::new(self.icon.as_str())
                     .size(t.type_scale.h2)
-                    .color(t.fg[3]),
+                    .color(t.text(TextRole::Disabled)),
             );
             ui.add_space(t.space.x(2.0));
             ui.label(
                 egui::RichText::new(self.title)
                     .font(t.font(ui.ctx(), FontWeight::Medium, t.type_scale.md))
-                    .color(t.fg[1]),
+                    .color(t.text(TextRole::Secondary)),
             );
             if let Some(message) = self.message {
                 ui.add_space(t.space.x(1.0));
                 ui.label(
                     egui::RichText::new(message)
                         .size(t.type_scale.sm)
-                        .color(t.fg[2]),
+                        .color(t.text(TextRole::Tertiary)),
                 );
             }
             ui.add_space(t.space.x(3.0));

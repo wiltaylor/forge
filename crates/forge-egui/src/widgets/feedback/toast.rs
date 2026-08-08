@@ -2,7 +2,7 @@
 //! available standalone for apps that manage their own notification stack.
 //! (For fire-and-forget toasts, use `ctx.toast()` from the runtime instead.)
 
-use crate::theme::{Severity, Theme};
+use crate::theme::{Severity, Surface, TextRole, Theme};
 use crate::widgets::primitives::Glyph;
 use crate::widgets::Tone;
 use egui::Ui;
@@ -33,14 +33,14 @@ impl<'a> Toast<'a> {
             Severity::Info => Glyph::Info,
         };
         egui::Frame::new()
-            .fill(t.bg[4])
+            .fill(t.surface(Surface::Popover))
             .stroke(egui::Stroke::new(1.0, t.border.default))
             .corner_radius(egui::CornerRadius::same(t.radius.md as u8))
             .inner_margin(egui::Margin::symmetric(12, 10))
             .show(ui, |ui| {
                 ui.horizontal(|ui| {
                     ui.label(egui::RichText::new(glyph.as_str()).color(base));
-                    ui.label(egui::RichText::new(self.message).color(t.fg[0]));
+                    ui.label(egui::RichText::new(self.message).color(t.text(TextRole::Primary)));
                 });
             })
             .response

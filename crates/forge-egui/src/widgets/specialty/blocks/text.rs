@@ -5,7 +5,7 @@
 
 use super::inline::{inline_job, text_style, InlineStyle};
 use super::{byte_of_char, popups, siblings, Action, BlockEditorState, CaretHint, Ecx};
-use crate::theme::FontWeight;
+use crate::theme::{FontWeight, TextRole};
 use egui::text::{CCursor, CCursorRange};
 use egui::{Key, Modifiers, Pos2, Rect, Sense, Stroke, Ui, Vec2};
 use forge_blocks::{line_start_shortcut, Address, BlockKind, Document, ListStyle};
@@ -70,14 +70,14 @@ fn list_marker(
             ui.label(
                 egui::RichText::new("•")
                     .font(t.font(ui.ctx(), FontWeight::Regular, t.type_scale.base))
-                    .color(t.fg[2]),
+                    .color(t.text(TextRole::Tertiary)),
             );
         }
         ListStyle::Number => {
             ui.label(
                 egui::RichText::new(format!("{}.", list_ordinal(doc, addr)))
                     .font(t.font(ui.ctx(), FontWeight::Regular, t.type_scale.base))
-                    .color(t.fg[2]),
+                    .color(t.text(TextRole::Tertiary)),
             );
         }
         ListStyle::Todo => {
@@ -215,7 +215,7 @@ fn edit_body(
         .frame(egui::Frame::NONE)
         .font(t.font(ui.ctx(), style.weight, style.size))
         .text_color(style.color)
-        .hint_text(egui::RichText::new(hint).color(t.fg[3]))
+        .hint_text(egui::RichText::new(hint).color(t.text(TextRole::Disabled)))
         .desired_rows(1)
         .desired_width(f32::INFINITY)
         .lock_focus(true)

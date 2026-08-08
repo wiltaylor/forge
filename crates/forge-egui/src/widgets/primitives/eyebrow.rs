@@ -1,6 +1,6 @@
 //! Uppercase dim caption used above titles and sections.
 
-use crate::theme::{FontWeight, Theme};
+use crate::theme::{FontWeight, TextRole, Theme};
 use egui::Ui;
 
 pub struct Eyebrow<'a> {
@@ -24,7 +24,7 @@ impl<'a> Eyebrow<'a> {
         ui.label(
             egui::RichText::new(spaced.trim_end_matches('\u{200A}'))
                 .font(t.font(ui.ctx(), FontWeight::Medium, t.type_scale.xs))
-                .color(t.fg[2]),
+                .color(t.text(TextRole::Tertiary)),
         )
     }
 }

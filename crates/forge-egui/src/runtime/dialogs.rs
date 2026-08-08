@@ -3,7 +3,7 @@
 //! returns a handle the app polls with `take()` in later frames; no
 //! callbacks cross the modal boundary.
 
-use crate::theme::{scrim, FontWeight, Theme};
+use crate::theme::{scrim, FontWeight, Surface, TextRole, Theme};
 use crate::widgets::{Button, Variant};
 use std::cell::Cell;
 use std::rc::Rc;
@@ -126,7 +126,7 @@ impl DialogHost {
             .anchor(egui::Align2::CENTER_CENTER, [0.0, -40.0])
             .show(ctx, |ui| {
                 egui::Frame::new()
-                    .fill(theme.bg[4])
+                    .fill(theme.surface(Surface::Popover))
                     .stroke(egui::Stroke::new(1.0, theme.border.default))
                     .corner_radius(egui::CornerRadius::same(theme.radius.lg as u8))
                     .inner_margin(egui::Margin::same(20))
@@ -142,10 +142,13 @@ impl DialogHost {
                             ui.label(
                                 egui::RichText::new(title.as_str())
                                     .font(t_font(ui, theme))
-                                    .color(theme.fg[0]),
+                                    .color(theme.text(TextRole::Primary)),
                             );
                             ui.add_space(8.0);
-                            ui.label(egui::RichText::new(message.as_str()).color(theme.fg[1]));
+                            ui.label(
+                                egui::RichText::new(message.as_str())
+                                    .color(theme.text(TextRole::Secondary)),
+                            );
                             ui.add_space(16.0);
                             ui.horizontal(|ui| {
                                 ui.with_layout(
@@ -220,7 +223,7 @@ impl DialogHost {
                                 let text = if selected {
                                     theme.accent.fg
                                 } else {
-                                    theme.fg[1]
+                                    theme.text(TextRole::Secondary)
                                 };
                                 let r = egui::Frame::new()
                                     .fill(fill)
@@ -241,7 +244,9 @@ impl DialogHost {
                                                         ui.label(
                                                             egui::RichText::new(hint.as_str())
                                                                 .size(theme.type_scale.sm)
-                                                                .color(theme.fg[2]),
+                                                                .color(
+                                                                    theme.text(TextRole::Tertiary),
+                                                                ),
                                                         );
                                                     },
                                                 );
@@ -257,7 +262,7 @@ impl DialogHost {
                             if filtered.is_empty() {
                                 ui.label(
                                     egui::RichText::new("No matches")
-                                        .color(theme.fg[3])
+                                        .color(theme.text(TextRole::Disabled))
                                         .size(theme.type_scale.sm),
                                 );
                             }

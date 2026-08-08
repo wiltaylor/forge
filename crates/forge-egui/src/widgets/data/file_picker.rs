@@ -7,7 +7,7 @@
 //! row ascends; breadcrumb segments jump straight to an ancestor.
 
 use crate::response::{ForgeResponse, Outcome};
-use crate::theme::{FontWeight, Theme};
+use crate::theme::{FontWeight, Surface, TextRole, Theme};
 use crate::widgets::primitives::Glyph;
 use crate::widgets::util;
 use egui::{CornerRadius, Key, Response, Sense, Stroke, Ui, Vec2, WidgetInfo, WidgetType};
@@ -139,7 +139,11 @@ impl<'a> FilePicker<'a> {
                     None => ancestor.display().to_string(), // "/" or drive root
                 };
                 let last = i + 1 == comps.len();
-                let color = if last { t.fg[0] } else { t.fg[2] };
+                let color = if last {
+                    t.text(TextRole::Primary)
+                } else {
+                    t.text(TextRole::Tertiary)
+                };
                 let g = util::galley(ui, &name, font.clone(), color);
                 let (rect, resp) = ui.allocate_exact_size(
                     g.size() + Vec2::new(8.0, 8.0),
@@ -151,11 +155,11 @@ impl<'a> FilePicker<'a> {
                         ui.painter().rect_filled(
                             rect,
                             CornerRadius::same(t.radius.sm as u8),
-                            t.bg[2],
+                            t.surface(Surface::Hover),
                         );
                     }
                     let color = if resp.hovered() && !last {
-                        t.fg[0]
+                        t.text(TextRole::Primary)
                     } else {
                         color
                     };
@@ -167,9 +171,9 @@ impl<'a> FilePicker<'a> {
                     jump = Some(ancestor.clone());
                 }
                 if !last {
-                    let g = util::galley(ui, "/", font.clone(), t.fg[3]);
+                    let g = util::galley(ui, "/", font.clone(), t.text(TextRole::Disabled));
                     let (r, _) = ui.allocate_exact_size(g.size(), Sense::hover());
-                    ui.painter().galley(r.min, g, t.fg[3]);
+                    ui.painter().galley(r.min, g, t.text(TextRole::Disabled));
                 }
             }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -192,7 +196,7 @@ impl<'a> FilePicker<'a> {
         // ---- Listing.
         let mut nav: Option<Nav> = None;
         let frame = egui::Frame::new()
-            .fill(t.bg[1])
+            .fill(t.surface(Surface::Card))
             .stroke(Stroke::new(1.0, t.border.subtle))
             .corner_radius(CornerRadius::same(t.radius.md as u8))
             .inner_margin(egui::Margin::same(4));
@@ -298,11 +302,16 @@ fn row_ui(
         if cursor {
             ui.painter().rect_filled(rect, radius, t.accent.bg);
         } else if resp.hovered() {
-            ui.painter().rect_filled(rect, radius, t.bg[2]);
+            ui.painter()
+                .rect_filled(rect, radius, t.surface(Surface::Hover));
         }
         let font = t.font(ui.ctx(), FontWeight::Regular, t.type_scale.base);
         let cy = rect.center().y;
-        let gcolor = if is_dir { t.accent.fg } else { t.fg[3] };
+        let gcolor = if is_dir {
+            t.accent.fg
+        } else {
+            t.text(TextRole::Disabled)
+        };
         let g = util::galley(ui, glyph.as_str(), font.clone(), gcolor);
         ui.painter().galley(
             egui::pos2(rect.min.x + 8.0, cy - g.size().y / 2.0),
@@ -312,9 +321,9 @@ fn row_ui(
         let color = if cursor {
             t.accent.fg
         } else if is_dir {
-            t.fg[0]
+            t.text(TextRole::Primary)
         } else {
-            t.fg[1]
+            t.text(TextRole::Secondary)
         };
         let g = util::galley(ui, name, font, color);
         let clip = ui.painter().with_clip_rect(rect.intersect(ui.clip_rect()));
@@ -330,7 +339,7 @@ fn row_ui(
 /// The "Hidden" dotfiles chip.
 fn hidden_chip(ui: &mut Ui, t: &Theme, on: bool) -> Response {
     let font = t.font(ui.ctx(), FontWeight::Medium, t.type_scale.sm);
-    let g = util::galley(ui, "Hidden", font.clone(), t.fg[1]);
+    let g = util::galley(ui, "Hidden", font.clone(), t.text(TextRole::Secondary));
     let size = Vec2::new(g.size().x + 20.0, t.control.sm - 6.0);
     let (rect, resp) = ui.allocate_exact_size(size, Sense::click());
     resp.widget_info(|| WidgetInfo::selected(WidgetType::Button, true, on, "Hidden"));
@@ -339,9 +348,9 @@ fn hidden_chip(ui: &mut Ui, t: &Theme, on: bool) -> Response {
         let (fill, color) = if on {
             (t.accent.bg, t.accent.fg)
         } else if resp.hovered() {
-            (t.bg[3], t.fg[0])
+            (t.surface(Surface::Pressed), t.text(TextRole::Primary))
         } else {
-            (t.bg[2], t.fg[1])
+            (t.surface(Surface::Hover), t.text(TextRole::Secondary))
         };
         ui.painter().rect_filled(rect, radius, fill);
         let g = util::galley(ui, "Hidden", font, color);

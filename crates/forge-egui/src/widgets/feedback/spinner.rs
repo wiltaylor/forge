@@ -1,6 +1,6 @@
 //! Indeterminate activity spinner: a rotating accent arc, time-driven.
 
-use crate::theme::{FontWeight, Theme};
+use crate::theme::{FontWeight, TextRole, Theme};
 use egui::{Sense, Ui, Vec2, WidgetInfo, WidgetType};
 
 pub struct Spinner<'a> {
@@ -60,7 +60,7 @@ impl<'a> Spinner<'a> {
                 ui.label(
                     egui::RichText::new(label)
                         .font(t.font(ui.ctx(), FontWeight::Regular, t.type_scale.sm))
-                        .color(t.fg[1]),
+                        .color(t.text(TextRole::Secondary)),
                 );
             }
             response

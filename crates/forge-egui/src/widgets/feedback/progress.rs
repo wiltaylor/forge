@@ -1,6 +1,6 @@
 //! Linear progress bar — determinate (0..=1) or an indeterminate sweep.
 
-use crate::theme::{FontWeight, Theme};
+use crate::theme::{FontWeight, Surface, TextRole, Theme};
 use crate::widgets::Tone;
 use egui::{Rect, Sense, Ui, Vec2, WidgetInfo, WidgetType};
 
@@ -71,7 +71,7 @@ impl<'a> Progress<'a> {
                         ui.label(
                             egui::RichText::new(label)
                                 .font(t.font(ui.ctx(), FontWeight::Regular, t.type_scale.sm))
-                                .color(t.fg[1]),
+                                .color(t.text(TextRole::Secondary)),
                         );
                     }
                     if self.show_value && !self.indeterminate {
@@ -82,7 +82,7 @@ impl<'a> Progress<'a> {
                                     (self.value * 100.0).round() as u32
                                 ))
                                 .font(t.mono(t.type_scale.sm))
-                                .color(t.fg[2]),
+                                .color(t.text(TextRole::Tertiary)),
                             );
                         });
                     }
@@ -105,7 +105,8 @@ impl<'a> Progress<'a> {
 
             if ui.is_rect_visible(rect) {
                 let pill = BAR_HEIGHT / 2.0;
-                ui.painter().rect_filled(rect, pill, t.bg[3]);
+                ui.painter()
+                    .rect_filled(rect, pill, t.surface(Surface::Pressed));
                 if self.indeterminate {
                     // A band sweeping left → right, wrapping around.
                     let time = ui.input(|i| i.time);

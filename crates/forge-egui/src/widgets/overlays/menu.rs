@@ -3,7 +3,7 @@
 //! return `Some(index)` when a row is chosen.
 
 use crate::response::ForgeResponse;
-use crate::theme::{FontWeight, Theme};
+use crate::theme::{FontWeight, Surface, TextRole, Theme};
 use crate::widgets::primitives::Glyph;
 use crate::widgets::util;
 use egui::{
@@ -57,7 +57,7 @@ impl MenuItem {
 
 fn menu_frame(t: &Theme) -> Frame {
     Frame::new()
-        .fill(t.bg[4])
+        .fill(t.surface(Surface::Popover))
         .stroke(Stroke::new(1.0, t.border.default))
         .corner_radius(CornerRadius::same(t.radius.md as u8))
         .inner_margin(Margin::same(4))
@@ -89,17 +89,20 @@ fn menu_row(ui: &mut Ui, t: &Theme, item: &MenuItem, highlighted: bool) -> Respo
     if ui.is_rect_visible(rect) {
         let hovered = response.hovered() && !item.disabled;
         if hovered || (highlighted && !item.disabled) {
-            ui.painter()
-                .rect_filled(rect, CornerRadius::same(t.radius.sm as u8), t.bg[2]);
+            ui.painter().rect_filled(
+                rect,
+                CornerRadius::same(t.radius.sm as u8),
+                t.surface(Surface::Hover),
+            );
         }
         let color = if item.disabled {
-            t.fg[3]
+            t.text(TextRole::Disabled)
         } else if item.danger {
             t.danger.base
         } else if hovered || highlighted {
-            t.fg[0]
+            t.text(TextRole::Primary)
         } else {
-            t.fg[1]
+            t.text(TextRole::Secondary)
         };
         let font = t.font(ui.ctx(), FontWeight::Regular, t.type_scale.base);
         let mut x = rect.min.x + 8.0;

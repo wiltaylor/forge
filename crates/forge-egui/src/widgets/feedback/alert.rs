@@ -1,7 +1,7 @@
 //! Inline callout: a tinted surface with a solid tone bar, glyph, title, and
 //! optional message. Purely presentational — mirrors `@forge/ui`'s `Alert`.
 
-use crate::theme::{FontWeight, Theme};
+use crate::theme::{FontWeight, TextRole, Theme};
 use crate::widgets::primitives::Glyph;
 use crate::widgets::Tone;
 use egui::{CornerRadius, Frame, Margin, Rect, Ui};
@@ -71,13 +71,13 @@ impl<'a> Alert<'a> {
                         ui.label(
                             egui::RichText::new(self.title)
                                 .font(t.font(ui.ctx(), FontWeight::Medium, t.type_scale.base))
-                                .color(t.fg[0]),
+                                .color(t.text(TextRole::Primary)),
                         );
                         if let Some(message) = self.message {
                             ui.label(
                                 egui::RichText::new(message)
                                     .font(t.font(ui.ctx(), FontWeight::Regular, t.type_scale.sm))
-                                    .color(t.fg[1]),
+                                    .color(t.text(TextRole::Secondary)),
                             );
                         }
                     });

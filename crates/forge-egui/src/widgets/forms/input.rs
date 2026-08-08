@@ -2,7 +2,7 @@
 //! (egui keeps cursor/selection/IME state; the chrome and Outcome are ours).
 
 use crate::response::{ForgeResponse, Outcome};
-use crate::theme::{FontWeight, Theme};
+use crate::theme::{FontWeight, Surface, TextRole, Theme};
 use crate::widgets::forms::field;
 use crate::widgets::primitives::{Glyph, Icon};
 use egui::{CornerRadius, Key, Margin, Stroke, Ui, Vec2};
@@ -88,7 +88,7 @@ impl<'a> Input<'a> {
                 }
 
                 let mut prepared = egui::Frame::new()
-                    .fill(t.bg[1])
+                    .fill(t.surface(Surface::Card))
                     .corner_radius(CornerRadius::same(t.radius.md as u8))
                     .inner_margin(Margin::symmetric(10, 0))
                     .begin(ui);
@@ -98,19 +98,25 @@ impl<'a> Input<'a> {
                     ui.horizontal(|ui| {
                         ui.spacing_mut().item_spacing.x = 6.0;
                         if let Some(glyph) = self.icon {
-                            let _ = Icon::new(glyph).color(t.fg[2]).show(ui);
+                            let _ = Icon::new(glyph).color(t.text(TextRole::Tertiary)).show(ui);
                         }
                         let mut te = egui::TextEdit::singleline(self.text)
                             .frame(egui::Frame::NONE)
                             .password(self.masked)
                             .font(t.font(ui.ctx(), FontWeight::Regular, t.type_scale.base))
-                            .text_color(if self.disabled { t.fg[3] } else { t.fg[0] })
+                            .text_color(if self.disabled {
+                                t.text(TextRole::Disabled)
+                            } else {
+                                t.text(TextRole::Primary)
+                            })
                             .vertical_align(egui::Align::Center)
                             .min_size(Vec2::new(0.0, t.control.md))
                             .desired_width(ui.available_width())
                             .interactive(!self.disabled);
                         if let Some(p) = self.placeholder {
-                            te = te.hint_text(egui::RichText::new(p).color(t.fg[3]));
+                            te = te.hint_text(
+                                egui::RichText::new(p).color(t.text(TextRole::Disabled)),
+                            );
                         }
                         ui.add(te)
                     })
@@ -130,7 +136,7 @@ impl<'a> Input<'a> {
                 if let Some(error) = self.error {
                     field::sub_line(ui, &t, error, t.danger.base);
                 } else if let Some(help) = self.help {
-                    field::sub_line(ui, &t, help, t.fg[2]);
+                    field::sub_line(ui, &t, help, t.text(TextRole::Tertiary));
                 }
                 response
             })

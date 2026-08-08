@@ -118,7 +118,7 @@ pub fn draw(ui: &mut egui::Ui, state: &mut GraphState) {
             ui.label(
                 egui::RichText::new(readout)
                     .font(t.mono(t.type_scale.sm))
-                    .color(t.fg[2]),
+                    .color(t.text(TextRole::Tertiary)),
             );
             ui.label(
                 egui::RichText::new(
@@ -131,7 +131,7 @@ pub fn draw(ui: &mut egui::Ui, state: &mut GraphState) {
                     forge_egui::theme::FontWeight::Regular,
                     t.type_scale.xs,
                 ))
-                .color(t.fg[2]),
+                .color(t.text(TextRole::Tertiary)),
             );
         });
 }

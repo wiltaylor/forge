@@ -35,7 +35,7 @@ pub fn draw(ui: &mut egui::Ui) {
                     forge_egui::theme::FontWeight::Regular,
                     t.type_scale.xs,
                 ))
-                .color(t.fg[2]),
+                .color(t.text(TextRole::Tertiary)),
         );
     });
 }

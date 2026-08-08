@@ -2,7 +2,7 @@
 //! keys when focused.
 
 use crate::response::{ForgeResponse, Outcome};
-use crate::theme::{FontWeight, Theme};
+use crate::theme::{FontWeight, Surface, TextRole, Theme};
 use egui::{Color32, EventFilter, Key, Rect, Sense, Stroke, Ui, Vec2, WidgetInfo};
 use std::ops::RangeInclusive;
 
@@ -62,7 +62,11 @@ impl<'a> Slider<'a> {
                 ui.label(
                     egui::RichText::new(label)
                         .font(t.font(ui.ctx(), FontWeight::Regular, t.type_scale.sm))
-                        .color(if self.disabled { t.fg[3] } else { t.fg[1] }),
+                        .color(if self.disabled {
+                            t.text(TextRole::Disabled)
+                        } else {
+                            t.text(TextRole::Secondary)
+                        }),
                 );
             }
 
@@ -134,7 +138,8 @@ impl<'a> Slider<'a> {
                     egui::pos2(x1, cy + TRACK_H / 2.0),
                 );
                 let vx = x0 + (x1 - x0) * ((v - min) / span) as f32;
-                ui.painter().rect_filled(track, TRACK_H / 2.0, t.bg[3]);
+                ui.painter()
+                    .rect_filled(track, TRACK_H / 2.0, t.surface(Surface::Pressed));
                 let fill = if self.disabled {
                     t.border.strong
                 } else {
@@ -154,7 +159,7 @@ impl<'a> Slider<'a> {
                     t.border.strong
                 };
                 let thumb_fill = if self.disabled {
-                    t.fg[3]
+                    t.text(TextRole::Disabled)
                 } else {
                     Color32::WHITE
                 };
@@ -170,7 +175,11 @@ impl<'a> Slider<'a> {
                 ui.label(
                     egui::RichText::new(fmt_value(v))
                         .font(t.mono(t.type_scale.sm))
-                        .color(if self.disabled { t.fg[3] } else { t.fg[1] }),
+                        .color(if self.disabled {
+                            t.text(TextRole::Disabled)
+                        } else {
+                            t.text(TextRole::Secondary)
+                        }),
                 );
             }
 

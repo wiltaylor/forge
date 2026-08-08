@@ -1,7 +1,7 @@
 //! Initials avatar with a deterministic per-name hue and an optional status
 //! dot. (Image sources come later with the `images` feature.)
 
-use crate::theme::{FontWeight, Theme};
+use crate::theme::{FontWeight, Surface, Theme};
 use crate::widgets::util;
 use crate::widgets::Tone;
 use egui::{Color32, Sense, Stroke, Ui, Vec2};
@@ -92,7 +92,7 @@ impl<'a> Avatar<'a> {
                 let r = (side * 0.14).max(3.0);
                 let center = rect.max - Vec2::splat(r);
                 ui.painter()
-                    .circle(center, r, base, Stroke::new(2.0, t.bg[1]));
+                    .circle(center, r, base, Stroke::new(2.0, t.surface(Surface::Card)));
             }
         }
         response.on_hover_text(self.name)

@@ -95,7 +95,7 @@ impl DocsPage {
                 ui.label(
                     egui::RichText::new(status)
                         .size(ctx.theme().type_scale.sm)
-                        .color(ctx.theme().fg[2]),
+                        .color(ctx.theme().text(TextRole::Tertiary)),
                 );
             }
         });
@@ -118,7 +118,7 @@ impl DocsPage {
                     ui.label(
                         egui::RichText::new(&name)
                             .font(ctx.theme().mono(ctx.theme().type_scale.base))
-                            .color(ctx.theme().fg[1]),
+                            .color(ctx.theme().text(TextRole::Secondary)),
                     );
                     if Button::new("Open")
                         .small(true)

@@ -2,7 +2,7 @@
 //! Toaster. The handle is `Clone + Send` and carries the `egui::Context` so a
 //! push from a background thread wakes eframe's lazy repaint loop.
 
-use crate::theme::{Severity, Theme};
+use crate::theme::{Severity, Surface, TextRole, Theme};
 use crate::widgets::Tone;
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
@@ -114,7 +114,7 @@ impl Toaster {
                     };
                     let (base, _, _) = tone.triple(theme);
                     egui::Frame::new()
-                        .fill(theme.bg[4])
+                        .fill(theme.surface(Surface::Popover))
                         .stroke(egui::Stroke::new(1.0, theme.border.default))
                         .corner_radius(egui::CornerRadius::same(theme.radius.md as u8))
                         .inner_margin(egui::Margin::symmetric(12, 10))
@@ -128,7 +128,8 @@ impl Toaster {
                                 };
                                 ui.label(egui::RichText::new(glyph).color(base));
                                 ui.label(
-                                    egui::RichText::new(&entry.toast.message).color(theme.fg[0]),
+                                    egui::RichText::new(&entry.toast.message)
+                                        .color(theme.text(TextRole::Primary)),
                                 );
                             });
                         });

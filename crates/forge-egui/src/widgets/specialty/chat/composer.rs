@@ -3,7 +3,7 @@
 //! commit semantics — the caller reads and clears the bound `String`.
 
 use crate::response::{ForgeResponse, Outcome};
-use crate::theme::{FontWeight, Theme};
+use crate::theme::{FontWeight, Surface, TextRole, Theme};
 use crate::widgets::primitives::{Glyph, IconButton, Variant};
 use egui::{CornerRadius, Key, KeyboardShortcut, Margin, Modifiers, RichText, Stroke, Ui};
 
@@ -39,7 +39,7 @@ impl<'a> Composer<'a> {
             let well_w = (ui.available_width() - send_w).max(80.0);
 
             let mut prepared = egui::Frame::new()
-                .fill(t.bg[1])
+                .fill(t.surface(Surface::Card))
                 .corner_radius(CornerRadius::same(t.radius.md as u8))
                 .inner_margin(Margin::symmetric(10, 6))
                 .begin(ui);
@@ -51,8 +51,8 @@ impl<'a> Composer<'a> {
                     .desired_rows(rows)
                     .desired_width(f32::INFINITY)
                     .font(t.font(ui.ctx(), FontWeight::Regular, t.type_scale.base))
-                    .text_color(t.fg[0])
-                    .hint_text(RichText::new(self.placeholder).color(t.fg[3]))
+                    .text_color(t.text(TextRole::Primary))
+                    .hint_text(RichText::new(self.placeholder).color(t.text(TextRole::Disabled)))
                     // Shift+Enter inserts the newline; plain Enter is ours.
                     .return_key(Some(KeyboardShortcut::new(Modifiers::SHIFT, Key::Enter)));
                 ui.add(te)

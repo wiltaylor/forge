@@ -83,6 +83,6 @@ fn readout(ui: &mut egui::Ui, t: &Theme, text: &str) {
     ui.label(
         egui::RichText::new(text)
             .font(t.mono(t.type_scale.sm))
-            .color(t.fg[2]),
+            .color(t.text(TextRole::Tertiary)),
     );
 }

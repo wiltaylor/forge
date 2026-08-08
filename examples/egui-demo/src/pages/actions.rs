@@ -68,7 +68,7 @@ impl ActionsPage {
                 ui.label(
                     egui::RichText::new(output)
                         .font(t.mono(t.type_scale.base))
-                        .color(t.fg[1]),
+                        .color(t.text(TextRole::Secondary)),
                 );
             });
         }

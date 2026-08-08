@@ -2,7 +2,7 @@
 //! blocking) with Forge chrome: theme scrim, bg\[4\] panel, title row with a
 //! close button, and an optional footer slot.
 
-use crate::theme::{scrim, FontWeight, Theme};
+use crate::theme::{scrim, FontWeight, Surface, TextRole, Theme};
 use crate::widgets::primitives::{Glyph, IconButton};
 use egui::{CornerRadius, Frame, InnerResponse, Margin, Stroke, Ui};
 
@@ -71,7 +71,7 @@ impl<'a> Modal<'a> {
             .backdrop_color(scrim(&t))
             .frame(
                 Frame::new()
-                    .fill(t.bg[4])
+                    .fill(t.surface(Surface::Popover))
                     .stroke(Stroke::new(1.0, t.border.default))
                     .corner_radius(CornerRadius::same(t.radius.lg as u8))
                     .inner_margin(Margin::same(20)),
@@ -82,7 +82,7 @@ impl<'a> Modal<'a> {
                     ui.label(
                         egui::RichText::new(self.title)
                             .font(t.font(ui.ctx(), FontWeight::SemiBold, t.type_scale.md))
-                            .color(t.fg[0]),
+                            .color(t.text(TextRole::Primary)),
                     );
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         if IconButton::new(Glyph::Cross, "Close")

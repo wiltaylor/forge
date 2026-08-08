@@ -8,7 +8,7 @@
 //! number/atom→info-fg, comment→fg3, type→warning-fg, property→info-fg,
 //! punctuation→fg2.
 
-use crate::theme::{Severity, Theme};
+use crate::theme::{Severity, Surface, TextRole, Theme};
 use egui::text::{LayoutJob, TextFormat};
 use egui::{Color32, CornerRadius, FontId, Frame, Margin, Pos2, Rect, Sense, Stroke, Ui, Vec2};
 use std::sync::OnceLock;
@@ -55,16 +55,16 @@ fn forge_syn_theme(t: &Theme) -> SynTheme {
         ("keyword, storage.modifier, storage.type.function, storage.type.class", t.accent.fg, false),
         ("string, punctuation.definition.string", t.success.fg, false),
         ("constant.numeric, constant.language, constant.character", t.info.fg, false),
-        ("comment, punctuation.definition.comment", t.fg[3], false),
+        ("comment, punctuation.definition.comment", t.text(TextRole::Disabled), false),
         ("entity.name.type, entity.name.class, support.type, support.class, storage.type", t.warning.fg, false),
         ("entity.other.attribute-name, support.function, meta.property-name, variable.other.member", t.info.fg, false),
-        ("entity.name.function", t.fg[0], true),
-        ("punctuation, keyword.operator", t.fg[2], false),
-        ("variable", t.fg[0], false),
+        ("entity.name.function", t.text(TextRole::Primary), true),
+        ("punctuation, keyword.operator", t.text(TextRole::Tertiary), false),
+        ("variable", t.text(TextRole::Primary), false),
     ];
     let mut theme = SynTheme {
         settings: ThemeSettings {
-            foreground: Some(syn_color(t.fg[0])),
+            foreground: Some(syn_color(t.text(TextRole::Primary))),
             ..Default::default()
         },
         ..Default::default()
@@ -93,7 +93,7 @@ fn mono_fonts(ui: &Ui, size: f32) -> (FontId, FontId) {
 }
 
 /// Highlight `code` into styled `(format, text)` runs per line. Unknown
-/// languages (or unparsable scope selectors) fall back to plain `fg[1]` text.
+/// languages (or unparsable scope selectors) fall back to plain secondary text.
 fn highlight_runs(
     ui: &Ui,
     t: &Theme,
@@ -111,7 +111,7 @@ fn highlight_runs(
 
     let plain = TextFormat {
         font_id: mono.clone(),
-        color: t.fg[1],
+        color: t.text(TextRole::Secondary),
         ..Default::default()
     };
     code.lines()
@@ -178,7 +178,7 @@ pub(crate) fn highlight_job(ui: &Ui, t: &Theme, code: &str, lang: &str, size: f3
     let (mono, _) = mono_fonts(ui, size);
     let newline = TextFormat {
         font_id: mono,
-        color: t.fg[1],
+        color: t.text(TextRole::Secondary),
         ..Default::default()
     };
     let lines = highlight_runs(ui, t, code, lang, size);
@@ -262,7 +262,7 @@ impl<'a> CodeView<'a> {
         let t = Theme::of(ui.ctx());
         let wrap = state.wrap;
         Frame::new()
-            .fill(t.bg[1])
+            .fill(t.surface(Surface::Card))
             .stroke(Stroke::new(1.0, t.border.subtle))
             .corner_radius(CornerRadius::same(t.radius.md as u8))
             .inner_margin(Margin::same(8))
@@ -285,7 +285,11 @@ impl<'a> CodeView<'a> {
         let digits = jobs.len().max(1).ilog10() as usize + 1;
         let char_w = ui
             .painter()
-            .layout_no_wrap("0".to_owned(), gutter_font.clone(), t.fg[3])
+            .layout_no_wrap(
+                "0".to_owned(),
+                gutter_font.clone(),
+                t.text(TextRole::Disabled),
+            )
             .size()
             .x;
         let gutter_w = if self.line_numbers {
@@ -310,7 +314,7 @@ impl<'a> CodeView<'a> {
                     let g = ui.painter().layout_no_wrap(
                         line_no.to_string(),
                         gutter_font.clone(),
-                        t.fg[3],
+                        t.text(TextRole::Disabled),
                     );
                     ui.painter().galley(
                         Pos2::new(
@@ -318,7 +322,7 @@ impl<'a> CodeView<'a> {
                             grect.center().y - g.size().y / 2.0,
                         ),
                         g,
-                        t.fg[3],
+                        t.text(TextRole::Disabled),
                     );
                     if let Some(ann) = ann {
                         ui.painter().circle_filled(
@@ -347,7 +351,7 @@ impl<'a> CodeView<'a> {
                                 crate::theme::FontWeight::Regular,
                                 t.type_scale.sm,
                             ))
-                            .color(t.fg[0]),
+                            .color(t.text(TextRole::Primary)),
                     );
                 }
             });
@@ -440,7 +444,7 @@ impl<'a> DiffView<'a> {
     pub fn show(self, ui: &mut Ui) -> egui::Response {
         let t = Theme::of(ui.ctx());
         Frame::new()
-            .fill(t.bg[1])
+            .fill(t.surface(Surface::Card))
             .stroke(Stroke::new(1.0, t.border.subtle))
             .corner_radius(CornerRadius::same(t.radius.md as u8))
             .inner_margin(Margin::same(8))
@@ -460,7 +464,7 @@ impl<'a> DiffView<'a> {
             .iter()
             .map(|row| {
                 let (marker, line, color) = match row {
-                    DiffRow::Same(l) => (' ', *l, t.fg[2]),
+                    DiffRow::Same(l) => (' ', *l, t.text(TextRole::Tertiary)),
                     DiffRow::Del(l) => ('-', *l, t.danger.fg),
                     DiffRow::Add(l) => ('+', *l, t.success.fg),
                 };

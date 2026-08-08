@@ -6,7 +6,7 @@
 //! to http(s)/mailto before becoming hyperlinks (parity with the web kit's
 //! XSS-safe renderer).
 
-use crate::theme::{FontWeight, Theme};
+use crate::theme::{FontWeight, Surface, TextRole, Theme};
 use crate::widgets::primitives::Separator;
 use egui::{CornerRadius, Frame, Margin, RichText, Stroke, Ui};
 use pulldown_cmark::{CodeBlockKind, Event, HeadingLevel, Options, Parser, Tag, TagEnd};
@@ -344,7 +344,7 @@ fn render_inline_prefixed(
             ui.label(
                 RichText::new(prefix)
                     .font(t.font(ui.ctx(), FontWeight::Regular, base.size))
-                    .color(t.fg[2]),
+                    .color(t.text(TextRole::Tertiary)),
             );
         }
         for span in spans {
@@ -363,7 +363,11 @@ fn render_inline_prefixed(
                     } else {
                         base.weight
                     };
-                    let color = if *strong { t.fg[0] } else { base.color };
+                    let color = if *strong {
+                        t.text(TextRole::Primary)
+                    } else {
+                        base.color
+                    };
                     let mut rt = RichText::new(text.as_str())
                         .font(t.font(ui.ctx(), weight, base.size))
                         .color(color);
@@ -380,7 +384,7 @@ fn render_inline_prefixed(
                         RichText::new(format!(" {code} "))
                             .font(t.mono(base.size - 1.0))
                             .color(t.accent.fg)
-                            .background_color(t.bg[2]),
+                            .background_color(t.surface(Surface::Hover)),
                     );
                 }
                 MdSpan::Link { text, url } => {
@@ -429,7 +433,11 @@ fn table_cell(ui: &mut Ui, t: &Theme, spans: &[MdSpan], base: InlineStyle) {
                 };
                 let mut format = TextFormat {
                     font_id: t.font(ui.ctx(), weight, base.size),
-                    color: if *strong { t.fg[0] } else { base.color },
+                    color: if *strong {
+                        t.text(TextRole::Primary)
+                    } else {
+                        base.color
+                    },
                     italics: *emphasis || base.italics,
                     ..Default::default()
                 };
@@ -445,7 +453,7 @@ fn table_cell(ui: &mut Ui, t: &Theme, spans: &[MdSpan], base: InlineStyle) {
                     TextFormat {
                         font_id: t.mono(base.size - 1.0),
                         color: t.accent.fg,
-                        background: t.bg[2],
+                        background: t.surface(Surface::Hover),
                         ..Default::default()
                     },
                 );
@@ -468,7 +476,7 @@ fn table_cell(ui: &mut Ui, t: &Theme, spans: &[MdSpan], base: InlineStyle) {
 
 fn code_well(ui: &mut Ui, t: &Theme, lang: &str, code: &str) {
     Frame::new()
-        .fill(t.bg[1])
+        .fill(t.surface(Surface::Card))
         .stroke(Stroke::new(1.0, t.border.subtle))
         .corner_radius(CornerRadius::same(t.radius.md as u8))
         .inner_margin(Margin::same(10))
@@ -491,7 +499,7 @@ fn code_well(ui: &mut Ui, t: &Theme, lang: &str, code: &str) {
                 ui.label(
                     RichText::new(code)
                         .font(t.mono(t.type_scale.sm))
-                        .color(t.fg[1]),
+                        .color(t.text(TextRole::Secondary)),
                 );
             }
         });
@@ -501,7 +509,11 @@ fn render_blocks(ui: &mut Ui, t: &Theme, blocks: &[MdBlock], quote: bool) {
     let body = InlineStyle {
         size: t.type_scale.base,
         weight: FontWeight::Regular,
-        color: if quote { t.fg[2] } else { t.fg[1] },
+        color: if quote {
+            t.text(TextRole::Tertiary)
+        } else {
+            t.text(TextRole::Secondary)
+        },
         italics: quote,
     };
     for (bi, block) in blocks.iter().enumerate() {
@@ -520,7 +532,7 @@ fn render_blocks(ui: &mut Ui, t: &Theme, blocks: &[MdBlock], quote: bool) {
                     InlineStyle {
                         size,
                         weight: FontWeight::SemiBold,
-                        color: t.fg[0],
+                        color: t.text(TextRole::Primary),
                         italics: false,
                     },
                 );
@@ -555,7 +567,7 @@ fn render_blocks(ui: &mut Ui, t: &Theme, blocks: &[MdBlock], quote: bool) {
                             .layout_no_wrap(
                                 marker.clone(),
                                 t.font(ui.ctx(), FontWeight::Regular, t.type_scale.base),
-                                t.fg[2],
+                                t.text(TextRole::Tertiary),
                             )
                             .size()
                             .x;
@@ -578,7 +590,7 @@ fn render_blocks(ui: &mut Ui, t: &Theme, blocks: &[MdBlock], quote: bool) {
                                             FontWeight::Regular,
                                             t.type_scale.base,
                                         ))
-                                        .color(t.fg[2]),
+                                        .color(t.text(TextRole::Tertiary)),
                                 );
                             }
                         }
@@ -599,13 +611,13 @@ fn render_blocks(ui: &mut Ui, t: &Theme, blocks: &[MdBlock], quote: bool) {
                 let head_style = InlineStyle {
                     size: t.type_scale.sm,
                     weight: FontWeight::Medium,
-                    color: t.fg[0],
+                    color: t.text(TextRole::Primary),
                     italics: false,
                 };
                 let cell_style = InlineStyle {
                     size: t.type_scale.sm,
                     weight: FontWeight::Regular,
-                    color: t.fg[1],
+                    color: t.text(TextRole::Secondary),
                     italics: false,
                 };
                 egui::Grid::new(("forge-md-table", bi))

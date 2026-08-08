@@ -1,8 +1,8 @@
-//! Tiny inline trend line: `fg[2]` 1.5pt stroke + a toned endpoint dot.
+//! Tiny inline trend line: tertiary-text 1.5pt stroke + a toned endpoint dot.
 //! No axes, no tooltip — web `Sparkline` parity (default 96×28).
 
 use crate::response::{ForgeResponse, Outcome};
-use crate::theme::Theme;
+use crate::theme::{TextRole, Theme};
 use crate::widgets::Tone;
 use egui::{Pos2, Sense, Shape, Stroke, Ui, Vec2};
 
@@ -60,8 +60,10 @@ impl<'a> Sparkline<'a> {
                 .collect();
             let last = *pts.last().expect("non-empty");
             if pts.len() >= 2 {
-                ui.painter()
-                    .add(Shape::line(pts, Stroke::new(1.5, t.fg[2])));
+                ui.painter().add(Shape::line(
+                    pts,
+                    Stroke::new(1.5, t.text(TextRole::Tertiary)),
+                ));
             }
             let (dot, _, _) = self.tone.triple(&t);
             ui.painter().circle_filled(last, 2.5, dot);

@@ -1,7 +1,7 @@
 //! Standalone status strip for apps not using the runtime Shell (which has
 //! its own).
 
-use crate::theme::Theme;
+use crate::theme::{Surface, TextRole, Theme};
 use egui::Ui;
 
 pub struct StatusBar<'a> {
@@ -22,7 +22,7 @@ impl<'a> StatusBar<'a> {
     pub fn show(self, ui: &mut Ui) -> egui::Response {
         let t = Theme::of(ui.ctx());
         egui::Frame::new()
-            .fill(t.bg[1])
+            .fill(t.surface(Surface::Card))
             .inner_margin(egui::Margin::symmetric(12, 6))
             .show(ui, |ui| {
                 ui.set_min_width(ui.available_width());
@@ -35,14 +35,14 @@ impl<'a> StatusBar<'a> {
                     ui.label(
                         egui::RichText::new(self.left)
                             .size(t.type_scale.sm)
-                            .color(t.fg[2]),
+                            .color(t.text(TextRole::Tertiary)),
                     );
                     if let Some(right) = self.right {
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                             ui.label(
                                 egui::RichText::new(right)
                                     .size(t.type_scale.sm)
-                                    .color(t.fg[2]),
+                                    .color(t.text(TextRole::Tertiary)),
                             );
                         });
                     }

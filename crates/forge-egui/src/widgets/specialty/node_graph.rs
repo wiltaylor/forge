@@ -20,7 +20,7 @@
 //! Delete/Backspace is only consumed while the pointer is over the canvas
 //! and no text widget has focus.
 
-use crate::theme::{FontWeight, Theme};
+use crate::theme::{FontWeight, Surface, TextRole, Theme};
 use crate::widgets::Tone;
 use egui::{
     Color32, CornerRadius, Key, Pos2, Rect, Sense, Shape, Stroke, StrokeKind, Ui, Vec2, WidgetInfo,
@@ -66,13 +66,13 @@ impl PortType {
     /// needs hardcoding.
     pub fn color(self, t: &Theme) -> Color32 {
         match self {
-            PortType::Trigger => t.fg[0],
+            PortType::Trigger => t.text(TextRole::Primary),
             PortType::String => t.success.base,
             PortType::Number => t.info.base,
             PortType::Boolean => t.danger.base,
             PortType::Object => t.accent.base,
             PortType::Array => t.warning.base,
-            PortType::Any => t.fg[3],
+            PortType::Any => t.text(TextRole::Disabled),
         }
     }
 }
@@ -393,8 +393,14 @@ impl<'a> NodeGraph<'a> {
 
         // --- Canvas surface + dotted grid (pans/zooms with the content).
         let canvas_radius = CornerRadius::same(t.radius.lg as u8);
-        painter.rect_filled(rect, canvas_radius, t.bg[0]);
-        draw_grid(&painter, rect, pan, zoom, t.fg[3].gamma_multiply(0.45));
+        painter.rect_filled(rect, canvas_radius, t.surface(Surface::Page));
+        draw_grid(
+            &painter,
+            rect,
+            pan,
+            zoom,
+            t.text(TextRole::Disabled).gamma_multiply(0.45),
+        );
 
         // --- Edges (under nodes). Remember screen midpoints for hit-tests.
         let node_by_id = |id: &str| nodes.iter().find(|n| n.id == id);
@@ -434,7 +440,7 @@ impl<'a> NodeGraph<'a> {
 
             // Body.
             let radius = CornerRadius::same(t.radius.md as u8);
-            painter.rect_filled(nrect, radius, t.bg[2]);
+            painter.rect_filled(nrect, radius, t.surface(Surface::Hover));
             let border = if selected {
                 Stroke::new(1.5, t.accent.base)
             } else {
@@ -458,11 +464,12 @@ impl<'a> NodeGraph<'a> {
                 FontWeight::Medium,
                 (t.type_scale.sm * zoom).max(5.0),
             );
-            let title = painter.layout_no_wrap(node.title.clone(), title_font, t.fg[0]);
+            let title =
+                painter.layout_no_wrap(node.title.clone(), title_font, t.text(TextRole::Primary));
             painter.galley(
                 Pos2::new(title_x, head.center().y - title.size().y / 2.0),
                 title,
-                t.fg[0],
+                t.text(TextRole::Primary),
             );
             if !node.inputs.is_empty() || !node.outputs.is_empty() {
                 painter.line_segment(
@@ -483,25 +490,43 @@ impl<'a> NodeGraph<'a> {
             let dot_r = (PORT_R * zoom).max(2.0);
             for (i, port) in node.inputs.iter().enumerate() {
                 let a = ts(node.in_anchor(i));
-                painter.circle(a, dot_r, port.ty.color(&t), Stroke::new(1.0, t.bg[0]));
-                let g = painter.layout_no_wrap(port.name.clone(), label_font.clone(), t.fg[1]);
+                painter.circle(
+                    a,
+                    dot_r,
+                    port.ty.color(&t),
+                    Stroke::new(1.0, t.surface(Surface::Page)),
+                );
+                let g = painter.layout_no_wrap(
+                    port.name.clone(),
+                    label_font.clone(),
+                    t.text(TextRole::Secondary),
+                );
                 painter.galley(
                     Pos2::new(nrect.min.x + 10.0 * zoom, a.y - g.size().y / 2.0),
                     g,
-                    t.fg[1],
+                    t.text(TextRole::Secondary),
                 );
             }
             for (i, port) in node.outputs.iter().enumerate() {
                 let a = ts(node.out_anchor(i));
-                painter.circle(a, dot_r, port.ty.color(&t), Stroke::new(1.0, t.bg[0]));
-                let g = painter.layout_no_wrap(port.name.clone(), label_font.clone(), t.fg[1]);
+                painter.circle(
+                    a,
+                    dot_r,
+                    port.ty.color(&t),
+                    Stroke::new(1.0, t.surface(Surface::Page)),
+                );
+                let g = painter.layout_no_wrap(
+                    port.name.clone(),
+                    label_font.clone(),
+                    t.text(TextRole::Secondary),
+                );
                 painter.galley(
                     Pos2::new(
                         nrect.max.x - 10.0 * zoom - g.size().x,
                         a.y - g.size().y / 2.0,
                     ),
                     g,
-                    t.fg[1],
+                    t.text(TextRole::Secondary),
                 );
             }
 
@@ -636,8 +661,17 @@ impl<'a> NodeGraph<'a> {
                 }
             }
             if er.hovered() || selected {
-                let tone = if selected { t.danger.base } else { t.fg[1] };
-                painter.circle(mid, 7.0, t.bg[3], Stroke::new(1.0, t.border.strong));
+                let tone = if selected {
+                    t.danger.base
+                } else {
+                    t.text(TextRole::Secondary)
+                };
+                painter.circle(
+                    mid,
+                    7.0,
+                    t.surface(Surface::Pressed),
+                    Stroke::new(1.0, t.border.strong),
+                );
                 let d = 2.8;
                 let s = Stroke::new(1.4, tone);
                 painter.line_segment([mid + Vec2::new(-d, -d), mid + Vec2::new(d, d)], s);

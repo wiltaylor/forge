@@ -3,7 +3,7 @@
 //! painted solid; `.marker(..)` draws an accent dashed "today" line.
 
 use crate::response::{ForgeResponse, Outcome};
-use crate::theme::{color::with_alpha, series_color, FontWeight, Theme};
+use crate::theme::{color::with_alpha, series_color, FontWeight, Surface, TextRole, Theme};
 use crate::widgets::charts::{self, nice_ticks, TipRow};
 use egui::{CornerRadius, Pos2, Rect, Sense, Shape, Stroke, Ui, Vec2};
 
@@ -96,7 +96,11 @@ impl<'a> Gantt<'a> {
                 .iter()
                 .map(|k| {
                     ui.painter()
-                        .layout_no_wrap(k.label.clone(), label_font.clone(), t.fg[1])
+                        .layout_no_wrap(
+                            k.label.clone(),
+                            label_font.clone(),
+                            t.text(TextRole::Secondary),
+                        )
                         .size()
                         .x
                 })
@@ -125,16 +129,18 @@ impl<'a> Gantt<'a> {
                     [Pos2::new(x, track.min.y), Pos2::new(x, track.max.y)],
                     Stroke::new(1.0, t.border.subtle),
                 );
-                let g = ui
-                    .painter()
-                    .layout_no_wrap(charts::fmt(tick), mono.clone(), t.fg[2]);
+                let g = ui.painter().layout_no_wrap(
+                    charts::fmt(tick),
+                    mono.clone(),
+                    t.text(TextRole::Tertiary),
+                );
                 ui.painter().galley(
                     Pos2::new(
                         (x - g.size().x / 2.0).clamp(track.min.x, track.max.x - g.size().x),
                         rect.min.y + (AXIS_H - g.size().y) / 2.0,
                     ),
                     g,
-                    t.fg[2],
+                    t.text(TextRole::Tertiary),
                 );
             }
 
@@ -150,14 +156,19 @@ impl<'a> Gantt<'a> {
                 let hovered = hover.is_some_and(|p| row.contains(p));
                 if hovered {
                     tip = Some(i);
-                    ui.painter()
-                        .rect_filled(row, CornerRadius::same(t.radius.sm as u8), t.bg[2]);
+                    ui.painter().rect_filled(
+                        row,
+                        CornerRadius::same(t.radius.sm as u8),
+                        t.surface(Surface::Hover),
+                    );
                 }
 
                 // Left label column (clipped to its width).
-                let g =
-                    ui.painter()
-                        .layout_no_wrap(task.label.clone(), label_font.clone(), t.fg[1]);
+                let g = ui.painter().layout_no_wrap(
+                    task.label.clone(),
+                    label_font.clone(),
+                    t.text(TextRole::Secondary),
+                );
                 ui.painter()
                     .with_clip_rect(Rect::from_min_max(
                         Pos2::new(rect.min.x, y),
@@ -166,7 +177,7 @@ impl<'a> Gantt<'a> {
                     .galley(
                         Pos2::new(rect.min.x, y + (row_h - g.size().y) / 2.0),
                         g,
-                        t.fg[1],
+                        t.text(TextRole::Secondary),
                     );
 
                 let color = series_color(&t, task.series);

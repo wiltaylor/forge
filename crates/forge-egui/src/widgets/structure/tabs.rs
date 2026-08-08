@@ -2,7 +2,7 @@
 //! caller's `match` — this is just the bar (web parity).
 
 use crate::response::{ForgeResponse, Outcome};
-use crate::theme::{FontWeight, Theme};
+use crate::theme::{FontWeight, Surface, TextRole, Theme};
 use egui::{Sense, Stroke, Ui, Vec2};
 
 pub struct TabItem<'a> {
@@ -51,11 +51,11 @@ impl<'a> Tabs<'a> {
                     let active = i == *self.active;
                     let font = t.font(ui.ctx(), FontWeight::Medium, t.type_scale.base);
                     let color = if item.disabled {
-                        t.fg[3]
+                        t.text(TextRole::Disabled)
                     } else if active {
-                        t.fg[0]
+                        t.text(TextRole::Primary)
                     } else {
-                        t.fg[2]
+                        t.text(TextRole::Tertiary)
                     };
                     let mut text = item.label.to_owned();
                     if let Some(count) = item.count {
@@ -82,7 +82,7 @@ impl<'a> Tabs<'a> {
                             ui.painter().rect_filled(
                                 rect.shrink2(egui::vec2(2.0, 4.0)),
                                 egui::CornerRadius::same(t.radius.sm as u8),
-                                t.bg[2],
+                                t.surface(Surface::Hover),
                             );
                         }
                         ui.painter().galley(

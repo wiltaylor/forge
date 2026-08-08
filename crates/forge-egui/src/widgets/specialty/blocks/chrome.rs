@@ -4,6 +4,7 @@
 
 use super::{Action, Ecx};
 use crate::response::{ForgeResponse, Outcome};
+use crate::theme::TextRole;
 use crate::widgets::overlays::{DropdownMenu, MenuItem};
 use egui::{Popup, Pos2, Rect, Sense, Ui, Vec2};
 use forge_blocks::{Address, BlockKind, Document, ListStyle};
@@ -24,9 +25,9 @@ pub(super) fn gutter(ui: &mut Ui, ecx: &mut Ecx, doc: &Document, addr: Address, 
         let open = Popup::is_id_open(ui.ctx(), Popup::default_response_id(&resp));
         if band_hovered || open || resp.hovered() {
             let color = if resp.hovered() || open {
-                t.fg[1]
+                t.text(TextRole::Secondary)
             } else {
-                t.fg[3]
+                t.text(TextRole::Disabled)
             };
             let g = ui
                 .painter()

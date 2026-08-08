@@ -108,13 +108,16 @@ pub fn draw(ui: &mut egui::Ui) {
                     forge_egui::theme::FontWeight::SemiBold,
                     t.type_scale.h3,
                 ))
-                .color(t.fg[0]),
+                .color(t.text(TextRole::Primary)),
         );
-        ui.label(egui::RichText::new("Body — jumps over the lazy dog.").color(t.fg[1]));
+        ui.label(
+            egui::RichText::new("Body — jumps over the lazy dog.")
+                .color(t.text(TextRole::Secondary)),
+        );
         ui.label(
             egui::RichText::new("mono — cargo run -p egui-gallery")
                 .font(t.mono(t.type_scale.base))
-                .color(t.fg[2]),
+                .color(t.text(TextRole::Tertiary)),
         );
     });
 }

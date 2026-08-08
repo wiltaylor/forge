@@ -17,7 +17,7 @@ pub fn draw(ui: &mut egui::Ui, ctx: &mut Ctx, state: &mut EffectsState) {
                  RunOptions::motion / FORGE_EGUI_MOTION (full · reduced · off).",
             )
             .size(t.type_scale.sm)
-            .color(t.fg[2]),
+            .color(t.text(TextRole::Tertiary)),
         );
         ui.add_space(8.0);
 
@@ -33,7 +33,10 @@ pub fn draw(ui: &mut egui::Ui, ctx: &mut Ctx, state: &mut EffectsState) {
                 .title("Test subject")
                 .show(ui, |ui| {
                     ui.set_max_width(288.0);
-                    ui.label(egui::RichText::new("Aim the effects at me.").color(t.fg[1]));
+                    ui.label(
+                        egui::RichText::new("Aim the effects at me.")
+                            .color(t.text(TextRole::Secondary)),
+                    );
                     let _ = Badge::new("stable")
                         .tone(forge_egui::widgets::Tone::Success)
                         .show(ui);

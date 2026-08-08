@@ -1,7 +1,7 @@
 //! Slide-in edge panel with a scrim — the egui sibling of `@forge/ui`'s
 //! `Sheet`. Slides over `theme.motion.base`; Esc or a scrim click closes.
 
-use crate::theme::{scrim, FontWeight, Theme};
+use crate::theme::{scrim, FontWeight, Surface, TextRole, Theme};
 use crate::widgets::primitives::{Glyph, IconButton};
 use egui::{CornerRadius, Frame, InnerResponse, Margin, Rect, Sense, Stroke, Ui, UiBuilder, Vec2};
 
@@ -96,7 +96,7 @@ impl<'a> Sheet<'a> {
                     .sense(Sense::CLICK | Sense::DRAG),
                 |ui| {
                     Frame::new()
-                        .fill(t.bg[4])
+                        .fill(t.surface(Surface::Popover))
                         .stroke(Stroke::new(1.0, t.border.default))
                         .corner_radius(CornerRadius::ZERO)
                         .inner_margin(Margin::same(20))
@@ -111,7 +111,7 @@ impl<'a> Sheet<'a> {
                                             FontWeight::SemiBold,
                                             t.type_scale.md,
                                         ))
-                                        .color(t.fg[0]),
+                                        .color(t.text(TextRole::Primary)),
                                 );
                                 ui.with_layout(
                                     egui::Layout::right_to_left(egui::Align::Center),

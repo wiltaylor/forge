@@ -2,7 +2,7 @@
 //! click target (Tab between options, Space/Enter selects).
 
 use crate::response::{ForgeResponse, Outcome};
-use crate::theme::{FontWeight, Theme};
+use crate::theme::{FontWeight, Surface, TextRole, Theme};
 use crate::widgets::util;
 use egui::{Response, Sense, Stroke, Ui, Vec2, WidgetInfo, WidgetType};
 
@@ -74,7 +74,11 @@ impl<'a> RadioGroup<'a> {
 }
 
 fn option_ui(ui: &mut Ui, t: &Theme, label: &str, selected: bool, disabled: bool) -> Response {
-    let text_color = if disabled { t.fg[3] } else { t.fg[0] };
+    let text_color = if disabled {
+        t.text(TextRole::Disabled)
+    } else {
+        t.text(TextRole::Primary)
+    };
     let galley = util::galley(
         ui,
         label,
@@ -98,10 +102,15 @@ fn option_ui(ui: &mut Ui, t: &Theme, label: &str, selected: bool, disabled: bool
     if ui.is_rect_visible(rect) {
         let center = egui::pos2(rect.min.x + CIRCLE_R, rect.center().y);
         if disabled {
-            ui.painter()
-                .circle(center, CIRCLE_R, t.bg[2], Stroke::new(1.0, t.border.subtle));
+            ui.painter().circle(
+                center,
+                CIRCLE_R,
+                t.surface(Surface::Hover),
+                Stroke::new(1.0, t.border.subtle),
+            );
             if selected {
-                ui.painter().circle_filled(center, DOT_R, t.fg[3]);
+                ui.painter()
+                    .circle_filled(center, DOT_R, t.text(TextRole::Disabled));
             }
         } else if selected {
             ui.painter()
@@ -113,8 +122,12 @@ fn option_ui(ui: &mut Ui, t: &Theme, label: &str, selected: bool, disabled: bool
             } else {
                 t.border.strong
             };
-            ui.painter()
-                .circle(center, CIRCLE_R, t.bg[2], Stroke::new(1.0, border));
+            ui.painter().circle(
+                center,
+                CIRCLE_R,
+                t.surface(Surface::Hover),
+                Stroke::new(1.0, border),
+            );
         }
         if response.has_focus() {
             ui.painter()

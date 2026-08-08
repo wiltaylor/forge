@@ -2,7 +2,7 @@
 //! lighter than a modal. Toggles on trigger click; click-outside/Esc dismiss.
 
 use crate::response::ForgeResponse;
-use crate::theme::Theme;
+use crate::theme::{Surface, Theme};
 use egui::{CornerRadius, Frame, InnerResponse, Margin, Popup, PopupCloseBehavior, Stroke, Ui};
 
 pub struct Popover {
@@ -40,7 +40,7 @@ impl Popover {
             .width(self.width)
             .frame(
                 Frame::new()
-                    .fill(t.bg[4])
+                    .fill(t.surface(Surface::Popover))
                     .stroke(Stroke::new(1.0, t.border.default))
                     .corner_radius(CornerRadius::same(t.radius.md as u8))
                     .inner_margin(Margin::same(12)),

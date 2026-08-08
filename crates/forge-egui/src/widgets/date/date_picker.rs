@@ -2,7 +2,7 @@
 //! as `forms::select`, with Input's label/help/error chrome.
 
 use crate::response::{ForgeResponse, Outcome};
-use crate::theme::{FontWeight, Theme};
+use crate::theme::{FontWeight, Surface, TextRole, Theme};
 use crate::widgets::date::calendar::{Calendar, CalendarState};
 use crate::widgets::primitives::Glyph;
 use crate::widgets::util;
@@ -109,7 +109,7 @@ impl<'a> DatePicker<'a> {
                 ui.label(
                     egui::RichText::new(label)
                         .font(t.font(ui.ctx(), FontWeight::Medium, t.type_scale.sm))
-                        .color(t.fg[1]),
+                        .color(t.text(TextRole::Secondary)),
                 );
                 ui.add_space(t.space.x(1.0));
             }
@@ -149,7 +149,8 @@ impl<'a> DatePicker<'a> {
                 } else {
                     t.border.default
                 };
-                ui.painter().rect_filled(rect, radius, t.bg[1]);
+                ui.painter()
+                    .rect_filled(rect, radius, t.surface(Surface::Card));
                 ui.painter().rect_stroke(
                     rect,
                     radius,
@@ -158,7 +159,11 @@ impl<'a> DatePicker<'a> {
                 );
                 util::focus_ring(ui, &response, rect, t.radius.md, &t);
 
-                let glyph_color = if disabled { t.fg[3] } else { t.fg[2] };
+                let glyph_color = if disabled {
+                    t.text(TextRole::Disabled)
+                } else {
+                    t.text(TextRole::Tertiary)
+                };
                 let g = util::galley(
                     ui,
                     "▦",
@@ -172,8 +177,18 @@ impl<'a> DatePicker<'a> {
                 );
 
                 let (text, color): (&str, Color32) = match cal.value.as_deref() {
-                    Some(value) => (value, if disabled { t.fg[3] } else { t.fg[0] }),
-                    None => (placeholder.unwrap_or("Pick a date…"), t.fg[3]),
+                    Some(value) => (
+                        value,
+                        if disabled {
+                            t.text(TextRole::Disabled)
+                        } else {
+                            t.text(TextRole::Primary)
+                        },
+                    ),
+                    None => (
+                        placeholder.unwrap_or("Pick a date…"),
+                        t.text(TextRole::Disabled),
+                    ),
                 };
                 let g = util::galley(
                     ui,
@@ -207,7 +222,7 @@ impl<'a> DatePicker<'a> {
             let mut picked = false;
             if *open && !disabled {
                 let frame = egui::Frame::new()
-                    .fill(t.bg[4])
+                    .fill(t.surface(Surface::Popover))
                     .stroke(Stroke::new(1.0, t.border.default))
                     .corner_radius(CornerRadius::same(t.radius.md as u8))
                     .inner_margin(Margin::same(8));
@@ -242,7 +257,7 @@ impl<'a> DatePicker<'a> {
             if let Some(error) = error {
                 sub_line(ui, &t, error, t.danger.base);
             } else if let Some(help) = help {
-                sub_line(ui, &t, help, t.fg[2]);
+                sub_line(ui, &t, help, t.text(TextRole::Tertiary));
             }
             (response, outcome)
         });

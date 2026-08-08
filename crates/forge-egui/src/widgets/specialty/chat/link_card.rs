@@ -2,7 +2,7 @@
 //! link in the system browser (scheme-sanitized like markdown links).
 
 use crate::response::{ForgeResponse, Outcome};
-use crate::theme::{FontWeight, Theme};
+use crate::theme::{FontWeight, Surface, TextRole, Theme};
 use crate::widgets::specialty::markdown::safe_url;
 use egui::{CornerRadius, Frame, Margin, RichText, Sense, Stroke, Ui};
 
@@ -29,7 +29,7 @@ impl<'a> LinkCard<'a> {
     pub fn show(self, ui: &mut Ui) -> ForgeResponse {
         let t = Theme::of(ui.ctx());
         let frame = Frame::new()
-            .fill(t.bg[1])
+            .fill(t.surface(Surface::Card))
             .stroke(Stroke::new(1.0, t.border.default))
             .corner_radius(CornerRadius::same(t.radius.md as u8))
             .inner_margin(Margin::same(10))
@@ -44,13 +44,13 @@ impl<'a> LinkCard<'a> {
                     ui.label(
                         RichText::new(description)
                             .font(t.font(ui.ctx(), FontWeight::Regular, t.type_scale.sm))
-                            .color(t.fg[2]),
+                            .color(t.text(TextRole::Tertiary)),
                     );
                 }
                 ui.label(
                     RichText::new(self.url)
                         .font(t.font(ui.ctx(), FontWeight::Regular, t.type_scale.xs))
-                        .color(t.fg[3]),
+                        .color(t.text(TextRole::Disabled)),
                 );
             });
 

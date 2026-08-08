@@ -3,7 +3,7 @@
 //! app-owned).
 
 use crate::response::{ForgeResponse, Outcome};
-use crate::theme::{FontWeight, Theme};
+use crate::theme::{FontWeight, Surface, TextRole, Theme};
 use crate::widgets::primitives::Glyph;
 use crate::widgets::util;
 use egui::{CornerRadius, Rect, Response, Sense, Stroke, Ui, Vec2, WidgetInfo, WidgetType};
@@ -103,7 +103,7 @@ impl<'a> Accordion<'a> {
     }
 }
 
-/// Shared header chrome: bg[1] row, hover bg[2], rotating chevron + title.
+/// Shared header chrome: card row, hover surface, rotating chevron + title.
 fn header_row(
     ui: &mut Ui,
     t: &Theme,
@@ -119,7 +119,11 @@ fn header_row(
     let _ = position;
     if ui.is_rect_visible(rect) {
         let radius = CornerRadius::same(t.radius.md as u8);
-        let fill = if resp.hovered() { t.bg[2] } else { t.bg[1] };
+        let fill = if resp.hovered() {
+            t.surface(Surface::Hover)
+        } else {
+            t.surface(Surface::Card)
+        };
         ui.painter().rect_filled(rect, radius, fill);
         ui.painter().rect_stroke(
             rect,
@@ -134,10 +138,15 @@ fn header_row(
             * ui.ctx()
                 .animate_bool_with_time(resp.id.with("chev"), open, t.motion.base);
         let font = t.font(ui.ctx(), FontWeight::Regular, t.type_scale.sm);
-        let g = util::galley(ui, Glyph::ChevronRight.as_str(), font, t.fg[2]);
+        let g = util::galley(
+            ui,
+            Glyph::ChevronRight.as_str(),
+            font,
+            t.text(TextRole::Tertiary),
+        );
         let chev_center = egui::pos2(rect.min.x + 16.0, rect.center().y);
         let chev_rect = Rect::from_center_size(chev_center, g.size());
-        let mut shape = egui::epaint::TextShape::new(chev_rect.min, g, t.fg[2]);
+        let mut shape = egui::epaint::TextShape::new(chev_rect.min, g, t.text(TextRole::Tertiary));
         shape.angle = angle;
         // Rotate around the glyph center: TextShape rotates around pos, so
         // offset pos to keep the glyph visually centered.
@@ -147,7 +156,11 @@ fn header_row(
         ui.painter().add(shape);
 
         let font = t.font(ui.ctx(), FontWeight::Medium, t.type_scale.base);
-        let color = if resp.hovered() { t.fg[0] } else { t.fg[1] };
+        let color = if resp.hovered() {
+            t.text(TextRole::Primary)
+        } else {
+            t.text(TextRole::Secondary)
+        };
         let g = util::galley(ui, title, font, color);
         ui.painter().galley(
             egui::pos2(rect.min.x + 30.0, rect.center().y - g.size().y / 2.0),

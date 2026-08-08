@@ -6,14 +6,13 @@
 
 use super::inline::{inline_job, InlineStyle};
 use super::{Action, BlockEditorState, CaretHint, Ecx};
-use crate::theme::{series_color, FontWeight};
+use crate::theme::{series_color, FontWeight, Surface, TextRole};
 use crate::widgets::charts::{BarChart, BarGroup, LineChart, LineSeries, PieChart, PieSlice};
 use crate::widgets::specialty::code::highlight_job;
 use crate::widgets::specialty::{FlowEdge, FlowNode, Flowchart};
 use crate::widgets::Tone as WidgetTone;
 use egui::{
-    Align2, CornerRadius, Frame, Key, Margin, Modifiers, Pos2, Rect, Sense, Shape, Stroke, Ui,
-    Vec2,
+    Align2, CornerRadius, Frame, Key, Margin, Modifiers, Pos2, Rect, Sense, Shape, Stroke, Ui, Vec2,
 };
 use forge_blocks::{Address, BlockKind, Document, MessageKind};
 
@@ -186,7 +185,11 @@ fn render_kind(ui: &mut Ui, ecx: &mut Ecx, st: &mut BlockEditorState, kind: &Blo
             ecx,
             title,
             kicker.as_deref(),
-            &[reading_time.as_deref(), updated.as_deref(), version.as_deref()],
+            &[
+                reading_time.as_deref(),
+                updated.as_deref(),
+                version.as_deref(),
+            ],
         ),
         _ => {}
     }
@@ -254,7 +257,7 @@ fn json_edit(
         .unwrap_or("json");
 
     Frame::new()
-        .fill(t.bg[1])
+        .fill(t.surface(Surface::Card))
         .stroke(Stroke::new(1.0, t.border.subtle))
         .corner_radius(CornerRadius::same(t.radius.md as u8))
         .inner_margin(Margin::same(8))
@@ -264,7 +267,7 @@ fn json_edit(
                 ui.label(
                     egui::RichText::new(type_name)
                         .font(t.mono(t.type_scale.xs))
-                        .color(t.fg[2]),
+                        .color(t.text(TextRole::Tertiary)),
                 );
                 if let Some(err) = &st.json_err {
                     ui.label(
@@ -373,7 +376,7 @@ fn image_view(
                 ui.label(
                     egui::RichText::new(alt)
                         .font(ecx.t.mono(ecx.t.type_scale.xs))
-                        .color(ecx.t.fg[2]),
+                        .color(ecx.t.text(TextRole::Tertiary)),
                 );
             }
             return;
@@ -396,10 +399,8 @@ fn load_image<'s>(
         let tex = std::fs::read(src).ok().and_then(|bytes| {
             let img = image::load_from_memory(&bytes).ok()?.to_rgba8();
             let (w, h) = img.dimensions();
-            let color = egui::ColorImage::from_rgba_unmultiplied(
-                [w as usize, h as usize],
-                img.as_raw(),
-            );
+            let color =
+                egui::ColorImage::from_rgba_unmultiplied([w as usize, h as usize], img.as_raw());
             Some(ui.ctx().load_texture(
                 format!("fblk-img:{src}"),
                 color,
@@ -415,7 +416,7 @@ fn load_image<'s>(
 fn media_card(ui: &mut Ui, ecx: &mut Ecx, chip: &str, primary: Option<&str>, secondary: &str) {
     let t = ecx.t;
     Frame::new()
-        .fill(t.bg[1])
+        .fill(t.surface(Surface::Card))
         .stroke(Stroke::new(1.0, t.border.default))
         .corner_radius(CornerRadius::same(t.radius.md as u8))
         .inner_margin(Margin::same(10))
@@ -425,19 +426,19 @@ fn media_card(ui: &mut Ui, ecx: &mut Ecx, chip: &str, primary: Option<&str>, sec
                 ui.label(
                     egui::RichText::new(chip)
                         .font(t.mono(t.type_scale.xs))
-                        .color(t.fg[2]),
+                        .color(t.text(TextRole::Tertiary)),
                 );
                 if let Some(primary) = primary {
                     ui.label(
                         egui::RichText::new(primary)
                             .font(t.font(ui.ctx(), FontWeight::Medium, t.type_scale.sm))
-                            .color(t.fg[0]),
+                            .color(t.text(TextRole::Primary)),
                     );
                 }
                 ui.label(
                     egui::RichText::new(secondary)
                         .font(t.mono(t.type_scale.xs))
-                        .color(t.fg[3]),
+                        .color(t.text(TextRole::Disabled)),
                 );
             });
         });
@@ -446,7 +447,7 @@ fn media_card(ui: &mut Ui, ecx: &mut Ecx, chip: &str, primary: Option<&str>, sec
 fn math_view(ui: &mut Ui, ecx: &mut Ecx, tex: &str) {
     let t = ecx.t;
     Frame::new()
-        .fill(t.bg[1])
+        .fill(t.surface(Surface::Card))
         .corner_radius(CornerRadius::same(t.radius.md as u8))
         .inner_margin(Margin::same(10))
         .show(ui, |ui| {
@@ -455,13 +456,13 @@ fn math_view(ui: &mut Ui, ecx: &mut Ecx, tex: &str) {
                 ui.label(
                     egui::RichText::new("math")
                         .font(t.mono(t.type_scale.xs))
-                        .color(t.fg[3]),
+                        .color(t.text(TextRole::Disabled)),
                 );
             });
             ui.label(
                 egui::RichText::new(tex)
                     .font(t.mono(t.type_scale.sm))
-                    .color(t.fg[1]),
+                    .color(t.text(TextRole::Secondary)),
             );
         });
 }
@@ -472,8 +473,11 @@ fn chart_title(ui: &mut Ui, ecx: &mut Ecx, title: Option<&str>) {
     if let Some(title) = title {
         ui.label(
             egui::RichText::new(title)
-                .font(ecx.t.font(ui.ctx(), FontWeight::Medium, ecx.t.type_scale.sm))
-                .color(ecx.t.fg[0]),
+                .font(
+                    ecx.t
+                        .font(ui.ctx(), FontWeight::Medium, ecx.t.type_scale.sm),
+                )
+                .color(ecx.t.text(TextRole::Primary)),
         );
     }
 }
@@ -510,10 +514,7 @@ fn sequence_view(
     for (i, p) in participants.iter().enumerate() {
         let x = cx(i);
         painter.add(Shape::dashed_line(
-            &[
-                Pos2::new(x, rect.min.y + head_h),
-                Pos2::new(x, rect.max.y),
-            ],
+            &[Pos2::new(x, rect.min.y + head_h), Pos2::new(x, rect.max.y)],
             Stroke::new(1.0, t.border.default),
             4.0,
             4.0,
@@ -525,7 +526,7 @@ fn sequence_view(
         painter.rect(
             head,
             CornerRadius::same(t.radius.sm as u8),
-            t.bg[2],
+            t.surface(Surface::Hover),
             Stroke::new(1.0, t.border.default),
             egui::StrokeKind::Inside,
         );
@@ -534,7 +535,7 @@ fn sequence_view(
             Align2::CENTER_CENTER,
             p.name.as_deref().unwrap_or(&p.id),
             t.font(ui.ctx(), FontWeight::Medium, t.type_scale.xs),
-            t.fg[0],
+            t.text(TextRole::Primary),
         );
     }
 
@@ -549,7 +550,7 @@ fn sequence_view(
         if let (Some(f), Some(to)) = (col_of(&m.from), col_of(&m.to)) {
             let (x0, x1) = (cx(f), cx(to));
             let dashed = matches!(m.kind, Some(MessageKind::Async) | Some(MessageKind::Reply));
-            let stroke = Stroke::new(1.2, t.fg[2]);
+            let stroke = Stroke::new(1.2, t.text(TextRole::Tertiary));
             if dashed {
                 painter.add(Shape::dashed_line(
                     &[Pos2::new(x0, y), Pos2::new(x1, y)],
@@ -576,7 +577,7 @@ fn sequence_view(
                     Align2::CENTER_BOTTOM,
                     text_,
                     t.font(ui.ctx(), FontWeight::Regular, t.type_scale.xs),
-                    t.fg[1],
+                    t.text(TextRole::Secondary),
                 );
             }
         }
@@ -587,7 +588,7 @@ fn sequence_view(
                 Align2::LEFT_CENTER,
                 format!("▹ {}", note_iter[ni].1),
                 t.font(ui.ctx(), FontWeight::Regular, t.type_scale.xs),
-                t.fg[3],
+                t.text(TextRole::Disabled),
             );
             y += row_h;
             ni += 1;
@@ -608,14 +609,14 @@ fn node_table_view(ui: &mut Ui, ecx: &mut Ecx, title: &str, rows: &[forge_blocks
             ui.set_min_width(width);
             if !title.is_empty() {
                 Frame::new()
-                    .fill(t.bg[2])
+                    .fill(t.surface(Surface::Hover))
                     .inner_margin(Margin::symmetric(10, 5))
                     .show(ui, |ui| {
                         ui.set_min_width(width - 20.0);
                         ui.label(
                             egui::RichText::new(title)
                                 .font(t.font(ui.ctx(), FontWeight::Medium, t.type_scale.sm))
-                                .color(t.fg[0]),
+                                .color(t.text(TextRole::Primary)),
                         );
                     });
             }
@@ -627,8 +628,7 @@ fn node_table_view(ui: &mut Ui, ecx: &mut Ecx, title: &str, rows: &[forge_blocks
                     } else {
                         ecx.t.border.default
                     };
-                    let (drect, _) =
-                        ui.allocate_exact_size(Vec2::new(8.0, 18.0), Sense::hover());
+                    let (drect, _) = ui.allocate_exact_size(Vec2::new(8.0, 18.0), Sense::hover());
                     ui.painter().circle_filled(
                         Pos2::new(drect.center().x, drect.center().y),
                         3.0,
@@ -637,7 +637,7 @@ fn node_table_view(ui: &mut Ui, ecx: &mut Ecx, title: &str, rows: &[forge_blocks
                     let style = InlineStyle {
                         size: t.type_scale.sm,
                         weight: FontWeight::Regular,
-                        color: t.fg[1],
+                        color: t.text(TextRole::Secondary),
                         italics: false,
                     };
                     let job = inline_job(ui, t, &row.md, style, f32::INFINITY);
@@ -658,19 +658,19 @@ fn tree_rows(ui: &mut Ui, ecx: &mut Ecx, nodes: &[forge_blocks::TreeNode], prefi
             ui.label(
                 egui::RichText::new(branch)
                     .font(t.mono(t.type_scale.sm))
-                    .color(t.fg[3]),
+                    .color(t.text(TextRole::Disabled)),
             );
             if let Some(icon) = &node.icon {
                 ui.label(
                     egui::RichText::new(format!("{icon} "))
                         .font(t.mono(t.type_scale.sm))
-                        .color(t.fg[2]),
+                        .color(t.text(TextRole::Tertiary)),
                 );
             }
             ui.label(
                 egui::RichText::new(&node.title)
                     .font(t.mono(t.type_scale.sm))
-                    .color(t.fg[1]),
+                    .color(t.text(TextRole::Secondary)),
             );
         });
         if let Some(children) = &node.children {
@@ -692,7 +692,7 @@ fn timeline_view(
         ui.label(
             egui::RichText::new(title)
                 .font(t.font(ui.ctx(), FontWeight::Medium, t.type_scale.sm))
-                .color(t.fg[0]),
+                .color(t.text(TextRole::Primary)),
         );
     }
     if let Some(phases) = phases {
@@ -700,24 +700,20 @@ fn timeline_view(
             ui.horizontal_wrapped(|ui| {
                 for (i, p) in phases.iter().enumerate() {
                     Frame::new()
-                        .fill(t.bg[2])
+                        .fill(t.surface(Surface::Hover))
                         .corner_radius(CornerRadius::same(99))
                         .inner_margin(Margin::symmetric(8, 2))
                         .show(ui, |ui| {
                             ui.horizontal(|ui| {
                                 ui.label(
                                     egui::RichText::new(&p.label)
-                                        .font(t.font(
-                                            ui.ctx(),
-                                            FontWeight::Medium,
-                                            t.type_scale.xs,
-                                        ))
+                                        .font(t.font(ui.ctx(), FontWeight::Medium, t.type_scale.xs))
                                         .color(series_color(t, i)),
                                 );
                                 ui.label(
                                     egui::RichText::new(format!("{} → {}", p.from, p.to))
                                         .font(t.mono(t.type_scale.xs))
-                                        .color(t.fg[3]),
+                                        .color(t.text(TextRole::Disabled)),
                                 );
                             });
                         });
@@ -727,10 +723,8 @@ fn timeline_view(
     }
     let row_h = 22.0;
     for (i, item) in items.iter().enumerate() {
-        let (rect, _) = ui.allocate_exact_size(
-            Vec2::new(ui.available_width(), row_h),
-            Sense::hover(),
-        );
+        let (rect, _) =
+            ui.allocate_exact_size(Vec2::new(ui.available_width(), row_h), Sense::hover());
         let painter = ui.painter();
         let dot = Pos2::new(rect.min.x + 6.0, rect.center().y);
         painter.circle_filled(dot, 3.5, t.accent.base);
@@ -748,13 +742,13 @@ fn timeline_view(
             Align2::LEFT_CENTER,
             &item.label,
             t.font(ui.ctx(), FontWeight::Regular, t.type_scale.sm),
-            t.fg[0],
+            t.text(TextRole::Primary),
         );
         let label_w = painter
             .layout_no_wrap(
                 item.label.clone(),
                 t.font(ui.ctx(), FontWeight::Regular, t.type_scale.sm),
-                t.fg[0],
+                t.text(TextRole::Primary),
             )
             .size()
             .x;
@@ -763,12 +757,18 @@ fn timeline_view(
             Align2::LEFT_CENTER,
             &item.on,
             t.mono(t.type_scale.xs),
-            t.fg[3],
+            t.text(TextRole::Disabled),
         );
     }
 }
 
-fn chapter_view(ui: &mut Ui, ecx: &mut Ecx, title: &str, kicker: Option<&str>, meta: &[Option<&str>]) {
+fn chapter_view(
+    ui: &mut Ui,
+    ecx: &mut Ecx,
+    title: &str,
+    kicker: Option<&str>,
+    meta: &[Option<&str>],
+) {
     let t = ecx.t;
     if let Some(kicker) = kicker {
         ui.label(
@@ -780,14 +780,14 @@ fn chapter_view(ui: &mut Ui, ecx: &mut Ecx, title: &str, kicker: Option<&str>, m
     ui.label(
         egui::RichText::new(title)
             .font(t.font(ui.ctx(), FontWeight::SemiBold, t.type_scale.h2))
-            .color(t.fg[0]),
+            .color(t.text(TextRole::Primary)),
     );
     let parts: Vec<&str> = meta.iter().flatten().copied().collect();
     if !parts.is_empty() {
         ui.label(
             egui::RichText::new(parts.join(" · "))
                 .font(t.mono(t.type_scale.xs))
-                .color(t.fg[2]),
+                .color(t.text(TextRole::Tertiary)),
         );
     }
 }

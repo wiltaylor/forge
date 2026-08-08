@@ -1,6 +1,6 @@
 //! KPI tile: eyebrow label, large value, optional trend delta.
 
-use crate::theme::{FontWeight, Theme};
+use crate::theme::{FontWeight, Surface, TextRole, Theme};
 use crate::widgets::primitives::Glyph;
 use crate::widgets::Tone;
 use egui::{CornerRadius, Frame, Margin, Stroke, Ui};
@@ -35,7 +35,7 @@ impl<'a> Stat<'a> {
     pub fn show(self, ui: &mut Ui) -> egui::Response {
         let t = Theme::of(ui.ctx());
         Frame::new()
-            .fill(t.bg[1])
+            .fill(t.surface(Surface::Card))
             .stroke(Stroke::new(1.0, t.border.subtle))
             .corner_radius(CornerRadius::same(t.radius.lg as u8))
             .inner_margin(Margin::same(t.space.x(4.0) as i8))
@@ -46,7 +46,7 @@ impl<'a> Stat<'a> {
                 ui.label(
                     egui::RichText::new(self.value)
                         .font(t.font(ui.ctx(), FontWeight::SemiBold, t.type_scale.h2))
-                        .color(t.fg[0]),
+                        .color(t.text(TextRole::Primary)),
                 );
                 if let Some((text, trend, tone)) = self.delta {
                     let (base, _, _) = tone.triple(&t);

@@ -39,7 +39,7 @@ pub use structure::*;
 #[cfg(feature = "term")]
 pub use term::*;
 
-use crate::theme::Theme;
+use crate::theme::{Surface, TextRole, Theme};
 use egui::Color32;
 
 // Families land milestone by milestone:
@@ -69,7 +69,11 @@ impl Tone {
     /// `(base, tint-bg, text-on-tint)` for this tone.
     pub fn triple(self, t: &Theme) -> (Color32, Color32, Color32) {
         match self {
-            Tone::Neutral => (t.fg[2], t.bg[3], t.fg[1]),
+            Tone::Neutral => (
+                t.text(TextRole::Tertiary),
+                t.surface(Surface::Pressed),
+                t.text(TextRole::Secondary),
+            ),
             Tone::Accent => (t.accent.base, t.accent.bg, t.accent.fg),
             Tone::Success => (t.success.base, t.success.bg, t.success.fg),
             Tone::Warning => (t.warning.base, t.warning.bg, t.warning.fg),

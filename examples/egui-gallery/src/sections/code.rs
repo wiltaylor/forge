@@ -65,7 +65,7 @@ pub fn draw(ui: &mut egui::Ui, state: &mut CodeSectionState) {
                     forge_egui::theme::FontWeight::Regular,
                     t.type_scale.xs,
                 ))
-                .color(t.fg[2]),
+                .color(t.text(TextRole::Tertiary)),
         );
     });
     ui.add_space(12.0);

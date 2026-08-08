@@ -3,7 +3,8 @@
 
 use crate::response::{ForgeResponse, Outcome};
 use crate::theme::{
-    FontWeight, Theme, SIDEBAR_RAIL, SIDEBAR_WIDTH, STATUSBAR_HEIGHT, TOPBAR_HEIGHT,
+    FontWeight, Surface, TextRole, Theme, SIDEBAR_RAIL, SIDEBAR_WIDTH, STATUSBAR_HEIGHT,
+    TOPBAR_HEIGHT,
 };
 use crate::widgets::primitives::Glyph;
 use egui::{CornerRadius, Sense, Stroke, Ui, Vec2};
@@ -140,7 +141,7 @@ impl<'a> Shell<'a> {
             .show_separator_line(false)
             .frame(
                 egui::Frame::new()
-                    .fill(t.bg[1])
+                    .fill(t.surface(Surface::Card))
                     .inner_margin(egui::Margin::symmetric(16, 0)),
             )
             .show(ui, |ui| {
@@ -154,7 +155,7 @@ impl<'a> Shell<'a> {
                         ui.label(
                             egui::RichText::new(title)
                                 .font(t.font(ui.ctx(), FontWeight::Medium, t.type_scale.md))
-                                .color(t.fg[0]),
+                                .color(t.text(TextRole::Primary)),
                         );
                     }
                     if let Some(right) = self.topbar_right {
@@ -169,7 +170,7 @@ impl<'a> Shell<'a> {
             .show_separator_line(false)
             .frame(
                 egui::Frame::new()
-                    .fill(t.bg[1])
+                    .fill(t.surface(Surface::Card))
                     .inner_margin(egui::Margin::symmetric(16, 0)),
             )
             .show(ui, |ui| {
@@ -183,7 +184,7 @@ impl<'a> Shell<'a> {
                         ui.label(
                             egui::RichText::new(status)
                                 .size(t.type_scale.sm)
-                                .color(t.fg[2]),
+                                .color(t.text(TextRole::Tertiary)),
                         );
                     }
                     if let Some(right) = self.status_right {
@@ -191,7 +192,7 @@ impl<'a> Shell<'a> {
                             ui.label(
                                 egui::RichText::new(right)
                                     .size(t.type_scale.sm)
-                                    .color(t.fg[2]),
+                                    .color(t.text(TextRole::Tertiary)),
                             );
                         });
                     }
@@ -208,7 +209,7 @@ impl<'a> Shell<'a> {
             .exact_size(width)
             .resizable(false)
             .show_separator_line(false)
-            .frame(egui::Frame::new().fill(t.bg[1]))
+            .frame(egui::Frame::new().fill(t.surface(Surface::Card)))
             .show(ui, |ui| {
                 let rect = ui.max_rect();
                 ui.painter().line_segment(
@@ -223,13 +224,13 @@ impl<'a> Shell<'a> {
                             ui.label(
                                 egui::RichText::new(self.title)
                                     .font(t.font(ui.ctx(), FontWeight::SemiBold, t.type_scale.md))
-                                    .color(t.fg[0]),
+                                    .color(t.text(TextRole::Primary)),
                             );
                             if let Some(subtitle) = self.subtitle {
                                 ui.label(
                                     egui::RichText::new(subtitle)
                                         .size(t.type_scale.xs)
-                                        .color(t.fg[2]),
+                                        .color(t.text(TextRole::Tertiary)),
                                 );
                             }
                         });
@@ -266,7 +267,7 @@ impl<'a> Shell<'a> {
 
         // Content region fills the remainder.
         let response = egui::Frame::new()
-            .fill(t.bg[0])
+            .fill(t.surface(Surface::Page))
             .inner_margin(egui::Margin::same(16))
             .show(ui, |ui| {
                 ui.set_min_size(ui.available_size());
@@ -307,11 +308,18 @@ fn nav_row(ui: &mut Ui, t: &Theme, item: &NavItem, selected: bool, collapsed: bo
                 t.accent.base,
             );
         } else if response.hovered() {
-            ui.painter()
-                .rect_filled(inner, CornerRadius::same(t.radius.md as u8), t.bg[2]);
+            ui.painter().rect_filled(
+                inner,
+                CornerRadius::same(t.radius.md as u8),
+                t.surface(Surface::Hover),
+            );
         }
 
-        let text_color = if selected { t.accent.fg } else { t.fg[1] };
+        let text_color = if selected {
+            t.accent.fg
+        } else {
+            t.text(TextRole::Secondary)
+        };
         let mut x = inner.min.x + 10.0;
         if let Some(icon) = item.icon {
             let g = ui.painter().layout_no_wrap(
@@ -341,13 +349,13 @@ fn nav_row(ui: &mut Ui, t: &Theme, item: &NavItem, selected: bool, collapsed: bo
                 let cg = ui.painter().layout_no_wrap(
                     count.to_string(),
                     egui::FontId::proportional(t.type_scale.xs),
-                    t.fg[2],
+                    t.text(TextRole::Tertiary),
                 );
                 let cx = inner.max.x - cg.size().x - 10.0;
                 ui.painter().galley(
                     egui::pos2(cx, rect.center().y - cg.size().y / 2.0),
                     cg,
-                    t.fg[2],
+                    t.text(TextRole::Tertiary),
                 );
             }
         }

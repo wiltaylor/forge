@@ -2,7 +2,7 @@
 //! boxes, dividers, and the typing indicator.
 
 use super::{ChatItem, Role, ToolStatus};
-use crate::theme::{FontWeight, Theme};
+use crate::theme::{FontWeight, Surface, TextRole, Theme};
 use crate::widgets::specialty::markdown::Markdown;
 use egui::{Align, CornerRadius, Frame, Layout, Margin, Pos2, RichText, Sense, Stroke, Ui, Vec2};
 
@@ -97,13 +97,13 @@ fn message(
         Role::User => (Align::Max, t.accent.bg, Stroke::NONE, "You"),
         Role::Assistant => (
             Align::Min,
-            t.bg[1],
+            t.surface(Surface::Card),
             Stroke::new(1.0, t.border.subtle),
             "Assistant",
         ),
         Role::System => (
             Align::Min,
-            t.bg[1],
+            t.surface(Surface::Card),
             Stroke::new(1.0, t.border.subtle),
             "System",
         ),
@@ -115,13 +115,13 @@ fn message(
             ui.label(
                 RichText::new(name.unwrap_or(default_name))
                     .font(t.font(ui.ctx(), FontWeight::Medium, t.type_scale.xs))
-                    .color(t.fg[2]),
+                    .color(t.text(TextRole::Tertiary)),
             );
             if let Some(time) = time {
                 ui.label(
                     RichText::new(time)
                         .font(t.font(ui.ctx(), FontWeight::Regular, t.type_scale.xs))
-                        .color(t.fg[3]),
+                        .color(t.text(TextRole::Disabled)),
                 );
             }
         });
@@ -143,7 +143,7 @@ fn tool_call(ui: &mut Ui, t: &Theme, title: &str, status: ToolStatus, body: Opti
     let mut open = ui.data(|d| d.get_temp::<bool>(open_id)).unwrap_or(false);
 
     Frame::new()
-        .fill(t.bg[1])
+        .fill(t.surface(Surface::Card))
         .stroke(Stroke::new(1.0, t.border.default))
         .corner_radius(CornerRadius::same(t.radius.md as u8))
         .inner_margin(Margin::same(10))
@@ -164,13 +164,13 @@ fn tool_call(ui: &mut Ui, t: &Theme, title: &str, status: ToolStatus, body: Opti
                 ui.label(
                     RichText::new(title)
                         .font(t.font(ui.ctx(), FontWeight::Medium, t.type_scale.base))
-                        .color(t.fg[0]),
+                        .color(t.text(TextRole::Primary)),
                 );
                 if body.is_some() {
                     ui.label(
                         RichText::new(if open { "▾" } else { "▸" })
                             .font(t.font(ui.ctx(), FontWeight::Regular, t.type_scale.sm))
-                            .color(t.fg[2]),
+                            .color(t.text(TextRole::Tertiary)),
                     );
                 }
                 if status == ToolStatus::Running {
@@ -193,7 +193,7 @@ fn tool_call(ui: &mut Ui, t: &Theme, title: &str, status: ToolStatus, body: Opti
                     ui.label(
                         RichText::new(body)
                             .font(t.mono(t.type_scale.sm))
-                            .color(t.fg[2]),
+                            .color(t.text(TextRole::Tertiary)),
                     );
                 }
             }
@@ -216,7 +216,7 @@ fn divider(ui: &mut Ui, t: &Theme, label: &str) {
     let g = ui.painter().layout_no_wrap(
         spaced.trim_end_matches('\u{200A}').to_owned(),
         t.font(ui.ctx(), FontWeight::Medium, t.type_scale.xs),
-        t.fg[2],
+        t.text(TextRole::Tertiary),
     );
     let cy = rect.center().y;
     let half_gap = g.size().x / 2.0 + 8.0;
@@ -228,7 +228,7 @@ fn divider(ui: &mut Ui, t: &Theme, label: &str) {
     ui.painter().galley(
         Pos2::new(rect.center().x - g.size().x / 2.0, cy - g.size().y / 2.0),
         g,
-        t.fg[2],
+        t.text(TextRole::Tertiary),
     );
 }
 
@@ -244,7 +244,7 @@ fn typing(ui: &mut Ui, t: &Theme) {
         ui.painter().circle_filled(
             Pos2::new(rect.min.x + 6.0 + k as f32 * 12.0, rect.center().y),
             3.0,
-            t.fg[2].gamma_multiply(alpha),
+            t.text(TextRole::Tertiary).gamma_multiply(alpha),
         );
     }
     ui.ctx().request_repaint();

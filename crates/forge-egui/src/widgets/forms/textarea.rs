@@ -2,7 +2,7 @@
 //! `egui::TextEdit::multiline`. Ctrl+Enter submits (plain Enter is a newline).
 
 use crate::response::{ForgeResponse, Outcome};
-use crate::theme::{FontWeight, Theme};
+use crate::theme::{FontWeight, Surface, TextRole, Theme};
 use crate::widgets::forms::field;
 use egui::{CornerRadius, Key, Margin, Stroke, Ui};
 
@@ -80,7 +80,7 @@ impl<'a> Textarea<'a> {
                 }
 
                 let mut prepared = egui::Frame::new()
-                    .fill(t.bg[1])
+                    .fill(t.surface(Surface::Card))
                     .corner_radius(CornerRadius::same(t.radius.md as u8))
                     .inner_margin(Margin::symmetric(10, 8))
                     .begin(ui);
@@ -91,11 +91,15 @@ impl<'a> Textarea<'a> {
                         .frame(egui::Frame::NONE)
                         .desired_rows(self.rows)
                         .font(t.font(ui.ctx(), FontWeight::Regular, t.type_scale.base))
-                        .text_color(if self.disabled { t.fg[3] } else { t.fg[0] })
+                        .text_color(if self.disabled {
+                            t.text(TextRole::Disabled)
+                        } else {
+                            t.text(TextRole::Primary)
+                        })
                         .desired_width(ui.available_width())
                         .interactive(!self.disabled);
                     if let Some(p) = self.placeholder {
-                        te = te.hint_text(egui::RichText::new(p).color(t.fg[3]));
+                        te = te.hint_text(egui::RichText::new(p).color(t.text(TextRole::Disabled)));
                     }
                     ui.add(te)
                 };
@@ -113,7 +117,7 @@ impl<'a> Textarea<'a> {
                 if let Some(error) = self.error {
                     field::sub_line(ui, &t, error, t.danger.base);
                 } else if let Some(help) = self.help {
-                    field::sub_line(ui, &t, help, t.fg[2]);
+                    field::sub_line(ui, &t, help, t.text(TextRole::Tertiary));
                 }
                 response
             })
