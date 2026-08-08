@@ -34,6 +34,7 @@ describe('request unwrapping', () => {
       method: 'GET',
       path: '/api/health',
       body: null,
+      token: null,
     });
   });
 
@@ -58,6 +59,45 @@ describe('request unwrapping', () => {
   });
 });
 
+describe('auth', () => {
+  it('carries the token a login minted on every later request', async () => {
+    const client = createClient();
+    respond(200, { ok: true, data: { token: 'jwt-1', expires_at: 1, user: { name: 'ann' } } });
+    await client.auth.login('ann', 'pw');
+    expect(invokeMock).toHaveBeenCalledWith('plugin:forge|request', {
+      method: 'POST',
+      path: '/api/auth/login',
+      body: { username: 'ann', password: 'pw' },
+      token: null,
+    });
+
+    respond(200, { ok: true, data: { sub: 'ann' } });
+    await client.auth.me();
+    expect(invokeMock).toHaveBeenLastCalledWith('plugin:forge|request', {
+      method: 'GET',
+      path: '/api/auth/me',
+      body: null,
+      token: 'jwt-1',
+    });
+  });
+
+  it('drops the token on a 401, so the next request goes out without it', async () => {
+    const client = createClient();
+    client.auth.setToken('stale');
+    respond(401, { ok: false, error: 'nope' });
+    await expect(client.auth.me()).rejects.toMatchObject({ status: 401 });
+
+    respond(200, { ok: true, data: { app: 'demo' } });
+    await client.health();
+    expect(invokeMock).toHaveBeenLastCalledWith('plugin:forge|request', {
+      method: 'GET',
+      path: '/api/health',
+      body: null,
+      token: null,
+    });
+  });
+});
+
 describe('data', () => {
   it('resolves null for a missing doc (404)', async () => {
     const client = createClient();
@@ -73,6 +113,7 @@ describe('data', () => {
       method: 'GET',
       path: '/api/data/notes',
       body: null,
+      token: null,
     });
   });
 
@@ -90,11 +131,13 @@ describe('data', () => {
         method: 'PUT',
         path: '/api/data/doc',
         body: { v: 2 },
+        token: null,
       });
       expect(invokeMock).toHaveBeenCalledWith('plugin:forge|request', {
         method: 'PUT',
         path: '/api/data/other',
         body: { v: 3 },
+        token: null,
       });
     } finally {
       vi.useRealTimers();
@@ -111,6 +154,7 @@ describe('actions', () => {
       method: 'POST',
       path: '/api/actions/echo',
       body: {},
+      token: null,
     });
   });
 });

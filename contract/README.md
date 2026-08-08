@@ -14,13 +14,16 @@ every driver at once.
 | `rust-http` | `crates/forge-server/tests/corpus.rs` | landed |
 | `python-http` | `python/forge-server/tests/test_corpus.py` | landed |
 | `ts-client` | — | issue #38 |
-| `rust-ipc` | — | issue #41 |
+| `rust-ipc` | `crates/forge-tauri/tests/corpus.rs` | landed |
 
 The Rust drivers share the loader and the matcher: `crates/forge-contract`.
 The Python driver has the same pair in
 `python/forge-server/tests/contract/`. Neither knows about HTTP.
 
-`just corpus-test` runs every driver.
+`just corpus-test` runs every driver. `just test` runs all of them except
+`rust-ipc`: forge-tauri is its own workspace, because tauri pulls wry/tao/gtk
+and would force webkit system deps onto every build. Run `just corpus-test`
+(or `just tauri-test`) after touching the corpus or the bridge.
 
 ## Applicability, and why it is not optional
 

@@ -355,11 +355,9 @@
     {
       "id": "doc-name-rejected-path-separator",
       "title": "A document name containing a slash never reaches the route and is 404",
-      "note": "The doc-name rule is not what rejects this one: a second path segment misses the route. Equally safe, and both HTTP backends must agree on it.",
-      "applies": ["rust-http", "python-http", "ts-client"],
-      "inapplicable": {
-        "rust-ipc": "IPC passes the document name as a string argument, so a separator reaches the doc-name rule instead of missing a route."
-      },
+      "note": "The doc-name rule is not what rejects this one: a second path segment misses the route. Equally safe, and every transport that routes on a path must agree on it.",
+      "applies": ["rust-http", "python-http", "rust-ipc", "ts-client"],
+      "inapplicable": {},
       "steps": [
         {
           "request": {
@@ -456,7 +454,7 @@
       "title": "An unknown /api path is a JSON 404 envelope, not the SPA fallback",
       "applies": ["rust-http", "python-http", "ts-client"],
       "inapplicable": {
-        "rust-ipc": "IPC has no URL space, so there is no unknown path to miss."
+        "rust-ipc": "An IPC response carries a status and an envelope, with no room for the content-type header this case is about."
       },
       "steps": [
         {
@@ -532,7 +530,7 @@
       "title": "A manifest bundle file is served verbatim",
       "applies": ["rust-http", "python-http"],
       "inapplicable": {
-        "rust-ipc": "The bridge returns the manifest, not bundle bytes; the webview loads bundles over the asset protocol.",
+        "rust-ipc": "An IPC response body is a JSON envelope, so it cannot carry bundle bytes with a content type; the endpoint has no IPC form and the webview loads bundles over the asset protocol.",
         "ts-client": "The client parses envelopes; a JavaScript bundle body is outside its surface."
       },
       "steps": [
@@ -555,7 +553,7 @@
       "note": "Percent-encoded so the traversal reaches the filename rule rather than missing the route.",
       "applies": ["rust-http", "python-http", "ts-client"],
       "inapplicable": {
-        "rust-ipc": "The bridge returns the manifest, not bundle bytes, so there is no bundle path to escape from."
+        "rust-ipc": "This is the error path of an endpoint with no IPC form — see `component-file-served` — so there is no bundle path to escape from. The filename rule it guards is `forge_core::components::valid_component_file`, which forge-server calls and forge-core tests directly."
       },
       "steps": [
         {

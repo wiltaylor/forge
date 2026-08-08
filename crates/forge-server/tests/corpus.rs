@@ -13,15 +13,14 @@ mod common;
 
 use std::collections::BTreeMap;
 use std::net::SocketAddr;
-use std::path::Path;
 use std::time::Duration;
 
 use axum::body::Body;
 use axum::http::{HeaderMap, Request, StatusCode};
 use axum::Router;
 use forge_contract::{
-    interpolate, interpolate_value, match_value, Auth, AwaitEvent, Case, Connect, Corpus, Expect,
-    Fixture, Kind, Step, Vars, RUST_HTTP,
+    interpolate, interpolate_value, match_value, write_fixture_files, Auth, AwaitEvent, Case,
+    Connect, Corpus, Expect, Fixture, Kind, Step, Vars, RUST_HTTP,
 };
 use futures_util::{SinkExt, StreamExt};
 use http_body_util::BodyExt;
@@ -83,8 +82,8 @@ impl Harness {
             serde_json::to_vec_pretty(&manifest).expect("manifest json"),
         )
         .expect("write manifest");
-        write_files(&components, &fixture.components.files, &vars);
-        write_files(&frontend, &fixture.frontend.files, &vars);
+        write_fixture_files(&components, &fixture.components.files, &vars).expect("components");
+        write_fixture_files(&frontend, &fixture.frontend.files, &vars).expect("frontend");
 
         let mut app = forge_server::ForgeApp::new(fixture.app.clone())
             .with_components(&components)
@@ -512,17 +511,6 @@ async fn next_frame(
             Message::Ping(_) | Message::Pong(_) => continue,
             other => return Err(format!("expected a text frame, got {other:?}")),
         }
-    }
-}
-
-fn write_files(dir: &Path, files: &BTreeMap<String, String>, vars: &Vars) {
-    for (name, content) in files {
-        let name = interpolate(name, vars).expect("file name");
-        std::fs::write(
-            dir.join(name),
-            interpolate(content, vars).expect("file body"),
-        )
-        .expect("write fixture file");
     }
 }
 

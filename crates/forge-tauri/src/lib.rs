@@ -18,8 +18,10 @@
 //! }
 //! ```
 //!
-//! Auth-disabled mode only: over IPC the caller is the app's own webview, so
-//! `me` answers with anonymous claims and `login` is the contract's 404.
+//! Auth is the same contract it is over HTTP: call [`Builder::auth`] and the
+//! protected routes need a token, which `POST /api/auth/login` mints. Leave
+//! it off and every route is open with [`Claims::anonymous`] — the mode an
+//! app whose only caller is its own webview wants.
 
 use std::collections::BTreeMap;
 use std::future::Future;
@@ -30,7 +32,7 @@ use serde_json::Value;
 use tauri::plugin::TauriPlugin;
 use tauri::{Emitter, Manager, Runtime};
 
-use forge_core::{box_action, DocStore, EventBus, ForgeError};
+use forge_core::{box_action, Auth, Components, DocStore, EventBus, ForgeError};
 
 mod bridge;
 mod commands;
@@ -39,7 +41,7 @@ mod state;
 mod widget_stream;
 
 pub use bridge::ForgeResponse;
-pub use forge_core::{ActionCtx, Claims, Event};
+pub use forge_core::{ActionCtx, AuthConfig, Claims, Event};
 pub use state::ForgeState;
 
 #[cfg(any(feature = "vnc", feature = "rdp"))]
@@ -58,7 +60,11 @@ enum DocstoreDir {
 /// Builder for the Forge plugin — mirrors `forge_server::ForgeApp`.
 pub struct Builder {
     app: String,
+    auth: Option<AuthConfig>,
+    /// First configuration error seen, surfaced when the state is assembled.
+    config_error: Option<ForgeError>,
     docstore: Option<DocstoreDir>,
+    components: Option<Components>,
     actions: BTreeMap<String, forge_core::BoxedAction>,
     events: EventBus,
     #[cfg(feature = "term")]
@@ -73,7 +79,10 @@ impl Builder {
     pub fn new(app: impl Into<String>) -> Self {
         Self {
             app: app.into(),
+            auth: None,
+            config_error: None,
             docstore: None,
+            components: None,
             actions: BTreeMap::new(),
             events: EventBus::new(),
             #[cfg(feature = "term")]
@@ -83,6 +92,37 @@ impl Builder {
             #[cfg(feature = "rdp")]
             rdp: None,
         }
+    }
+
+    /// Enable auth: the protected routes need a valid token and
+    /// `POST /api/auth/login` mints one. Without this call the plugin runs
+    /// auth-disabled — every route open, [`Claims::anonymous`] everywhere.
+    ///
+    /// The secret must be at least 32 characters; a shorter one fails when
+    /// the plugin starts, the way it does over HTTP.
+    pub fn auth(mut self, config: AuthConfig) -> Self {
+        if let Err(e) = config.validate() {
+            return self.fail(e);
+        }
+        self.auth = Some(config);
+        self
+    }
+
+    /// Enable component federation from `dir` (`manifest.json` plus the
+    /// bundle files beside it). The bridge serves the manifest; the webview
+    /// loads the bundles themselves over the Tauri asset protocol.
+    pub fn with_components(mut self, dir: impl Into<PathBuf>) -> Self {
+        self.components = Some(Components::new(dir.into()));
+        self
+    }
+
+    /// Keep the first configuration error; it surfaces when the state is
+    /// assembled, so builder calls stay chainable.
+    fn fail(mut self, e: ForgeError) -> Self {
+        if self.config_error.is_none() {
+            self.config_error = Some(e);
+        }
+        self
     }
 
     /// Enable the JSON document store in an explicit `dir`.
@@ -158,11 +198,34 @@ impl Builder {
         self.events.clone()
     }
 
-    /// Build the Tauri plugin: `.plugin(forge.build())`.
-    pub fn build<R: Runtime>(self) -> TauriPlugin<R> {
+    /// The plugin state this builder describes, for a host that drives the
+    /// contract without a Tauri runtime — the contract-corpus driver is one.
+    ///
+    /// Fails on a configuration error, and on [`Builder::with_docstore_default`],
+    /// whose location only a running Tauri app can resolve.
+    pub fn try_state(self) -> Result<ForgeState, ForgeError> {
+        self.into_state(|| {
+            Err(ForgeError::Config(
+                "with_docstore_default() needs a Tauri app to resolve the app-data \
+                 directory; name one with with_docstore(dir)"
+                    .into(),
+            ))
+        })
+    }
+
+    /// Assemble the state. `app_data_dir` is consulted only when the doc-store
+    /// location was left to the platform, which is the one thing that needs
+    /// the app handle.
+    fn into_state(
+        self,
+        app_data_dir: impl FnOnce() -> Result<PathBuf, ForgeError>,
+    ) -> Result<ForgeState, ForgeError> {
         let Builder {
             app,
+            auth,
+            config_error,
             docstore,
+            components,
             actions,
             events,
             #[cfg(feature = "term")]
@@ -172,6 +235,40 @@ impl Builder {
             #[cfg(feature = "rdp")]
             rdp,
         } = self;
+        if let Some(e) = config_error {
+            return Err(e);
+        }
+
+        let docstore = match docstore {
+            Some(DocstoreDir::Path(dir)) => Some(DocStore::new(dir)),
+            Some(DocstoreDir::AppDataDefault) => Some(DocStore::new(app_data_dir()?.join("data"))),
+            None => None,
+        };
+
+        Ok(ForgeState {
+            app,
+            start: Instant::now(),
+            auth: auth.map(Auth::new),
+            docstore,
+            components,
+            actions,
+            events,
+            #[cfg(feature = "term")]
+            term,
+            #[cfg(feature = "vnc")]
+            vnc,
+            #[cfg(feature = "rdp")]
+            rdp,
+            #[cfg(any(feature = "term", feature = "vnc", feature = "rdp"))]
+            sessions: state::SessionMap::default(),
+            #[cfg(any(feature = "term", feature = "vnc", feature = "rdp"))]
+            next_session: std::sync::atomic::AtomicU32::new(1),
+        })
+    }
+
+    /// Build the Tauri plugin: `.plugin(forge.build())`.
+    pub fn build<R: Runtime>(self) -> TauriPlugin<R> {
+        let events = self.events.clone();
 
         tauri::plugin::Builder::new("forge")
             .invoke_handler(tauri::generate_handler![
@@ -182,31 +279,13 @@ impl Builder {
                 commands::widget_close,
             ])
             .setup(move |app_handle, _api| {
-                let docstore = match docstore {
-                    Some(DocstoreDir::Path(dir)) => Some(DocStore::new(dir)),
-                    Some(DocstoreDir::AppDataDefault) => Some(DocStore::new(
-                        app_handle.path().app_data_dir()?.join("data"),
-                    )),
-                    None => None,
-                };
-
-                app_handle.manage(ForgeState {
-                    app,
-                    start: Instant::now(),
-                    docstore,
-                    actions,
-                    events: events.clone(),
-                    #[cfg(feature = "term")]
-                    term,
-                    #[cfg(feature = "vnc")]
-                    vnc,
-                    #[cfg(feature = "rdp")]
-                    rdp,
-                    #[cfg(any(feature = "term", feature = "vnc", feature = "rdp"))]
-                    sessions: state::SessionMap::default(),
-                    #[cfg(any(feature = "term", feature = "vnc", feature = "rdp"))]
-                    next_session: std::sync::atomic::AtomicU32::new(1),
-                });
+                let state = self.into_state(|| {
+                    app_handle
+                        .path()
+                        .app_data_dir()
+                        .map_err(|e| ForgeError::Config(format!("no app data directory: {e}")))
+                })?;
+                app_handle.manage(state);
 
                 // EventBus → webview bridge: one Tauri event, client-side
                 // topic filtering (mirrors the SSE/WS fan-out).

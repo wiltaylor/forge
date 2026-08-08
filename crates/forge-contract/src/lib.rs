@@ -29,6 +29,28 @@ pub const CORPUS_JSON: &str = include_str!("../../../contract/corpus.json");
 /// Transport id of the Rust HTTP driver.
 pub const RUST_HTTP: &str = "rust-http";
 
+/// Transport id of the Rust IPC driver.
+pub const RUST_IPC: &str = "rust-ipc";
+
+/// Write a fixture file group — `components.files`, `frontend.files` — into
+/// `dir`, interpolating both the names and the contents.
+///
+/// Every driver provisions the same fixture, so the two Rust ones share this
+/// rather than each holding its own copy of what `${}` in a filename means.
+pub fn write_fixture_files(
+    dir: &std::path::Path,
+    files: &BTreeMap<String, String>,
+    vars: &Vars,
+) -> Result<(), String> {
+    for (name, content) in files {
+        let name = interpolate(name, vars)?;
+        let content = interpolate(content, vars)?;
+        std::fs::write(dir.join(&name), content)
+            .map_err(|e| format!("cannot write the fixture file {name:?}: {e}"))?;
+    }
+    Ok(())
+}
+
 /// One authored contract corpus.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -435,13 +457,33 @@ mod tests {
         assert!(err.contains("expects a body from the request"), "{err}");
     }
 
+    /// Authored, not lifted from the real corpus: a test that quotes a reason
+    /// verbatim breaks every time someone rewords one.
     #[test]
     fn an_excuse_needs_a_reason() {
-        let json = CORPUS_JSON.replace(
-            "\"rust-ipc\": \"IPC has no URL space, so there is no unknown path to miss.\"",
-            "\"rust-ipc\": \"  \"",
-        );
-        let err = Corpus::parse(&json).unwrap_err();
+        let json = r#"{
+            "contract_version": "1.0",
+            "transports": ["a", "b"],
+            "vars": {},
+            "fixture": {
+                "app": "t",
+                "auth": {"enabled": true, "users": []},
+                "docstore": true,
+                "events": true,
+                "actions": [],
+                "components": {"manifest": {}, "files": {}},
+                "frontend": {"files": {}}
+            },
+            "cases": [{
+                "id": "x",
+                "title": "x",
+                "applies": ["a"],
+                "inapplicable": {"b": "  "},
+                "steps": [{"request": {"method": "GET", "path": "/"},
+                           "expect": {"status": 200}}]
+            }]
+        }"#;
+        let err = Corpus::parse(json).unwrap_err();
         assert!(err.contains("with no reason"), "{err}");
     }
 }

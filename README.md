@@ -161,6 +161,14 @@ fn main() {
 }
 ```
 
+Auth is the same contract it is over HTTP: add
+`.auth(AuthConfig::new(secret).user("admin", "hunter2"))` and the protected
+routes need a token, which `POST /api/auth/login` mints and `@forge/tauri`
+carries. Leave it off and every route is open with anonymous claims, which is
+what an app whose only caller is its own webview wants.
+`.with_components(dir)` serves the federation manifest; the webview loads the
+bundles themselves over the Tauri asset protocol.
+
 Frontend-side, the only change versus a web app is the client import —
 `@forge/tauri`'s `createClient()` implements `@forge/client`'s `ForgeClient`
 interface over `invoke`/`listen` (`ws.connect()`/`wsUrl()` throw; events ride

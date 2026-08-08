@@ -34,6 +34,9 @@ tracing = "0.1"
 tauri-plugin = { version = "2", features = ["build"] }
 
 [dev-dependencies]
+# The contract corpus and its loader/matcher — this crate is the `rust-ipc`
+# driver (tests/corpus.rs). Transport-free, so no HTTP comes with it.
+forge-contract = { path = "../forge-contract" }
 tempfile = "3"
 tokio = { version = "1", features = ["full"] }
 
