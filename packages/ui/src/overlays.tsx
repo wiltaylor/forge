@@ -1,8 +1,8 @@
-import { For, Show, createEffect, createSignal, mergeProps } from 'solid-js';
+import { For, Show, createEffect, createSignal, mergeProps, untrack } from 'solid-js';
 import type { JSX } from 'solid-js';
 import { SearchSvg, XSvg } from './internal/icons';
-import { MenuList } from './internal/menu';
-import { OverlayPortal, useOverlay } from './overlay';
+import { MenuList, menuRoving, menuSelectable } from './internal/menu';
+import { OverlayPortal, createRoving, useOverlay } from './overlay';
 import { Button, Icon, Kbd } from './primitives';
 import type { CommandItem, ControlSize, IconComponent, MenuItem } from './types';
 
@@ -154,37 +154,22 @@ export interface DropdownMenuProps {
 export function DropdownMenu(props: DropdownMenuProps): JSX.Element {
   const merged = mergeProps({ variant: 'secondary' as const, size: 'md' as const, align: 'start' as const }, props);
   const [open, setOpen] = createSignal(false);
-  const [activeIdx, setActiveIdx] = createSignal(-1);
   let root!: HTMLDivElement;
   useOverlay({ open, surface: () => root, onDismiss: () => setOpen(false) });
 
-  const selectable = (i: number) => {
-    const it = merged.items[i];
-    return !!it && !it.separator && !it.disabled;
-  };
-  const move = (dir: number) => {
-    const n = merged.items.length;
-    let i = activeIdx();
-    for (let step = 0; step < n; step++) {
-      i = (i + dir + n) % n;
-      if (selectable(i)) { setActiveIdx(i); return; }
-    }
-  };
+  const roving = menuRoving(() => merged.items);
   const commit = (i: number) => {
-    if (!selectable(i)) return;
+    if (!menuSelectable(merged.items, i)) return;
     setOpen(false);
     merged.items[i]?.onSelect?.();
   };
   const onKeyDown = (e: KeyboardEvent) => {
     if (!open()) {
-      if (['ArrowDown', 'Enter', ' '].includes(e.key)) { e.preventDefault(); setActiveIdx(-1); setOpen(true); move(1); }
+      if (['ArrowDown', 'Enter', ' '].includes(e.key)) { e.preventDefault(); setOpen(true); roving.first(); }
       return;
     }
-    if (e.key === 'ArrowDown') { e.preventDefault(); move(1); }
-    else if (e.key === 'ArrowUp') { e.preventDefault(); move(-1); }
-    else if (e.key === 'Home') { e.preventDefault(); setActiveIdx(-1); move(1); }
-    else if (e.key === 'End') { e.preventDefault(); setActiveIdx(merged.items.length); move(-1); }
-    else if (e.key === 'Enter') { e.preventDefault(); commit(activeIdx()); }
+    if (roving.onKeyDown(e)) return;
+    if (e.key === 'Enter') { e.preventDefault(); commit(roving.active()); }
   };
 
   return (
@@ -196,7 +181,7 @@ export function DropdownMenu(props: DropdownMenuProps): JSX.Element {
       </Button>
       <Show when={open()}>
         <div class="fpop fmenu-pop" role="menu" classList={{ 'is-end': merged.align === 'end' }}>
-          <MenuList items={merged.items} activeIdx={activeIdx} setActiveIdx={setActiveIdx} onCommit={commit} />
+          <MenuList items={merged.items} roving={roving} onCommit={commit} />
         </div>
       </Show>
     </div>
@@ -212,28 +197,27 @@ export interface ContextMenuProps {
 
 export function ContextMenu(props: ContextMenuProps): JSX.Element {
   const [pos, setPos] = createSignal<{ x: number; y: number } | null>(null);
-  const [activeIdx, setActiveIdx] = createSignal(-1);
+  const roving = menuRoving(() => props.items);
   let root!: HTMLDivElement;
   useOverlay({ open: () => !!pos(), surface: () => root, onDismiss: () => setPos(null) });
   const commit = (i: number) => {
-    const it = props.items[i];
-    if (!it || it.separator || it.disabled) return;
+    if (!menuSelectable(props.items, i)) return;
     setPos(null);
-    it.onSelect?.();
+    props.items[i]?.onSelect?.();
   };
   return (
     <div class="fctx" ref={root}
          onContextMenu={(e) => {
            e.preventDefault();
            const r = root.getBoundingClientRect();
-           setActiveIdx(-1);
+           roving.clear();
            setPos({ x: e.clientX - r.left, y: e.clientY - r.top });
          }}>
       {props.children}
       <Show when={pos()}>
         <div class="fpop fmenu-pop" role="menu"
              style={{ top: `${pos()!.y}px`, left: `${pos()!.x}px` }}>
-          <MenuList items={props.items} activeIdx={activeIdx} setActiveIdx={setActiveIdx} onCommit={commit} />
+          <MenuList items={props.items} roving={roving} onCommit={commit} />
         </div>
       </Show>
     </div>
@@ -252,7 +236,7 @@ export interface CommandProps {
 
 export function Command(props: CommandProps): JSX.Element {
   const [query, setQuery] = createSignal('');
-  const [activeIdx, setActiveIdx] = createSignal(0);
+  const roving = createRoving({ count: () => filtered().length });
   let input: HTMLInputElement | undefined;
   let backdrop: HTMLDivElement | undefined;
   let panel: HTMLDivElement | undefined;
@@ -286,12 +270,15 @@ export function Command(props: CommandProps): JSX.Element {
     item.onSelect?.();
   };
   const onKeyDown = (e: KeyboardEvent) => {
-    const n = filtered().length;
-    if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIdx((i) => (i + 1) % Math.max(1, n)); }
-    else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIdx((i) => (i - 1 + n) % Math.max(1, n)); }
-    else if (e.key === 'Enter') { e.preventDefault(); commit(filtered()[activeIdx()]); }
+    if (roving.onKeyDown(e)) return;
+    if (e.key === 'Enter') { e.preventDefault(); commit(filtered()[roving.active()]); }
   };
-  createEffect(() => { if (props.open) { setActiveIdx(0); queueMicrotask(() => input?.focus()); } });
+  /* Opening starts at the top and takes the caret. Untracked, or the effect
+     follows the item list the index reads and throws a keyboard user back to
+     the top of a palette whose items arrive late. */
+  createEffect(() => {
+    if (props.open) untrack(() => { roving.first(); queueMicrotask(() => input?.focus()); });
+  });
 
   return (
     <Show when={props.open}>
@@ -302,7 +289,7 @@ export function Command(props: CommandProps): JSX.Element {
               <SearchSvg />
               <input ref={input} placeholder={props.placeholder ?? 'Type a command…'}
                      value={query()}
-                     onInput={(e) => { setQuery(e.currentTarget.value); setActiveIdx(0); }}
+                     onInput={(e) => { setQuery(e.currentTarget.value); roving.first(); }}
                      onKeyDown={onKeyDown} />
               <Kbd>esc</Kbd>
             </div>
@@ -317,8 +304,8 @@ export function Command(props: CommandProps): JSX.Element {
                       <For each={g.items}>
                         {(item) => (
                           <button type="button" class="fcmd-item"
-                                  classList={{ 'is-active': flatIndex(item) === activeIdx() }}
-                                  onPointerEnter={() => setActiveIdx(flatIndex(item))}
+                                  classList={{ 'is-active': flatIndex(item) === roving.active() }}
+                                  onPointerEnter={() => roving.setActive(flatIndex(item))}
                                   onClick={() => commit(item)}>
                             <Show when={item.icon}>
                               <Icon of={item.icon!} size={14} />
