@@ -60,14 +60,13 @@ def cors_origins() -> list[str]:
 def parse_users(raw: str) -> dict[str, str]:
     """Parse ``FORGE_AUTH_USERS``: comma-separated ``user:secret`` entries.
 
-    The FIRST colon splits user from secret. A fragment with no colon is a
-    continuation of the previous entry's secret, because an argon2 PHC hash
-    carries commas in its params. Secrets starting with ``$argon2`` are PHC
-    hashes; anything else is plaintext and logs a warning.
+    The FIRST colon splits user from secret; a fragment with no colon
+    continues the previous entry's secret. Secrets starting with ``$argon2``
+    are PHC hashes; anything else is plaintext and logs a warning.
     """
     users: dict[str, str] = {}
     plaintext: list[str] = []
-    last: str | None = None
+    last_name: str | None = None
     for entry in raw.split(","):
         entry = entry.strip()
         if not entry:
@@ -77,8 +76,8 @@ def parse_users(raw: str) -> dict[str, str]:
             # (`$argon2id$v=19$m=19456,t=2,p=1$…`), so a colon-less fragment
             # is the continuation of the previous entry's secret, not a new
             # user (user names always precede a colon).
-            if last is not None:
-                users[last] += f",{entry}"
+            if last_name is not None:
+                users[last_name] += f",{entry}"
                 continue
             raise ValueError(
                 f"invalid FORGE_AUTH_USERS entry {entry!r} (expected 'user:secret')"
@@ -87,7 +86,7 @@ def parse_users(raw: str) -> dict[str, str]:
         if not name:
             raise ValueError(f"invalid FORGE_AUTH_USERS entry {entry!r} (empty username)")
         users[name] = secret
-        last = name
+        last_name = name
         if not secret.startswith("$argon2"):
             plaintext.append(name)
     if plaintext:
