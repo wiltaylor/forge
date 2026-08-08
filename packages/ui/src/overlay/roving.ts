@@ -9,9 +9,14 @@
 
    The active item is an index, not focus. Focus stays on the trigger or the
    search input while the index moves, which is what lets a Select popup and a
-   Combobox list be driven from a control outside them. */
+   Combobox list be driven from a control outside them.
 
-import { createSignal } from 'solid-js';
+   Because focus does not move, assistive technology cannot see the movement
+   on its own. The announcement closes that gap: each item carries the id
+   `itemId` gives it, and the element that holds focus points at the active
+   one through `aria-activedescendant={roving.activeId()}`. */
+
+import { createSignal, createUniqueId } from 'solid-js';
 import type { Accessor } from 'solid-js';
 
 /** The index when no item is active. */
@@ -45,12 +50,23 @@ export interface Roving {
    * to the caller — Enter, Escape, typing and the rest are not this module's.
    */
   onKeyDown: (e: KeyboardEvent) => boolean;
+  /** The DOM id the item at this index carries, for the announcement. */
+  itemId: (index: number) => string;
+  /**
+   * The value for `aria-activedescendant` on the element that holds focus.
+   * Undefined when no item is active, which removes the attribute.
+   */
+  activeId: Accessor<string | undefined>;
 }
 
 /** Give a widget the kit's roving index. */
 export function createRoving(options: RovingOptions): Roving {
   const [active, setIndex] = createSignal(NO_ACTIVE_INDEX);
   const canTake = (i: number): boolean => options.enabled?.(i) ?? true;
+  const prefix = `froving-${createUniqueId()}`;
+  const itemId = (index: number): string => `${prefix}-${index}`;
+  const activeId = (): string | undefined =>
+    active() === NO_ACTIVE_INDEX ? undefined : itemId(active());
 
   /* Scan from `from` in `dir` for an item that can take the index, wrapping at
      both ends. It looks at each item once, so a widget whose items are all
@@ -96,5 +112,7 @@ export function createRoving(options: RovingOptions): Roving {
     first,
     last,
     onKeyDown,
+    itemId,
+    activeId,
   };
 }

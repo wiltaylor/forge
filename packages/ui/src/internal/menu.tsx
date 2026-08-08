@@ -30,6 +30,7 @@ export function MenuList(props: MenuListProps): JSX.Element {
       {(item, i) => (
         <Show when={!item.separator} fallback={<div class="fmenu-sep" role="separator" />}>
           <button type="button" class="fmenu-item" role="menuitem" disabled={item.disabled}
+                  id={props.roving.itemId(i())}
                   classList={{
                     'is-active': i() === props.roving.active(),
                     'is-danger': !!item.danger,
