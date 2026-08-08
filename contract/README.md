@@ -54,23 +54,62 @@ a reason — a case that a transport could serve stays in `applies` and fails
 until it does. A conditional skip inside a driver is never correct: it turns a
 real divergence into a green run.
 
-## Fixture
+## Fixtures
 
-Every driver provisions the same server before it runs a case. The `fixture`
-block says what that is:
+A case runs against a server the corpus describes. `fixtures` holds them by
+name; a case runs against `default` unless it names another with `"fixture":
+"…"`. A driver builds each one it needs and no more, and a fixture no case
+uses is rejected — an unused server reads as coverage that is not there.
+
+The four:
+
+| Fixture | Why it exists |
+|---|---|
+| `default` | Everything mounted, auth on. Nearly every case. |
+| `auth-disabled` | The mode the contract calls first-class. The default fixture structurally cannot run it: its cases need a token. |
+| `absent-manifest` | A components directory with no `manifest.json`. |
+| `events-tuned` | A one-deep buffer and a one-second heartbeat, so the lag notification and the heartbeat are seen rather than waited for. |
+
+A fixture states:
 
 - `app` — the application name the backend reports.
 - `auth.enabled`, `auth.users` — auth on, with these users. The signing secret
   is the driver's own business; nothing in the corpus observes it.
-- `docstore` — a document store, empty at the start of the run.
-- `events` — the event bus, with `/api/events` and `/api/ws` mounted.
+  - `name`, `password` — the credentials a login sends.
+  - `secret` — optional: how the backend **stores** the credential, in the
+    `FORGE_AUTH_USERS` syntax (an argon2 PHC hash, or plaintext). Absent means
+    the password as it stands.
+  - `roles` — optional, default none.
+- `docstore` — a document store, empty at the start of the run. Default off.
+- `events` — mounts `/api/events` and `/api/ws`. Absent leaves them unmounted.
+  `{"buffer": n}` is how far a subscriber may fall behind before it is told it
+  lagged, and `{"heartbeat_s": n}` the gap between heartbeat comments; both
+  default to the backend's own, which are the contract's.
 - `actions` — the actions that must be registered:
   - `echo` returns its payload unchanged.
   - `publish` takes `{topic, data}`, publishes `data` on `topic`, and returns
     `{"published": true, "topic": <topic>}`.
-- `components.manifest` — written to `manifest.json` in the components
-  directory. `components.files` — written beside it, name to content.
+  - `flood` takes `{topic, count}` and publishes `count` events on `topic`
+    without yielding once, so a bounded buffer overruns by construction rather
+    than by luck. It returns `{"published": <count>, "topic": <topic>}`.
+- `components` — mounts component federation. Absent leaves it unconfigured.
+  `components.manifest` is written to `manifest.json`; **absent** is the
+  fixture that has a directory and no manifest. `components.files` are written
+  beside it, name to content.
 - `frontend.files` — written to the static frontend directory.
+
+### Users go in through the variable
+
+A driver does not hand the user store a name and a secret. It builds the
+`FORGE_AUTH_USERS` value the fixture describes — `name:secret` entries, comma
+separated — and gives it to the backend's own parser for that variable.
+
+That is the path a deployment takes, and it is the path that has already
+broken: an argon2 PHC hash carries commas in its parameters
+(`$argon2id$v=19$m=19456,t=2,p=1$…`), which is the separator between entries.
+The corpus has a user whose stored secret is a real hash, so a backend that
+splits the variable naively boots with a mangled secret and fails
+`login-with-a-hashed-credential`.
 
 ## Variables
 
@@ -86,6 +125,7 @@ leaf or an expected value — is replaced from `vars`. The driver adds one more:
   "id": "unique-kebab-case",
   "title": "one line, present tense",
   "kind": "http",
+  "fixture": "default",
   "note": "optional; why the case is written this way",
   "applies": [...],
   "inapplicable": {...},
@@ -93,7 +133,8 @@ leaf or an expected value — is replaced from `vars`. The driver adds one more:
 }
 ```
 
-`kind` is `http` (the default), `sse` or `ws`.
+`kind` is `http` (the default), `sse` or `ws`. `fixture` names the server the
+case runs against, and defaults to `default`.
 
 ### Steps
 
@@ -106,7 +147,8 @@ first step. A `ws` case connects with its first step.
 | connect | `{"connect": {"path": ..., "auth": ...}, "expect": {...}}` | Open a websocket. With no `expect`, the handshake must succeed. With one, it must be refused with that status and body. |
 | send | `{"send": {...}}` | Send a JSON frame on the open socket. |
 | await_frame | `{"await_frame": <matcher>}` | The **next** frame on the socket must match. |
-| await_event | `{"await_event": {"topic": ..., "data": <matcher>}}` | The **next** event on the stream must have this topic and match this data. Heartbeats are not events. |
+| await_event | `{"await_event": {"topic": ..., "data": <matcher>}}` | The **next** event on the stream must have this topic and match this data. Heartbeats are not events, so this steps over one. |
+| await_heartbeat | `{"await_heartbeat": <matcher>}` | The **next** block on the stream must be the heartbeat comment, matched against its text without the leading `:`. |
 
 "The next frame" is deliberate. A driver that searched forward for a matching
 frame would pass while the server sent frames the contract does not allow.
@@ -157,7 +199,7 @@ An expected value is a matcher, not a literal:
 | `"literal"`, `1`, `true`, `null` | Equality, after `${}` substitution. |
 | `{"k": <matcher>}` | An object that has **at least** these keys, each matching. |
 | `[<matcher>, ...]` | An array of the same length, element by element. |
-| `{"$exact": <value>}` | Deep equality — no extra keys anywhere. |
+| `{"$exact": <matcher>}` | No extra keys, anywhere below this point. Matchers still apply inside it. |
 | `{"$type": "string"}` | One of `string`, `number`, `integer`, `boolean`, `array`, `object`, `null`. |
 | `{"$contains": <matcher>}` | A substring of a string, or an array with at least one matching element. |
 | `{"$prefix": "..."}` | A string with this prefix. |
@@ -166,9 +208,11 @@ An expected value is a matcher, not a literal:
 
 Objects match by subset so that a case can assert the fields it is about and
 stay quiet about the rest. Reach for `$exact` when the whole payload is the
-point — a document read back, or a websocket frame. Watch the loose ones:
-`{"$type": "string"}` accepts `""`, which is why a token asserts
-`{"$min_length": 1}` instead.
+point — a document read back, a websocket frame, or a payload whose *shape* is
+what the contract states. `$exact` still runs the matchers inside it, so
+`me-with-bearer` can pin four member names while saying only `{"$type":
+"integer"}` about the expiry. Watch the loose ones: `{"$type": "string"}`
+accepts `""`, which is why a token asserts `{"$min_length": 1}` instead.
 
 An operator object holds exactly one `$` key and nothing else.
 
@@ -216,6 +260,26 @@ than a description of whatever the server does today:
   exactly `echo` and `publish`, so the case names both, in order.
 - The `token` fixture asked for a non-empty string, which `{"$type": "string"}`
   does not say. It asserts `{"$min_length": 1}`.
+
+## The cases the nineteen never reached
+
+Each of these corresponds to something the old suite left unverified, or hid.
+
+| Case | What it reaches |
+|---|---|
+| `auth-disabled-health-reports-it`, `-has-no-login`, `-identity-is-anonymous`, `-protected-routes-are-open` | The mode the contract calls first-class. The old fixture needed a token, so it could not run the mode that has none. |
+| `login-with-a-hashed-credential` | The shipped defect. Both demo configurations ship plaintext credentials, so no suite ever booted a backend with a hash whose parameters carry commas. |
+| `components-absent-manifest-is-an-empty-catalogue` | Where the two HTTP backends diverged, and where the suite guarding them skipped itself. |
+| `doc-name-rejected-on-read`, `-on-delete` | The name rule on the verbs that are not `PUT`. |
+| `doc-name-accepted-at-the-length-limit` | 64 characters, the boundary from the inside. `doc-name-rejected-too-long` moved from 70 characters to 65, so the pair sits either side of it. |
+| `component-file-with-query-token` | The `?token=` path on the bundle endpoint, which the contract marks and nothing exercised. |
+| `sse-heartbeat-holds-an-idle-stream-open` | The heartbeat comment. It also turned up a difference: sse-starlette's own heartbeat carries a timestamp, and the contract states `: ping`. |
+| `ws-lagged-tells-a-consumer-it-missed-events` | The lag notification, which no test had ever provoked. |
+
+`me-with-bearer` was tightened rather than added. It asserted three members
+loosely and passed while the two backends answered with different key sets —
+one carrying `iat` and dropping a null `iss`, the other the reverse. It now
+states the four members the contract names, and nothing else.
 
 ## The block kind registry
 

@@ -2,45 +2,94 @@
   "contract_version": "1.0",
   "transports": ["rust-http", "python-http", "rust-ipc", "ts-client"],
   "vars": {
+    "app": "forge-contract-corpus",
     "user": "admin",
     "password": "hunter2",
     "wrong_password": "definitely-wrong",
+    "hashed_user": "overseer",
+    "hashed_password": "s3cret",
+    "hashed_secret": "$argon2id$v=19$m=19456,t=2,p=1$oIonqyWQKyCxWwPHZhDWFQ$MatG+SWES3ScVBSWxHLZ6y0BwSH/jxcJYuHBHO3gME4",
+    "issuer": "forge",
     "doc": "paritytest-doc",
+    "bad_doc": "UPPER",
     "component_file": "widget.js",
     "sse_topic": "paritytest-sse",
-    "ws_topic": "paritytest-ws"
+    "ws_topic": "paritytest-ws",
+    "ws_quiet_topic": "paritytest-ws-quiet",
+    "ws_flood_topic": "paritytest-ws-flood"
   },
-  "fixture": {
-    "app": "forge-contract-corpus",
-    "auth": {
-      "enabled": true,
-      "users": [{ "name": "${user}", "password": "${password}", "roles": [] }]
-    },
-    "docstore": true,
-    "events": true,
-    "actions": ["echo", "publish"],
-    "components": {
-      "manifest": {
-        "components": [
+  "fixtures": {
+    "default": {
+      "app": "${app}",
+      "auth": {
+        "enabled": true,
+        "users": [
+          { "name": "${user}", "password": "${password}", "roles": [] },
           {
-            "name": "Widget",
-            "tag": "forge-widget",
-            "file": "${component_file}",
-            "hash": "sha256-corpus",
-            "props": [],
-            "events": [],
-            "version": "1.0.0"
+            "name": "${hashed_user}",
+            "password": "${hashed_password}",
+            "secret": "${hashed_secret}",
+            "roles": []
           }
         ]
       },
-      "files": {
-        "${component_file}": "export const widget = 1;\n"
+      "docstore": true,
+      "events": {},
+      "actions": ["echo", "publish"],
+      "components": {
+        "manifest": {
+          "components": [
+            {
+              "name": "Widget",
+              "tag": "forge-widget",
+              "file": "${component_file}",
+              "hash": "sha256-corpus",
+              "props": [],
+              "events": [],
+              "version": "1.0.0"
+            }
+          ]
+        },
+        "files": {
+          "${component_file}": "export const widget = 1;\n"
+        }
+      },
+      "frontend": {
+        "files": {
+          "index.html": "<!doctype html>\n<title>corpus</title>\n"
+        }
       }
     },
-    "frontend": {
-      "files": {
-        "index.html": "<!doctype html>\n<title>corpus</title>\n"
+    "auth-disabled": {
+      "app": "${app}",
+      "auth": { "enabled": false },
+      "docstore": true,
+      "actions": ["echo"],
+      "components": {
+        "manifest": { "components": [] },
+        "files": {}
       }
+    },
+    "absent-manifest": {
+      "app": "${app}",
+      "auth": {
+        "enabled": true,
+        "users": [{ "name": "${user}", "password": "${password}", "roles": [] }]
+      },
+      "components": {
+        "files": {
+          "${component_file}": "export const widget = 1;\n"
+        }
+      }
+    },
+    "events-tuned": {
+      "app": "${app}",
+      "auth": {
+        "enabled": true,
+        "users": [{ "name": "${user}", "password": "${password}", "roles": [] }]
+      },
+      "events": { "buffer": 1, "heartbeat_s": 1 },
+      "actions": ["flood"]
     }
   },
   "cases": [
@@ -114,6 +163,48 @@
       ]
     },
     {
+      "id": "login-with-a-hashed-credential",
+      "title": "A user whose stored secret is an argon2 hash logs in, and only with the right password",
+      "note": "The shipped-defect case. `${hashed_secret}` is real forge-hash output, and an argon2 PHC hash carries commas in its parameters (`m=19456,t=2,p=1`) — the separator the FORGE_AUTH_USERS format also uses. A backend that splits that variable naively boots with a mangled secret and answers this case with a 401.",
+      "applies": ["rust-http", "python-http", "rust-ipc", "ts-client"],
+      "inapplicable": {},
+      "steps": [
+        {
+          "request": {
+            "method": "POST",
+            "path": "/api/auth/login",
+            "auth": "none",
+            "body": {
+              "username": "${hashed_user}",
+              "password": "${hashed_password}"
+            }
+          },
+          "expect": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": {
+                "token": { "$min_length": 1 },
+                "user": { "name": "${hashed_user}" }
+              }
+            }
+          }
+        },
+        {
+          "request": {
+            "method": "POST",
+            "path": "/api/auth/login",
+            "auth": "none",
+            "body": {
+              "username": "${hashed_user}",
+              "password": "${wrong_password}"
+            }
+          },
+          "expect": { "status": 401, "body": { "ok": false } }
+        }
+      ]
+    },
+    {
       "id": "me-requires-token",
       "title": "GET /api/auth/me without a token is 401",
       "applies": ["rust-http", "python-http", "rust-ipc", "ts-client"],
@@ -128,6 +219,7 @@
     {
       "id": "me-with-bearer",
       "title": "GET /api/auth/me returns the decoded claims for a bearer token",
+      "note": "The whole payload, not a subset: the contract names four members for this endpoint, and a backend that adds a fifth is shipping a claim the contract does not describe. `iss` is the contract's default issuer, which neither driver configures.",
       "applies": ["rust-http", "python-http", "rust-ipc", "ts-client"],
       "inapplicable": {},
       "steps": [
@@ -138,9 +230,12 @@
             "body": {
               "ok": true,
               "data": {
-                "sub": "${user}",
-                "roles": { "$type": "array" },
-                "exp": { "$type": "integer" }
+                "$exact": {
+                  "sub": "${user}",
+                  "roles": [],
+                  "iss": "${issuer}",
+                  "exp": { "$type": "integer" }
+                }
               }
             }
           }
@@ -257,10 +352,36 @@
         {
           "request": {
             "method": "PUT",
-            "path": "/api/data/UPPER",
+            "path": "/api/data/${bad_doc}",
             "auth": "bearer",
             "body": {}
           },
+          "expect": { "status": 400, "body": { "ok": false } }
+        }
+      ]
+    },
+    {
+      "id": "doc-name-rejected-on-read",
+      "title": "A read of an invalid document name is 400, not 404",
+      "note": "The name rule guards every verb, not only the one that writes. A backend that checks it on the way in and not on the way out answers 404 here, which says the document is missing rather than that the name is not one.",
+      "applies": ["rust-http", "python-http", "rust-ipc", "ts-client"],
+      "inapplicable": {},
+      "steps": [
+        {
+          "request": { "method": "GET", "path": "/api/data/${bad_doc}", "auth": "bearer" },
+          "expect": { "status": 400, "body": { "ok": false } }
+        }
+      ]
+    },
+    {
+      "id": "doc-name-rejected-on-delete",
+      "title": "A delete of an invalid document name is 400, not an idempotent success",
+      "note": "Delete is idempotent for a name that is valid and absent. An invalid name is a different answer: the rule is the path-traversal guard, so it cannot be skipped on the verb that removes files.",
+      "applies": ["rust-http", "python-http", "rust-ipc", "ts-client"],
+      "inapplicable": {},
+      "steps": [
+        {
+          "request": { "method": "DELETE", "path": "/api/data/${bad_doc}", "auth": "bearer" },
           "expect": { "status": 400, "body": { "ok": false } }
         }
       ]
@@ -300,15 +421,42 @@
       ]
     },
     {
-      "id": "doc-name-rejected-too-long",
-      "title": "A document name longer than 64 characters is rejected with 400",
+      "id": "doc-name-accepted-at-the-length-limit",
+      "title": "A document name of exactly 64 characters is accepted",
+      "note": "The boundary, from the inside. `^[a-z0-9][a-z0-9_-]{0,63}$` admits 64 characters, so an implementation that counts one out is caught here rather than by a name so long that every off-by-one still rejects it.",
       "applies": ["rust-http", "python-http", "rust-ipc", "ts-client"],
       "inapplicable": {},
       "steps": [
         {
           "request": {
             "method": "PUT",
-            "path": "/api/data/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "path": "/api/data/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "auth": "bearer",
+            "body": { "at": "the-limit" }
+          },
+          "expect": { "status": 200, "body": { "ok": true } }
+        },
+        {
+          "request": {
+            "method": "DELETE",
+            "path": "/api/data/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "auth": "bearer"
+          },
+          "expect": { "status": 200, "body": { "ok": true } }
+        }
+      ]
+    },
+    {
+      "id": "doc-name-rejected-too-long",
+      "title": "A document name of 65 characters is rejected with 400",
+      "note": "One character past the limit, so the case sits against `doc-name-accepted-at-the-length-limit` rather than well clear of it.",
+      "applies": ["rust-http", "python-http", "rust-ipc", "ts-client"],
+      "inapplicable": {},
+      "steps": [
+        {
+          "request": {
+            "method": "PUT",
+            "path": "/api/data/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
             "auth": "bearer",
             "body": {}
           },
@@ -450,6 +598,28 @@
       ]
     },
     {
+      "id": "sse-heartbeat-holds-an-idle-stream-open",
+      "title": "An idle event stream carries a heartbeat comment",
+      "kind": "sse",
+      "fixture": "events-tuned",
+      "note": "The contract sends the heartbeat every 15 s; this fixture asks for one a second, because the case is about the comment arriving, not about the interval. Nothing publishes here, so the heartbeat is the only thing the stream can carry.",
+      "applies": ["rust-http", "python-http"],
+      "inapplicable": {
+        "rust-ipc": "IPC delivers events as Tauri events; there is no event stream, so nothing holds one open.",
+        "ts-client": "EventSource drops comment lines before the client sees them, so a heartbeat cannot be observed through it."
+      },
+      "steps": [
+        {
+          "request": { "method": "GET", "path": "/api/events", "auth": "query" },
+          "expect": {
+            "status": 200,
+            "headers": { "content-type": { "$prefix": "text/event-stream" } }
+          }
+        },
+        { "await_heartbeat": "ping" }
+      ]
+    },
+    {
       "id": "api-miss-is-json-404",
       "title": "An unknown /api path is a JSON 404 envelope, not the SPA fallback",
       "applies": ["rust-http", "python-http", "ts-client"],
@@ -503,11 +673,31 @@
             "body": {
               "ok": true,
               "data": {
-                "app": { "$type": "string" },
+                "app": "${app}",
                 "components": [
                   { "name": "Widget", "tag": "forge-widget", "file": "${component_file}" }
                 ]
               }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "components-absent-manifest-is-an-empty-catalogue",
+      "title": "A components directory with no manifest.json is an empty catalogue",
+      "fixture": "absent-manifest",
+      "note": "This is where the two HTTP backends used to disagree — one a 404, the other an empty list — and where the suite that guarded them skipped itself. The contract states one response shape for this endpoint and names no error status for it, unlike the endpoints where a miss is a 404 (`/api/data/{name}`, `/api/actions/{name}`), so an absent manifest is a catalogue with nothing in it.",
+      "applies": ["rust-http", "python-http", "rust-ipc", "ts-client"],
+      "inapplicable": {},
+      "steps": [
+        {
+          "request": { "method": "GET", "path": "/api/components", "auth": "bearer" },
+          "expect": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": { "$exact": { "app": "${app}", "components": [] } }
             }
           }
         }
@@ -539,6 +729,29 @@
             "method": "GET",
             "path": "/api/components/${component_file}",
             "auth": "bearer"
+          },
+          "expect": {
+            "status": 200,
+            "text": { "$contains": "export const widget" }
+          }
+        }
+      ]
+    },
+    {
+      "id": "component-file-with-query-token",
+      "title": "A bundle file is served for a ?token= query parameter with no header",
+      "note": "The contract marks this endpoint `?token=` for the same reason as the two streams: a browser fetching a federated bundle through an element it does not control cannot set a header.",
+      "applies": ["rust-http", "python-http"],
+      "inapplicable": {
+        "rust-ipc": "IPC commands take typed arguments; there is no query string to carry a token, and no IPC form of this endpoint — see `component-file-served`.",
+        "ts-client": "The client parses envelopes; a JavaScript bundle body is outside its surface."
+      },
+      "steps": [
+        {
+          "request": {
+            "method": "GET",
+            "path": "/api/components/${component_file}",
+            "auth": "query"
           },
           "expect": {
             "status": 200,
@@ -626,6 +839,121 @@
               "topic": "${ws_topic}",
               "data": { "hello": "ws" }
             }
+          }
+        }
+      ]
+    },
+    {
+      "id": "ws-lagged-tells-a-consumer-it-missed-events",
+      "title": "A websocket consumer that overruns its buffer is told it lagged",
+      "kind": "ws",
+      "fixture": "events-tuned",
+      "note": "The flood publishes on a topic this socket did not subscribe to, so every event it carries is filtered away and the lag notification is the only frame the contract allows next. That is what makes `await_frame` honest here: with the flood on the subscribed topic, the frames before the notification would be a race rather than a contract. The fixture's one-deep buffer is what a `count` this small can overrun.",
+      "applies": ["rust-http", "python-http", "ts-client"],
+      "inapplicable": {
+        "rust-ipc": "IPC delivers events as Tauri events, not as websocket frames."
+      },
+      "steps": [
+        { "connect": { "path": "/api/ws", "auth": "query" } },
+        { "send": { "type": "subscribe", "topics": ["${ws_quiet_topic}"] } },
+        { "send": { "type": "ping" } },
+        { "await_frame": { "$exact": { "type": "pong" } } },
+        {
+          "request": {
+            "method": "POST",
+            "path": "/api/actions/flood",
+            "auth": "bearer",
+            "body": { "topic": "${ws_flood_topic}", "count": 64 }
+          },
+          "expect": { "status": 200, "body": { "ok": true } }
+        },
+        { "await_frame": { "$exact": { "type": "lagged" } } }
+      ]
+    },
+    {
+      "id": "auth-disabled-health-reports-it",
+      "title": "With no auth configured, health says so",
+      "fixture": "auth-disabled",
+      "applies": ["rust-http", "python-http", "rust-ipc", "ts-client"],
+      "inapplicable": {},
+      "steps": [
+        {
+          "request": { "method": "GET", "path": "/api/health", "auth": "none" },
+          "expect": {
+            "status": 200,
+            "body": { "ok": true, "data": { "auth_enabled": false } }
+          }
+        }
+      ]
+    },
+    {
+      "id": "auth-disabled-has-no-login",
+      "title": "With no auth configured there is no login endpoint",
+      "fixture": "auth-disabled",
+      "note": "404 rather than 401: the contract makes login an endpoint that exists only when auth does, so a client can tell 'wrong password' from 'this server does not do passwords'.",
+      "applies": ["rust-http", "python-http", "rust-ipc", "ts-client"],
+      "inapplicable": {},
+      "steps": [
+        {
+          "request": {
+            "method": "POST",
+            "path": "/api/auth/login",
+            "auth": "none",
+            "body": { "username": "${user}", "password": "${password}" }
+          },
+          "expect": { "status": 404, "body": { "ok": false } }
+        }
+      ]
+    },
+    {
+      "id": "auth-disabled-identity-is-anonymous",
+      "title": "With no auth configured, a request with no token is the anonymous identity",
+      "fixture": "auth-disabled",
+      "note": "A subset, unlike `me-with-bearer`: the contract fixes `sub` and `roles` for the anonymous identity and says nothing about what an expiry means for an identity that never came from a token.",
+      "applies": ["rust-http", "python-http", "rust-ipc", "ts-client"],
+      "inapplicable": {},
+      "steps": [
+        {
+          "request": { "method": "GET", "path": "/api/auth/me", "auth": "none" },
+          "expect": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": { "sub": "anonymous", "roles": { "$exact": [] } }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "auth-disabled-protected-routes-are-open",
+      "title": "With no auth configured, the routes that need a token are open",
+      "fixture": "auth-disabled",
+      "note": "The doc store, an action and the components manifest: one route from each surface that sits behind the auth middleware, so a backend that leaves the middleware in the way of any of them is caught.",
+      "applies": ["rust-http", "python-http", "rust-ipc", "ts-client"],
+      "inapplicable": {},
+      "steps": [
+        {
+          "request": { "method": "GET", "path": "/api/data", "auth": "none" },
+          "expect": { "status": 200, "body": { "ok": true, "data": { "$exact": [] } } }
+        },
+        {
+          "request": {
+            "method": "POST",
+            "path": "/api/actions/echo",
+            "auth": "none",
+            "body": { "open": true }
+          },
+          "expect": {
+            "status": 200,
+            "body": { "ok": true, "data": { "$exact": { "open": true } } }
+          }
+        },
+        {
+          "request": { "method": "GET", "path": "/api/components", "auth": "none" },
+          "expect": {
+            "status": 200,
+            "body": { "ok": true, "data": { "$exact": { "app": "${app}", "components": [] } } }
           }
         }
       ]

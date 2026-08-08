@@ -14,7 +14,7 @@ use serde_json::Value;
 
 use forge_core::{
     err_value, health_payload, ok_empty_value, ok_value, unknown_action_error, ActionCtx, Auth,
-    Claims, Components, DocStore, ForgeError,
+    Claims, Components, DocStore, ForgeError, MeResponse,
 };
 
 use crate::state::ForgeState;
@@ -170,7 +170,9 @@ async fn dispatch(
             &state.action_names(),
         )),
         Route::Login => login(state, body),
-        Route::Me => ok(claims),
+        // Contract: the decoded claims, which is `{sub, roles, iss, exp}` —
+        // the same payload forge-server answers with.
+        Route::Me => ok(MeResponse::from(&claims)),
         Route::DataList(store) => match store.list().await {
             Ok(docs) => ok(docs),
             Err(e) => err_forge(e),
@@ -278,10 +280,12 @@ fn percent_decode(segment: &str) -> Option<String> {
 /// What the contract corpus cannot state for this transport. Everything the
 /// corpus does cover runs in `tests/corpus.rs` — nothing here restates it.
 ///
-/// - Auth-disabled mode. The corpus fixture is auth-enabled, so the mode the
-///   contract calls first-class has no case to run over IPC.
 /// - The routing miss. The corpus case asserts a `content-type` header, which
 ///   an IPC response has no room for, so it is declared inapplicable.
+/// - What a rejected doc name leaves on disk. The corpus reads envelopes; that
+///   nothing was written is a fact about the directory behind them.
+/// - The identity an action is handed. The corpus fixture's actions do not
+///   look at their caller.
 #[cfg(test)]
 mod tests {
     use serde_json::json;
@@ -294,43 +298,6 @@ mod tests {
             .action("echo", |payload, _ctx| async move { Ok(payload) })
             .try_state()
             .expect("state")
-    }
-
-    #[tokio::test]
-    async fn auth_disabled_mode_is_anonymous_and_open() {
-        let state = state();
-
-        let r = state.request("GET", "/api/health", None, None).await;
-        assert_eq!(r.status, 200);
-        assert_eq!(r.body["data"]["auth_enabled"], false);
-
-        // No token, and every protected route still answers.
-        let r = state.request("GET", "/api/auth/me", None, None).await;
-        assert_eq!(r.status, 200);
-        assert_eq!(r.body["data"]["sub"], "anonymous");
-        assert_eq!(r.body["data"]["roles"], json!([]));
-
-        let r = state
-            .request("POST", "/api/actions/echo", Some(json!({"n": 1})), None)
-            .await;
-        assert_eq!(r.status, 200);
-        assert_eq!(r.body["data"], json!({"n": 1}));
-    }
-
-    /// Contract: with no auth configured there is no login endpoint.
-    #[tokio::test]
-    async fn auth_disabled_login_is_the_contract_404() {
-        let r = state()
-            .request(
-                "POST",
-                "/api/auth/login",
-                Some(json!({"username": "admin", "password": "admin"})),
-                None,
-            )
-            .await;
-        assert_eq!(r.status, 404);
-        assert_eq!(r.body["ok"], false);
-        assert_eq!(r.body["error"], forge_core::auth::AUTH_DISABLED);
     }
 
     /// A miss is a 404 envelope, whether the path is unknown, the method is

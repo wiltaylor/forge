@@ -53,8 +53,10 @@ async fn login(State(state): State<ForgeState>, body: Bytes) -> Response {
     }
 }
 
+/// Contract: the decoded claims, which is `{sub, roles, iss, exp}` — the
+/// shape [`forge_core::MeResponse`] holds, not the token's own claim set.
 async fn me(
     crate::auth::extract::RequireClaims(claims): crate::auth::extract::RequireClaims,
 ) -> Response {
-    ok(claims)
+    ok(forge_core::MeResponse::from(&claims))
 }

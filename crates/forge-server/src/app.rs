@@ -19,7 +19,7 @@ use crate::auth::{Auth, AuthConfig, TokenValidator};
 use crate::components::Components;
 use crate::docstore::DocStore;
 use crate::error::ForgeError;
-use crate::events::EventBus;
+use crate::events::{EventBus, EventsConfig};
 use crate::frontend::Frontend;
 use crate::state::{ForgeState, StateInner};
 use crate::{auth, components, docstore, events, frontend, health};
@@ -47,6 +47,7 @@ pub struct ForgeApp {
     config_error: Option<ForgeError>,
     events: EventBus,
     events_enabled: bool,
+    events_heartbeat: std::time::Duration,
     docstore: Option<DocStore>,
     components: Option<Components>,
     actions: BTreeMap<String, BoxedAction>,
@@ -73,6 +74,7 @@ impl ForgeApp {
             config_error: None,
             events: EventBus::new(),
             events_enabled: false,
+            events_heartbeat: crate::events::DEFAULT_HEARTBEAT,
             docstore: None,
             components: None,
             actions: BTreeMap::new(),
@@ -138,7 +140,15 @@ impl ForgeApp {
     }
 
     /// Mount `/api/events` (SSE) and `/api/ws` (WebSocket).
-    pub fn with_events(mut self) -> Self {
+    pub fn with_events(self) -> Self {
+        self.with_events_config(EventsConfig::default())
+    }
+
+    /// Mount the event endpoints with an explicit [`EventsConfig`] — the
+    /// buffer a subscriber may fall behind by, and the heartbeat interval.
+    pub fn with_events_config(mut self, config: EventsConfig) -> Self {
+        self.events = EventBus::with_capacity(config.buffer);
+        self.events_heartbeat = config.heartbeat;
         self.events_enabled = true;
         self
     }
@@ -313,6 +323,7 @@ impl ForgeApp {
                 start: Instant::now(),
                 auth: auth_state,
                 events: self.events,
+                events_heartbeat: self.events_heartbeat,
                 docstore: self.docstore,
                 actions: self.actions,
                 components: self.components,

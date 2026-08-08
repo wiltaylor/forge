@@ -2,7 +2,12 @@
 
 The bus itself lives in :mod:`forge_server.core.events`; this module streams it
 to clients. Who is told about a dropped message is a transport decision: a WS
-client gets ``{"type": "lagged"}``, an SSE client just drops.
+client gets ``{"type": "lagged"}``, an SSE client just drops. So is the
+heartbeat, which is a property of the event stream rather than of the bus.
+
+The heartbeat interval below is a default, not the contract. The contract fixes
+the behaviour — a periodic comment — so a caller that will not wait a quarter of
+a minute to see one arrive passes its own to :meth:`ForgeApp.with_events`.
 """
 
 from __future__ import annotations
@@ -12,13 +17,16 @@ import json
 from typing import Any, Callable
 
 from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
-from sse_starlette.sse import EventSourceResponse
+from sse_starlette.sse import EventSourceResponse, ServerSentEvent
 
 from .config import log
 from .core.events import EventBus
 from .envelope import fail
 
+#: Seconds between heartbeat comments on the event stream.
 SSE_PING_SECS = 15
+#: The heartbeat comment the contract states: `: ping`.
+HEARTBEAT_COMMENT = "ping"
 
 
 def _parse_topics(raw: str | None) -> set[str] | None:
@@ -29,7 +37,12 @@ def _parse_topics(raw: str | None) -> set[str] | None:
     return topics or None
 
 
-def register_routes(app: FastAPI, bus: EventBus, require_claims: Callable) -> None:
+def register_routes(
+    app: FastAPI,
+    bus: EventBus,
+    require_claims: Callable,
+    heartbeat_s: float = SSE_PING_SECS,
+) -> None:
     from . import auth as _auth
 
     @app.get("/api/events")
@@ -54,8 +67,14 @@ def register_routes(app: FastAPI, bus: EventBus, require_claims: Callable) -> No
             finally:
                 bus.unsubscribe(sub)
 
-        # sse-starlette sends a `: ping` comment heartbeat every `ping` seconds.
-        return EventSourceResponse(generator(), ping=SSE_PING_SECS)
+        # sse-starlette sends a comment heartbeat every `ping` seconds. Its
+        # own comment carries a timestamp; the contract states `: ping` and
+        # nothing else, so the message is ours rather than the library's.
+        return EventSourceResponse(
+            generator(),
+            ping=heartbeat_s,
+            ping_message_factory=lambda: ServerSentEvent(comment=HEARTBEAT_COMMENT),
+        )
 
     @app.websocket("/api/ws")
     async def ws_events(ws: WebSocket):

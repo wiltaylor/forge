@@ -14,9 +14,11 @@
 //! with a reason. This driver has no skips: an authored expectation it cannot
 //! check is a failure, because a silent pass is what the corpus exists to stop.
 
+use std::collections::BTreeMap;
+
 use forge_contract::{
-    interpolate, interpolate_value, match_value, write_fixture_files, Auth, Case, Corpus, Expect,
-    Fixture, Kind, Step, Vars, RUST_IPC,
+    interpolate, interpolate_value, match_value, users_env, write_fixture_files, Auth, Case,
+    Corpus, Expect, Fixture, Kind, Step, Vars, RUST_IPC,
 };
 use forge_tauri::{ActionCtx, AuthConfig, Builder, ForgeResponse, ForgeState};
 use serde_json::{json, Value};
@@ -27,14 +29,24 @@ const SECRET: &str = "0123456789abcdef0123456789abcdef";
 #[tokio::test]
 async fn corpus_rust_ipc() {
     let corpus = Corpus::load().expect("contract/corpus.json");
-    let harness = Harness::build(&corpus).await;
 
+    // One state per fixture a case actually names, built the first time it is
+    // needed: a fixture whose cases are all inapplicable here costs nothing.
+    let mut harnesses: BTreeMap<&str, Harness> = BTreeMap::new();
     let mut failures = Vec::new();
     let mut ran = 0;
     for case in corpus.cases_for(RUST_IPC) {
         ran += 1;
+        if !harnesses.contains_key(case.fixture.as_str()) {
+            let harness = Harness::build(&corpus, &case.fixture).await;
+            harnesses.insert(case.fixture.as_str(), harness);
+        }
+        let harness = &harnesses[case.fixture.as_str()];
         if let Err(why) = harness.run(case).await {
-            failures.push(format!("{}: {why}\n    ({})", case.id, case.title));
+            failures.push(format!(
+                "{} [{}]: {why}\n    ({})",
+                case.id, case.fixture, case.title
+            ));
         }
     }
 
@@ -56,8 +68,11 @@ struct Harness {
 }
 
 impl Harness {
-    async fn build(corpus: &Corpus) -> Self {
-        let fixture = &corpus.fixture;
+    async fn build(corpus: &Corpus, name: &str) -> Self {
+        let fixture = corpus
+            .fixtures
+            .get(name)
+            .unwrap_or_else(|| panic!("the corpus has no fixture {name:?}"));
         let vars = corpus.vars();
         let dir = tempfile::tempdir().expect("tempdir");
         let data = dir.path().join("data");
@@ -65,18 +80,24 @@ impl Harness {
         for path in [&data, &components] {
             std::fs::create_dir_all(path).expect("fixture dir");
         }
-
-        let manifest = interpolate_value(&fixture.components.manifest, &vars).expect("manifest");
-        std::fs::write(
-            components.join("manifest.json"),
-            serde_json::to_vec_pretty(&manifest).expect("manifest json"),
-        )
-        .expect("write manifest");
-        write_fixture_files(&components, &fixture.components.files, &vars).expect("components");
         // `fixture.frontend` has no counterpart here: the webview loads its
         // own assets, which is why the static cases are inapplicable.
 
-        let mut builder = Builder::new(fixture.app.clone()).with_components(&components);
+        let mut builder = Builder::new(interpolate(&fixture.app, &vars).expect("app"));
+        if let Some(fixture_components) = &fixture.components {
+            // An authored manifest is written; an absent one is the point of
+            // the fixture that leaves it out.
+            if let Some(manifest) = &fixture_components.manifest {
+                let manifest = interpolate_value(manifest, &vars).expect("manifest");
+                std::fs::write(
+                    components.join("manifest.json"),
+                    serde_json::to_vec_pretty(&manifest).expect("manifest json"),
+                )
+                .expect("write manifest");
+            }
+            write_fixture_files(&components, &fixture_components.files, &vars).expect("components");
+            builder = builder.with_components(&components);
+        }
         if fixture.docstore {
             builder = builder.with_docstore(&data);
         }
@@ -237,14 +258,25 @@ impl Harness {
     }
 }
 
+/// The fixture's users, configured the way a deployment configures them:
+/// through the `FORGE_AUTH_USERS` parser. Handing the store a name and a
+/// secret directly would step over the parse, which is where an argon2 hash's
+/// commas land.
 fn auth_config(fixture: &Fixture, vars: &Vars) -> AuthConfig {
+    let raw = users_env(&fixture.auth, vars).expect("fixture users");
     let mut config = AuthConfig::new(SECRET);
+    config.users = forge_core::auth::parse_users(&raw)
+        .expect("the fixture users are not a valid FORGE_AUTH_USERS value");
+    // The variable carries no roles and the fixture does, so they go back on
+    // by name.
     for user in &fixture.auth.users {
-        config = config.user_with_roles(
-            interpolate(&user.name, vars).expect("user name"),
-            interpolate(&user.password, vars).expect("user password"),
-            user.roles.clone(),
-        );
+        let name = interpolate(&user.name, vars).expect("user name");
+        let stored = config
+            .users
+            .iter_mut()
+            .find(|u| u.name == name)
+            .expect("every fixture user survives the parse");
+        stored.roles = user.roles.clone();
     }
     config
 }

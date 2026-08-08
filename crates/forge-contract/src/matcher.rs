@@ -105,10 +105,7 @@ fn check_operator(
     path: &str,
 ) -> Result<(), String> {
     match op {
-        "$exact" => {
-            let wanted = interpolate_value(operand, vars)?;
-            equal(&wanted, actual, path)
-        }
+        "$exact" => check_exact(operand, actual, vars, path),
         "$min_length" => {
             let wanted = operand
                 .as_u64()
@@ -199,6 +196,57 @@ fn check_operator(
     }
 }
 
+/// `$exact`: no extra keys, anywhere below this point. Matchers still apply,
+/// so a payload whose shape is the point can still say `{"$type": "integer"}`
+/// for the one field that moves.
+fn check_exact(expected: &Value, actual: &Value, vars: &Vars, path: &str) -> Result<(), String> {
+    match expected {
+        Value::Object(map) => {
+            if let Some((op, operand)) = operator(map, path)? {
+                return check_operator(op, operand, actual, vars, path);
+            }
+            let Some(got) = actual.as_object() else {
+                return Err(format!("at {path}: expected an object, got {actual}"));
+            };
+            let mut wanted = BTreeMap::new();
+            for (key, want) in map {
+                wanted.insert(interpolate(key, vars)?, want);
+            }
+            for key in got.keys() {
+                if !wanted.contains_key(key) {
+                    return Err(format!("at {path}.{key}: unexpected"));
+                }
+            }
+            for (key, want) in wanted {
+                let child = format!("{path}.{key}");
+                let Some(got) = got.get(&key) else {
+                    return Err(format!("at {child}: missing"));
+                };
+                check_exact(want, got, vars, &child)?;
+            }
+            Ok(())
+        }
+        Value::Array(items) => {
+            let Some(got) = actual.as_array() else {
+                return Err(format!("at {path}: expected an array, got {actual}"));
+            };
+            if items.len() != got.len() {
+                return Err(format!(
+                    "at {path}: expected {} elements, got {}",
+                    items.len(),
+                    got.len()
+                ));
+            }
+            for (i, (want, got)) in items.iter().zip(got).enumerate() {
+                check_exact(want, got, vars, &format!("{path}[{i}]"))?;
+            }
+            Ok(())
+        }
+        Value::String(s) => equal(&Value::String(interpolate(s, vars)?), actual, path),
+        other => equal(other, actual, path),
+    }
+}
+
 fn check_subset(
     expected: &Map<String, Value>,
     actual: &Value,
@@ -270,7 +318,31 @@ mod tests {
     #[test]
     fn exact_rejects_extra_keys() {
         ok(json!({"$exact": {"n": 1}}), json!({"n": 1}));
-        assert!(fails(json!({"$exact": {"n": 1}}), json!({"n": 1, "x": 2})).contains("expected"));
+        assert!(
+            fails(json!({"$exact": {"n": 1}}), json!({"n": 1, "x": 2})).contains("$.x: unexpected")
+        );
+        assert!(fails(json!({"$exact": {"n": 1}}), json!({})).contains("$.n: missing"));
+        // Nested too: exactness reaches all the way down.
+        assert!(fails(
+            json!({"$exact": {"a": {"b": 1}}}),
+            json!({"a": {"b": 1, "c": 2}})
+        )
+        .contains("$.a.c: unexpected"));
+    }
+
+    /// The claims payload is a fixed key set with one field that moves, so
+    /// `$exact` has to hold a matcher rather than only literals.
+    #[test]
+    fn exact_still_runs_the_matchers_inside_it() {
+        ok(
+            json!({"$exact": {"sub": "${user}", "exp": {"$type": "integer"}}}),
+            json!({"sub": "admin", "exp": 1234}),
+        );
+        let err = fails(
+            json!({"$exact": {"sub": "${user}", "exp": {"$type": "integer"}}}),
+            json!({"sub": "admin", "exp": "soon"}),
+        );
+        assert!(err.contains("at $.exp: expected a integer"), "{err}");
     }
 
     #[test]

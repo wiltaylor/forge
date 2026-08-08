@@ -37,7 +37,7 @@ from . import events as _events
 from . import static as _static
 from .core.actions import ActionContext, ActionRegistry
 from .core.docstore import DocStore
-from .core.events import EventBus
+from .core.events import QUEUE_SIZE, EventBus
 
 
 class ForgeApp:
@@ -125,9 +125,21 @@ class ForgeApp:
         self._resort_routes()
         return self
 
-    def with_events(self) -> "ForgeApp":
-        self.events = EventBus()
-        _events.register_routes(self.fastapi, self.events, self.require_auth)
+    def with_events(
+        self,
+        buffer: int = QUEUE_SIZE,
+        heartbeat_s: float = _events.SSE_PING_SECS,
+    ) -> "ForgeApp":
+        """Mount ``/api/events`` (SSE) and ``/api/ws`` (WebSocket).
+
+        ``buffer`` is how far a subscriber may fall behind before it is told
+        it lagged; ``heartbeat_s`` is the gap between heartbeat comments on
+        the event stream. Both default to the contract's own values.
+        """
+        self.events = EventBus(buffer=buffer)
+        _events.register_routes(
+            self.fastapi, self.events, self.require_auth, heartbeat_s=heartbeat_s
+        )
         self._resort_routes()
         return self
 

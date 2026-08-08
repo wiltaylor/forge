@@ -9,10 +9,12 @@ Nothing here knows about HTTP. The driver lives in ``tests/test_corpus.py``.
 
 from .corpus import (
     ABSENT,
+    DEFAULT_FIXTURE,
     PYTHON_HTTP,
     Auth,
     AwaitEventStep,
     AwaitFrameStep,
+    AwaitHeartbeatStep,
     Case,
     Connect,
     ConnectStep,
@@ -20,21 +22,25 @@ from .corpus import (
     CorpusError,
     Expect,
     Fixture,
+    FixtureEvents,
     FixtureUser,
     Kind,
     Request,
     RequestStep,
     SendStep,
     Step,
+    users_env,
 )
 from .matcher import MatchError, Vars, interpolate, interpolate_value, match_value
 
 __all__ = [
     "ABSENT",
+    "DEFAULT_FIXTURE",
     "PYTHON_HTTP",
     "Auth",
     "AwaitEventStep",
     "AwaitFrameStep",
+    "AwaitHeartbeatStep",
     "Case",
     "Connect",
     "ConnectStep",
@@ -42,6 +48,7 @@ __all__ = [
     "CorpusError",
     "Expect",
     "Fixture",
+    "FixtureEvents",
     "FixtureUser",
     "Kind",
     "MatchError",
@@ -53,4 +60,5 @@ __all__ = [
     "interpolate",
     "interpolate_value",
     "match_value",
+    "users_env",
 ]

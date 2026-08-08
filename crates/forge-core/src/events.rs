@@ -30,9 +30,19 @@ impl Default for EventBus {
     }
 }
 
+/// Events a subscriber may fall behind by before it is told it lagged.
+pub const DEFAULT_CAPACITY: usize = 256;
+
 impl EventBus {
     pub fn new() -> Self {
-        let (tx, _rx) = broadcast::channel(256);
+        Self::with_capacity(DEFAULT_CAPACITY)
+    }
+
+    /// A bus whose subscribers buffer `capacity` events. Smaller means a slow
+    /// consumer is told sooner; the contract fixes only that the buffer is
+    /// bounded.
+    pub fn with_capacity(capacity: usize) -> Self {
+        let (tx, _rx) = broadcast::channel(capacity.max(1));
         Self { tx }
     }
 
@@ -148,5 +158,30 @@ mod tests {
         // The bad payload never entered the channel; the next frame is the
         // good one.
         assert_eq!(rx.recv().await.unwrap().topic, "good");
+    }
+
+    /// The contract fixes only that the buffer is bounded, so how deep it is
+    /// belongs to the caller. This is the seam under the corpus case
+    /// `ws-lagged-tells-a-consumer-it-missed-events`, whose fixture asks for a
+    /// one-deep buffer so that a small flood overruns it.
+    #[tokio::test]
+    async fn buffer_depth_is_the_callers_choice() {
+        let bus = EventBus::with_capacity(1);
+        let mut rx = bus.subscribe();
+
+        bus.publish("t", 1);
+        bus.publish("t", 2);
+
+        assert!(matches!(rx.recv().await, Err(RecvError::Lagged(1))));
+        assert_eq!(rx.recv().await.expect("the surviving event").json, "2");
+    }
+
+    /// A zero-deep buffer would panic the channel, so it is a one-deep one.
+    #[tokio::test]
+    async fn a_buffer_is_always_at_least_one_deep() {
+        let bus = EventBus::with_capacity(0);
+        let mut rx = bus.subscribe();
+        bus.publish("t", 1);
+        assert_eq!(rx.recv().await.expect("event").topic, "t");
     }
 }

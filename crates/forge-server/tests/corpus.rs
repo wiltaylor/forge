@@ -19,8 +19,8 @@ use axum::body::Body;
 use axum::http::{HeaderMap, Request, StatusCode};
 use axum::Router;
 use forge_contract::{
-    interpolate, interpolate_value, match_value, write_fixture_files, Auth, AwaitEvent, Case,
-    Connect, Corpus, Expect, Fixture, Kind, Step, Vars, RUST_HTTP,
+    interpolate, interpolate_value, match_value, users_env, write_fixture_files, Auth, AwaitEvent,
+    Case, Connect, Corpus, Expect, Fixture, Kind, Step, Vars, RUST_HTTP,
 };
 use futures_util::{SinkExt, StreamExt};
 use http_body_util::BodyExt;
@@ -36,14 +36,24 @@ const SECRET: &str = "0123456789abcdef0123456789abcdef";
 #[tokio::test]
 async fn corpus_rust_http() {
     let corpus = Corpus::load().expect("contract/corpus.json");
-    let harness = Harness::build(&corpus).await;
 
+    // One server per fixture a case actually names, built the first time it
+    // is needed: a fixture whose cases are all inapplicable here costs nothing.
+    let mut harnesses: BTreeMap<&str, Harness> = BTreeMap::new();
     let mut failures = Vec::new();
     let mut ran = 0;
     for case in corpus.cases_for(RUST_HTTP) {
         ran += 1;
+        if !harnesses.contains_key(case.fixture.as_str()) {
+            let harness = Harness::build(&corpus, &case.fixture).await;
+            harnesses.insert(case.fixture.as_str(), harness);
+        }
+        let harness = &harnesses[case.fixture.as_str()];
         if let Err(why) = harness.run(case).await {
-            failures.push(format!("{}: {why}\n    ({})", case.id, case.title));
+            failures.push(format!(
+                "{} [{}]: {why}\n    ({})",
+                case.id, case.fixture, case.title
+            ));
         }
     }
 
@@ -65,8 +75,11 @@ struct Harness {
 }
 
 impl Harness {
-    async fn build(corpus: &Corpus) -> Self {
-        let fixture = &corpus.fixture;
+    async fn build(corpus: &Corpus, name: &str) -> Self {
+        let fixture = corpus
+            .fixtures
+            .get(name)
+            .unwrap_or_else(|| panic!("the corpus has no fixture {name:?}"));
         let vars = corpus.vars();
         let dir = tempfile::tempdir().expect("tempdir");
         let data = dir.path().join("data");
@@ -75,24 +88,29 @@ impl Harness {
         for path in [&data, &components, &frontend] {
             std::fs::create_dir_all(path).expect("fixture dir");
         }
-
-        let manifest = interpolate_value(&fixture.components.manifest, &vars).expect("manifest");
-        std::fs::write(
-            components.join("manifest.json"),
-            serde_json::to_vec_pretty(&manifest).expect("manifest json"),
-        )
-        .expect("write manifest");
-        write_fixture_files(&components, &fixture.components.files, &vars).expect("components");
         write_fixture_files(&frontend, &fixture.frontend.files, &vars).expect("frontend");
 
-        let mut app = forge_server::ForgeApp::new(fixture.app.clone())
-            .with_components(&components)
+        let mut app = forge_server::ForgeApp::new(interpolate(&fixture.app, &vars).expect("app"))
             .frontend_dir(&frontend);
+        if let Some(fixture_components) = &fixture.components {
+            // An authored manifest is written; an absent one is the point of
+            // the fixture that leaves it out.
+            if let Some(manifest) = &fixture_components.manifest {
+                let manifest = interpolate_value(manifest, &vars).expect("manifest");
+                std::fs::write(
+                    components.join("manifest.json"),
+                    serde_json::to_vec_pretty(&manifest).expect("manifest json"),
+                )
+                .expect("write manifest");
+            }
+            write_fixture_files(&components, &fixture_components.files, &vars).expect("components");
+            app = app.with_components(&components);
+        }
         if fixture.docstore {
             app = app.with_docstore(&data);
         }
-        if fixture.events {
-            app = app.with_events();
+        if let Some(events) = &fixture.events {
+            app = app.with_events_config(events_config(events));
         }
         if fixture.auth.enabled {
             app = app.auth(auth_config(fixture, &vars));
@@ -200,6 +218,12 @@ impl Harness {
                         .await
                         .map_err(|e| format!("step {i}: {e}"))?;
                 }
+                Step::AwaitHeartbeat { await_heartbeat } => {
+                    let stream = stream.as_mut().expect("stream opened by the first step");
+                    self.expect_heartbeat(stream, await_heartbeat)
+                        .await
+                        .map_err(|e| format!("step {i}: {e}"))?;
+                }
                 _ => return Err(format!("step {i}: not a step a stream can take")),
             }
         }
@@ -217,6 +241,22 @@ impl Harness {
             return Err(format!("expected topic {wanted:?}, got {topic:?}"));
         }
         match_value(&expected.data, &data, &self.vars)
+    }
+
+    /// The *next* block, not the next heartbeat: a driver that read past an
+    /// event to find one would pass while the stream carried something the
+    /// contract does not allow.
+    async fn expect_heartbeat(
+        &self,
+        stream: &mut SseStream,
+        expected: &Value,
+    ) -> Result<(), String> {
+        match stream.next_block().await? {
+            SseBlock::Heartbeat(text) => match_value(expected, &Value::String(text), &self.vars),
+            SseBlock::Event(topic, data) => Err(format!(
+                "expected a heartbeat, got the event {topic:?} carrying {data}"
+            )),
+        }
     }
 
     async fn run_ws(&self, case: &Case) -> Result<(), String> {
@@ -258,7 +298,9 @@ impl Harness {
                 Step::Request { request, expect } => {
                     self.run_request(request, expect.as_ref(), i).await?;
                 }
-                Step::AwaitEvent { .. } => return Err(at("a socket awaits frames".into())),
+                Step::AwaitEvent { .. } | Step::AwaitHeartbeat { .. } => {
+                    return Err(at("a socket awaits frames".into()))
+                }
             }
         }
         if let Some(mut ws) = socket {
@@ -431,8 +473,15 @@ impl Response {
     }
 }
 
-/// Reads `event:`/`data:` pairs off a live server-sent-events body. Comment
-/// heartbeats are not events, so they are stepped over.
+/// One block off a live server-sent-events body.
+enum SseBlock {
+    /// An `event:`/`data:` pair.
+    Event(String, Value),
+    /// The comment that holds an idle stream open, its text without the colon.
+    Heartbeat(String),
+}
+
+/// Reads blocks off a live server-sent-events body.
 struct SseStream {
     body: Body,
     buffer: String,
@@ -446,16 +495,26 @@ impl SseStream {
         }
     }
 
+    /// The next event. Comment heartbeats are not events, so they are stepped
+    /// over — `await_heartbeat` is the step that sees one.
     async fn next_event(&mut self) -> Result<(String, Value), String> {
         loop {
+            if let SseBlock::Event(topic, data) = self.next_block().await? {
+                return Ok((topic, data));
+            }
+        }
+    }
+
+    async fn next_block(&mut self) -> Result<SseBlock, String> {
+        loop {
             while let Some(block) = self.take_block() {
-                if let Some(event) = parse_sse_block(&block)? {
-                    return Ok(event);
+                if let Some(block) = parse_sse_block(&block)? {
+                    return Ok(block);
                 }
             }
             let frame = timeout(WAIT, self.body.frame())
                 .await
-                .map_err(|_| "timed out waiting for an event".to_string())?
+                .map_err(|_| "timed out waiting for the stream".to_string())?
                 .ok_or_else(|| "the stream ended".to_string())?
                 .map_err(|e| format!("stream error: {e}"))?;
             if let Some(data) = frame.data_ref() {
@@ -472,23 +531,27 @@ impl SseStream {
     }
 }
 
-fn parse_sse_block(block: &str) -> Result<Option<(String, Value)>, String> {
+/// `None` for a block that is neither an event nor a heartbeat.
+fn parse_sse_block(block: &str) -> Result<Option<SseBlock>, String> {
     let mut topic = None;
     let mut data = None;
+    let mut comment = None;
     for line in block.lines() {
         if let Some(rest) = line.strip_prefix("event:") {
             topic = Some(rest.trim().to_string());
         } else if let Some(rest) = line.strip_prefix("data:") {
             data = Some(rest.trim().to_string());
+        } else if let Some(rest) = line.strip_prefix(':') {
+            comment.get_or_insert_with(|| rest.trim().to_string());
         }
     }
-    match (topic, data) {
-        (Some(topic), Some(data)) => {
+    match (topic, data, comment) {
+        (Some(topic), Some(data), _) => {
             let value = serde_json::from_str(&data)
                 .map_err(|e| format!("event data is not JSON: {data:?} ({e})"))?;
-            Ok(Some((topic, value)))
+            Ok(Some(SseBlock::Event(topic, value)))
         }
-        // A comment heartbeat, or a frame with no payload.
+        (_, _, Some(comment)) => Ok(Some(SseBlock::Heartbeat(comment))),
         _ => Ok(None),
     }
 }
@@ -514,14 +577,36 @@ async fn next_frame(
     }
 }
 
+/// The fixture's users, configured the way a deployment configures them:
+/// through the `FORGE_AUTH_USERS` parser. Handing the store a name and a
+/// secret directly would step over the parse, which is where an argon2 hash's
+/// commas land.
 fn auth_config(fixture: &Fixture, vars: &Vars) -> forge_server::AuthConfig {
+    let raw = users_env(&fixture.auth, vars).expect("fixture users");
     let mut config = forge_server::AuthConfig::new(SECRET);
+    config.users = forge_server::auth::parse_users(&raw)
+        .expect("the fixture users are not a valid FORGE_AUTH_USERS value");
+    // The variable carries no roles and the fixture does, so they go back on
+    // by name.
     for user in &fixture.auth.users {
-        config = config.user_with_roles(
-            interpolate(&user.name, vars).expect("user name"),
-            interpolate(&user.password, vars).expect("user password"),
-            user.roles.clone(),
-        );
+        let name = interpolate(&user.name, vars).expect("user name");
+        let stored = config
+            .users
+            .iter_mut()
+            .find(|u| u.name == name)
+            .expect("every fixture user survives the parse");
+        stored.roles = user.roles.clone();
+    }
+    config
+}
+
+fn events_config(events: &forge_contract::FixtureEvents) -> forge_server::EventsConfig {
+    let mut config = forge_server::EventsConfig::default();
+    if let Some(buffer) = events.buffer {
+        config = config.buffer(buffer);
+    }
+    if let Some(secs) = events.heartbeat_s {
+        config = config.heartbeat(Duration::from_secs_f64(secs));
     }
     config
 }
@@ -541,6 +626,21 @@ fn register_action(app: forge_server::ForgeApp, name: &str) -> forge_server::For
             let data = payload.get("data").cloned().unwrap_or(Value::Null);
             ctx.events.publish(&topic, data);
             Ok(json!({"published": true, "topic": topic}))
+        }),
+        // Publishes without awaiting anything, so no subscriber gets a turn
+        // in between: that is what makes overrunning a bounded buffer a
+        // certainty rather than a race.
+        "flood" => app.action("flood", |payload: Value, ctx| async move {
+            let topic = payload
+                .get("topic")
+                .and_then(Value::as_str)
+                .unwrap_or("misc")
+                .to_string();
+            let count = payload.get("count").and_then(Value::as_u64).unwrap_or(0);
+            for n in 0..count {
+                ctx.events.publish(&topic, json!({"n": n}));
+            }
+            Ok(json!({"published": count, "topic": topic}))
         }),
         other => {
             panic!("the corpus fixture wants an action this driver has no behaviour for: {other:?}")

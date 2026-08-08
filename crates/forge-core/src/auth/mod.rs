@@ -181,6 +181,35 @@ pub struct LoginUser {
     pub roles: Vec<String>,
 }
 
+/// The `/api/auth/me` body the contract specifies: the decoded claims, which
+/// the contract names as `{sub, roles, iss, exp}`.
+///
+/// [`Claims`] is the token; this is the endpoint. They are not the same shape
+/// — `iat` is in the token and not in this payload — and one definition here
+/// is what keeps every transport answering `/api/auth/me` alike.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MeResponse {
+    /// Username.
+    pub sub: String,
+    /// Role names.
+    pub roles: Vec<String>,
+    /// Issuer, `null` when the identity carries none.
+    pub iss: Option<String>,
+    /// Expiry (unix seconds).
+    pub exp: i64,
+}
+
+impl From<&Claims> for MeResponse {
+    fn from(claims: &Claims) -> Self {
+        Self {
+            sub: claims.sub.clone(),
+            roles: claims.roles.clone(),
+            iss: claims.iss.clone(),
+            exp: claims.exp,
+        }
+    }
+}
+
 /// Runtime auth: a token validator, plus the config that mints tokens when
 /// login is available.
 ///
@@ -333,6 +362,32 @@ mod tests {
         // Validation still works — that is the whole point of the mode.
         let token = encode_token(&Claims::new("x", vec![], 3600, None), SECRET).unwrap();
         assert_eq!(auth.validate(&token).unwrap().sub, "x");
+    }
+
+    /// The contract names four members for `/api/auth/me`; `iat` is a token
+    /// claim and not one of them.
+    #[test]
+    fn the_me_payload_is_the_four_members_the_contract_names() {
+        let claims = Claims::new("admin", vec!["ops".into()], 3600, Some("forge".into()));
+        let payload = serde_json::to_value(MeResponse::from(&claims)).unwrap();
+        assert_eq!(
+            payload,
+            serde_json::json!({
+                "sub": "admin",
+                "roles": ["ops"],
+                "iss": "forge",
+                "exp": claims.exp,
+            })
+        );
+    }
+
+    /// An identity with no issuer says so, rather than dropping the member —
+    /// the payload has one shape whether or not a token carried an issuer.
+    #[test]
+    fn the_me_payload_keeps_a_null_issuer() {
+        let payload = serde_json::to_value(MeResponse::from(&Claims::anonymous())).unwrap();
+        assert_eq!(payload["sub"], "anonymous");
+        assert!(payload["iss"].is_null());
     }
 
     #[test]

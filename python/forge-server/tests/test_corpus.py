@@ -23,7 +23,7 @@ import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterator, Mapping
+from typing import Any, Callable, Iterator, Mapping
 from urllib.parse import quote
 
 import httpx
@@ -38,11 +38,13 @@ from contract import (
     Auth,
     AwaitEventStep,
     AwaitFrameStep,
+    AwaitHeartbeatStep,
     Case,
     ConnectStep,
     Corpus,
     Expect,
     Fixture,
+    FixtureEvents,
     Kind,
     MatchError,
     Request,
@@ -52,6 +54,7 @@ from contract import (
     interpolate,
     interpolate_value,
     match_value,
+    users_env,
 )
 from forge_server import ForgeApp
 
@@ -71,8 +74,8 @@ def test_the_corpus_reaches_this_transport():
 
 
 @pytest.mark.parametrize("case", CASES, ids=[case.id for case in CASES])
-def test_case(harness: "Harness", case: Case):
-    harness.run(case)
+def test_case(harnesses, case: Case):
+    harnesses(case.fixture).run(case)
 
 
 class Failure(AssertionError):
@@ -96,12 +99,25 @@ _NOT_JSON = object()
 
 
 @pytest.fixture(scope="session")
-def harness(tmp_path_factory) -> Iterator["Harness"]:
-    built = Harness.build(CORPUS, tmp_path_factory.mktemp("corpus"))
+def harnesses(tmp_path_factory) -> Iterator[Callable[[str], "Harness"]]:
+    """One server per fixture a case names, built the first time it is needed.
+
+    A fixture whose cases are all inapplicable to this transport costs nothing.
+    """
+    built: dict[str, Harness] = {}
+
+    def get(name: str) -> Harness:
+        if name not in built:
+            built[name] = Harness.build(
+                CORPUS, name, tmp_path_factory.mktemp(f"corpus-{name}")
+            )
+        return built[name]
+
     try:
-        yield built
+        yield get
     finally:
-        built.stop()
+        for harness in built.values():
+            harness.stop()
 
 
 class Harness:
@@ -118,28 +134,35 @@ class Harness:
     # -- building ----------------------------------------------------------
 
     @classmethod
-    def build(cls, corpus: Corpus, root: Path) -> "Harness":
-        fixture = corpus.fixture
+    def build(cls, corpus: Corpus, name: str, root: Path) -> "Harness":
+        fixture = corpus.fixtures[name]
         variables = dict(corpus.vars)
         data = root / "data"
         components = root / "components"
         frontend = root / "frontend"
         for path in (data, components, frontend):
             path.mkdir(parents=True, exist_ok=True)
-
-        manifest = interpolate_value(fixture.components.manifest, variables)
-        (components / "manifest.json").write_text(json.dumps(manifest, indent=2))
-        _write_files(components, fixture.components.files, variables)
         _write_files(frontend, fixture.frontend.files, variables)
 
-        app = ForgeApp(fixture.app)
+        app = ForgeApp(interpolate(fixture.app, variables))
         if fixture.auth.enabled:
-            app.auth(secret=SECRET, users=_users(fixture, variables))
+            # Configured the way a deployment configures it: through the
+            # FORGE_AUTH_USERS parser. Handing the store a name and a secret
+            # directly would step over the parse, which is where an argon2
+            # hash's commas land.
+            app.auth(secret=SECRET, users=users_env(fixture.auth, variables))
         if fixture.docstore:
             app.with_docstore(data)
-        if fixture.events:
-            app.with_events()
-        app.with_components(components)
+        if fixture.events is not None:
+            app.with_events(**_events_kwargs(fixture.events))
+        if fixture.components is not None:
+            # An authored manifest is written; an absent one is the point of
+            # the fixture that leaves it out.
+            if fixture.components.manifest is not None:
+                manifest = interpolate_value(fixture.components.manifest, variables)
+                (components / "manifest.json").write_text(json.dumps(manifest, indent=2))
+            _write_files(components, fixture.components.files, variables)
+            app.with_components(components)
         _register_actions(app, fixture.actions)
         # Last, so the SPA catch-all sits behind every API route.
         app.serve_frontend(frontend, spa=True)
@@ -205,6 +228,9 @@ class Harness:
                 elif isinstance(step, AwaitEventStep):
                     assert stream is not None  # opened by the first step
                     self._expect_event(stream, step, index)
+                elif isinstance(step, AwaitHeartbeatStep):
+                    assert stream is not None  # opened by the first step
+                    self._expect_heartbeat(stream, step, index)
                 else:
                     raise Failure(f"step {index}: not a step a stream can take")
 
@@ -294,6 +320,20 @@ class Harness:
             raise Failure(f"step {index}: expected topic {wanted!r}, got {topic!r}")
         _match(step.data, data, self.vars, index)
 
+    def _expect_heartbeat(
+        self, stream: "_SseStream", step: AwaitHeartbeatStep, index: int
+    ) -> None:
+        """The *next* block, not the next heartbeat: a driver that read past an
+        event to find one would pass while the stream carried something the
+        contract does not allow."""
+        block = stream.next_block(index)
+        if isinstance(block, _Event):
+            raise Failure(
+                f"step {index}: expected a heartbeat, got the event {block.topic!r} "
+                f"carrying {block.data!r}"
+            )
+        _match(step.matcher, block.text, self.vars, index)
+
     def _check(self, expect: Expect | None, response: Response, index: int) -> None:
         _check_status_and_headers(expect, response, index, self.vars)
         if expect is None:
@@ -357,26 +397,48 @@ def _next_frame(socket_, index: int) -> Any:
         raise Failure(f"step {index}: frame is not JSON: {message!r} ({e})") from None
 
 
+@dataclass
+class _Event:
+    """An ``event:``/``data:`` pair off the stream."""
+
+    topic: str
+    data: Any
+
+
+@dataclass
+class _Heartbeat:
+    """The comment that holds an idle stream open, without its colon."""
+
+    text: str
+
+
 class _SseStream:
-    """Reads ``event:``/``data:`` pairs off a live event stream. Comment
-    heartbeats are not events, so they are stepped over."""
+    """Reads blocks off a live event stream."""
 
     def __init__(self, response: httpx.Response):
         self.chunks = response.iter_text()
         self.buffer = ""
 
     def next_event(self, index: int) -> tuple[str, Any]:
+        """The next event. Comment heartbeats are not events, so they are
+        stepped over — ``await_heartbeat`` is the step that sees one."""
+        while True:
+            block = self.next_block(index)
+            if isinstance(block, _Event):
+                return block.topic, block.data
+
+    def next_block(self, index: int) -> "_Event | _Heartbeat":
         while True:
             block = self._take_block()
             if block is not None:
-                event = _parse_sse_block(block, index)
-                if event is not None:
-                    return event
+                parsed = _parse_sse_block(block, index)
+                if parsed is not None:
+                    return parsed
                 continue
             try:
                 self.buffer += next(self.chunks)
             except httpx.TimeoutException:
-                raise Failure(f"step {index}: timed out waiting for an event") from None
+                raise Failure(f"step {index}: timed out waiting for the stream") from None
             except StopIteration:
                 raise Failure(f"step {index}: the stream ended") from None
 
@@ -390,19 +452,22 @@ class _SseStream:
         return buffer[:end]
 
 
-def _parse_sse_block(block: str, index: int) -> tuple[str, Any] | None:
+def _parse_sse_block(block: str, index: int) -> "_Event | _Heartbeat | None":
+    """``None`` for a block that is neither an event nor a heartbeat."""
     topic = None
     data = None
+    comment = None
     for line in block.splitlines():
         if line.startswith("event:"):
             topic = line[len("event:") :].strip()
         elif line.startswith("data:"):
             data = line[len("data:") :].strip()
+        elif line.startswith(":") and comment is None:
+            comment = line[1:].strip()
     if topic is None or data is None:
-        # A comment heartbeat, or a frame with no payload.
-        return None
+        return _Heartbeat(comment) if comment is not None else None
     try:
-        return topic, json.loads(data)
+        return _Event(topic, json.loads(data))
     except ValueError as e:
         raise Failure(f"step {index}: event data is not JSON: {data!r} ({e})") from None
 
@@ -434,18 +499,15 @@ def _serve(app: ForgeApp) -> tuple[uvicorn.Server, threading.Thread, int]:
     return server, thread, port
 
 
-def _users(fixture: Fixture, variables: Vars) -> dict[str, str]:
-    users = {}
-    for user in fixture.auth.users:
-        if user.roles:
-            # Loud rather than silent: this backend issues a token with no
-            # roles, so a fixture that wants them is not the fixture served.
-            raise AssertionError(
-                f"the corpus fixture gives {user.name!r} roles, which this backend "
-                "cannot put in a token"
-            )
-        users[interpolate(user.name, variables)] = interpolate(user.password, variables)
-    return users
+def _events_kwargs(events: FixtureEvents) -> dict[str, Any]:
+    """The event knobs the fixture tightens; the rest keep the backend's
+    defaults, which are the contract's."""
+    kwargs: dict[str, Any] = {}
+    if events.buffer is not None:
+        kwargs["buffer"] = events.buffer
+    if events.heartbeat_s is not None:
+        kwargs["heartbeat_s"] = events.heartbeat_s
+    return kwargs
 
 
 def _register_actions(app: ForgeApp, names: list[str]) -> None:
@@ -459,6 +521,8 @@ def _register_actions(app: ForgeApp, names: list[str]) -> None:
             app.action(name)(_echo)
         elif name == "publish":
             app.action(name)(_publish)
+        elif name == "flood":
+            app.action(name)(_flood)
         else:
             raise AssertionError(
                 "the corpus fixture wants an action this driver has no behaviour "
@@ -474,6 +538,20 @@ def _publish(payload: Any, ctx: Any) -> Any:
     topic = str(payload.get("topic", "misc"))
     ctx.events.publish(topic, payload.get("data"))
     return {"published": True, "topic": topic}
+
+
+async def _flood(payload: Any, ctx: Any) -> Any:
+    """Publish ``count`` events on ``topic`` in one go.
+
+    Async, and awaiting nothing, so it runs to the end without giving a
+    subscriber a turn: that is what makes overrunning a bounded buffer a
+    certainty rather than a race.
+    """
+    topic = str(payload.get("topic", "misc"))
+    count = int(payload.get("count", 0))
+    for n in range(count):
+        ctx.events.publish(topic, {"n": n})
+    return {"published": count, "topic": topic}
 
 
 def _write_files(directory: Path, files: Mapping[str, str], variables: Vars) -> None:

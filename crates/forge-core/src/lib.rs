@@ -21,7 +21,9 @@ pub mod health;
 pub mod widgets;
 
 pub use actions::{box_action, unknown_action_error, ActionCtx, ActionFuture, BoxedAction};
-pub use auth::{Auth, AuthConfig, AuthUser, Hs256Validator, LoginResponse, TokenValidator};
+pub use auth::{
+    Auth, AuthConfig, AuthUser, Hs256Validator, LoginResponse, MeResponse, TokenValidator,
+};
 pub use claims::{unix_now, Claims};
 pub use components::{valid_component_file, Components, ALLOWED_EXTENSIONS, FILE_PATTERN};
 pub use docstore::{valid_doc_name, DocStore, NAME_PATTERN};
