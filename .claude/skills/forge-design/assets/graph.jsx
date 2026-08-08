@@ -1,4 +1,8 @@
-/* Forge node graph — optional 4th copy-in asset (needs console.css's
+/* AUTHORED FILE — hand-maintained standalone port of packages/graph. Not
+   generated: of this skill's assets only the CSS bundles are (see
+   scripts/generate.mjs). Sync changes from the package by hand.
+
+   Forge node graph — optional 4th copy-in asset (needs console.css's
    "Node graph" section). Controlled component: nodes/edges/selection come
    from props; interactions are reported through callbacks and the consumer
    updates its own store.

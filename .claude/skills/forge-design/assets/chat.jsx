@@ -1,4 +1,8 @@
-/* Forge chat — optional copy-in asset (chat UI: conversation view, tool-call
+/* AUTHORED FILE — hand-maintained standalone port of packages/chat. Not
+   generated: of this skill's assets only the CSS bundles are (see
+   scripts/generate.mjs). Sync changes from the package by hand.
+
+   Forge chat — optional copy-in asset (chat UI: conversation view, tool-call
    boxes, interactive prompts, link cards, markdown, composer).
 
    UNLIKE the other extras this file IMPORTS ./ui.jsx (Avatar, Button, Icon,
