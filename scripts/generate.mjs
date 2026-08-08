@@ -14,7 +14,8 @@
  * directly. The block kind registry is Rust, so `just generate-blocks` dumps it
  * to `contract/*.json` first and these generators read that — which keeps this
  * script, and `just check` with it, a Node-only job that installing the web kit
- * never needs a Rust toolchain to reproduce.
+ * never needs a Rust toolchain to reproduce. A dump states a digest of its Rust
+ * source, so a stale one fails here rather than quietly generating from it.
  *
  * To add an output, add one entry to `ARTIFACTS`.
  */

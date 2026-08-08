@@ -3,9 +3,7 @@
 //! serde, so a new variant with no registry entry fails here rather than
 //! waiting for a kit to notice.
 
-use forge_blocks::{
-    kind_entry, palette_row, palette_rows, starter_kind, BlockKind, PaletteAction, KINDS,
-};
+use forge_blocks::{kind_entry, palette_rows, starter_kind, BlockKind, PaletteAction, KINDS};
 
 /// Every wire `type` name the schema accepts, taken from serde's own list of
 /// expected variants (the error text for an unknown tag). No hand-kept copy.
@@ -212,7 +210,9 @@ fn every_palette_row_makes_the_kind_it_belongs_to() {
 }
 
 #[test]
-fn palette_rows_are_unique_and_reachable() {
+fn palette_rows_are_named_once_each() {
+    // A kit lists rows by label and matches them by id. Two rows sharing
+    // either one would make the palette ambiguous.
     let rows = palette_rows();
     assert!(
         rows.len() > KINDS.len(),
@@ -220,12 +220,7 @@ fn palette_rows_are_unique_and_reachable() {
     );
     for row in &rows {
         assert!(!row.label.is_empty(), "the row `{}` has no label", row.id);
-        let found = palette_row(row.id).unwrap_or_else(|| panic!("`{}` is unreachable", row.id));
-        assert!(
-            std::ptr::eq(found, *row),
-            "`{}` resolves to another row",
-            row.id
-        );
+        assert!(!row.id.is_empty(), "the row `{}` has no id", row.label);
     }
     for key in [
         rows.iter().map(|r| r.id).collect::<Vec<_>>(),
@@ -240,7 +235,6 @@ fn palette_rows_are_unique_and_reachable() {
             "two palette rows share a key: {key:?}"
         );
     }
-    assert!(palette_row("nope").is_none());
 }
 
 #[test]
@@ -280,15 +274,26 @@ fn every_kind_but_custom_reaches_the_palette() {
 }
 
 #[test]
-fn a_data_kind_inserts_the_shared_starter() {
+fn the_first_row_of_a_kind_inserts_its_starter() {
     // The palette is where a starter divergence used to show up: one kit's
-    // table was two by one while the others' was three by two.
-    for entry in KINDS.iter().filter(|e| e.is_data) {
-        let row = entry.palette.first().expect(entry.type_name);
-        let PaletteAction::Insert(make) = row.action else {
-            panic!("`{}` offers no insert row", entry.type_name);
+    // table was two by one while the others' was three by two. A kind that
+    // offers several rows offers variants of one starter — the first heading
+    // level, the first list style — so the first row is the starter itself,
+    // whatever else follows it.
+    for entry in KINDS {
+        let Some(row) = entry.palette.first() else {
+            continue;
         };
-        assert_eq!(make(), starter_kind(entry.type_name).unwrap());
+        let PaletteAction::Insert(make) = row.action else {
+            continue;
+        };
+        assert_eq!(
+            make(),
+            (entry.starter)(),
+            "the palette row `{}` inserts something other than the `{}` starter",
+            row.id,
+            entry.type_name
+        );
     }
 }
 

@@ -1,20 +1,20 @@
 /**
  * Emit the emoji shortcode table.
  *
- * Eight hundred and thirty-six entries used to live twice — once in Rust, once
- * in TypeScript — under a comment asking whoever edited one to remember the
- * other. The Rust table is the author now; this writes its TypeScript form.
+ * The table used to live twice — once in Rust, once in TypeScript — under a
+ * comment asking whoever edited one to remember the other. The Rust table is
+ * the author now; this writes its TypeScript form.
  *
  * The order is the table's own, sorted by shortcode. `searchEmoji` walks the
  * object in key order, so it must stay sorted here too.
  */
 import { bannerLines } from './banner.mjs';
-import { EMOJI_PATH, EMOJI_SOURCE_PATH, emoji, quote } from './blocks-source.mjs';
+import { EMOJI_PATH, EMOJI_SOURCE_PATH, emoji, quote, via } from './blocks-source.mjs';
 
 /** The whole file. */
 export function renderBlocksEmoji() {
   const lines = [
-    `/* ${bannerLines(EMOJI_SOURCE_PATH, EMOJI_PATH).join('\n   ')} */`,
+    `/* ${bannerLines(EMOJI_SOURCE_PATH, via(EMOJI_PATH)).join('\n   ')} */`,
     '',
     '/** Curated emoji shortcode table — gemoji-compatible names, sorted by',
     '    shortcode. */',

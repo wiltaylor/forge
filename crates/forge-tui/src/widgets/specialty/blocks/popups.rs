@@ -3,7 +3,7 @@
 //! Both render last with `Clear` + `place()` anchored near the focused
 //! block.
 
-use forge_blocks::{palette_rows, PaletteRow};
+use forge_blocks::palette_rows;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
@@ -36,16 +36,11 @@ pub(super) struct EmojiState {
     pub start: usize,
 }
 
-/// The built-in slash rows, from the shared kind registry. Every kit reads
-/// this list, so none of them can offer a kind the others do not.
-pub(super) fn builtins() -> Vec<&'static PaletteRow> {
-    palette_rows()
-}
-
-/// The full palette command list: built-ins followed by the registered
-/// custom kinds (in registration order).
+/// The full palette command list: the built-in rows from the shared kind
+/// registry — the list every kit reads, so none can offer a kind the others do
+/// not — followed by the registered custom kinds, in registration order.
 pub(super) fn slash_commands(custom: &[Box<dyn CustomBlock>]) -> Vec<Command<'static>> {
-    let mut out: Vec<Command<'static>> = builtins()
+    let mut out: Vec<Command<'static>> = palette_rows()
         .into_iter()
         .map(|row| Command::new(row.id, row.label))
         .collect();

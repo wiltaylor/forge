@@ -445,7 +445,7 @@ impl BlockEditorState {
         let Some(addr) = self.focus else {
             return Outcome::Consumed;
         };
-        let builtins = popups::builtins();
+        let builtins = forge_blocks::palette_rows();
         let kind = if let Some(row) = builtins.get(ci) {
             match row.action {
                 PaletteAction::WrapColumns(n) => {

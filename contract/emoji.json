@@ -1,5 +1,6 @@
 {
   "generated_from": "crates/forge-blocks/src/emoji.rs",
+  "source_digest": "fnv1a64:333f0d44d2ada3e9",
   "emoji": [
     ["+1", "👍"],
     ["-1", "👎"],

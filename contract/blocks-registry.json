@@ -11,8 +11,6 @@
         }
       ],
       "is_data": false,
-      "label": "Text",
-      "markdown": "native",
       "starter": {
         "md": "",
         "type": "paragraph"
@@ -34,8 +32,6 @@
         }
       ],
       "is_data": false,
-      "label": "Heading",
-      "markdown": "native",
       "starter": {
         "level": 1,
         "md": "",
@@ -68,8 +64,6 @@
         }
       ],
       "is_data": false,
-      "label": "List item",
-      "markdown": "native",
       "starter": {
         "indent": 0,
         "md": "",
@@ -88,8 +82,6 @@
         }
       ],
       "is_data": false,
-      "label": "Quote",
-      "markdown": "native",
       "starter": {
         "md": "",
         "type": "quote"
@@ -100,8 +92,6 @@
       "doc": [],
       "fields": [],
       "is_data": false,
-      "label": "Divider",
-      "markdown": "native",
       "starter": {
         "type": "divider"
       },
@@ -122,8 +112,6 @@
         }
       ],
       "is_data": false,
-      "label": "Code",
-      "markdown": "native",
       "starter": {
         "code": "",
         "lang": "",
@@ -148,8 +136,6 @@
         }
       ],
       "is_data": false,
-      "label": "Table",
-      "markdown": "native",
       "starter": {
         "header": [
           "",
@@ -192,8 +178,6 @@
         }
       ],
       "is_data": false,
-      "label": "Callout",
-      "markdown": "native",
       "starter": {
         "md": "",
         "title": "",
@@ -214,8 +198,6 @@
         }
       ],
       "is_data": false,
-      "label": "Columns",
-      "markdown": "flattened",
       "starter": {
         "columns": [
           {
@@ -260,8 +242,6 @@
         }
       ],
       "is_data": false,
-      "label": "Custom",
-      "markdown": "custom-fence",
       "starter": {
         "data": null,
         "kind": "",
@@ -294,8 +274,6 @@
         }
       ],
       "is_data": true,
-      "label": "Image",
-      "markdown": "native-or-fence",
       "starter": {
         "alt": "",
         "src": "",
@@ -335,8 +313,6 @@
         }
       ],
       "is_data": true,
-      "label": "Video",
-      "markdown": "fence",
       "starter": {
         "src": "",
         "type": "video"
@@ -355,8 +331,6 @@
         }
       ],
       "is_data": true,
-      "label": "Math",
-      "markdown": "native",
       "starter": {
         "tex": "",
         "type": "math"
@@ -403,8 +377,6 @@
         }
       ],
       "is_data": true,
-      "label": "Bar chart",
-      "markdown": "fence",
       "starter": {
         "categories": [
           "A",
@@ -475,8 +447,6 @@
         }
       ],
       "is_data": true,
-      "label": "Line chart",
-      "markdown": "fence",
       "starter": {
         "categories": [
           "A",
@@ -512,8 +482,6 @@
         }
       ],
       "is_data": true,
-      "label": "Pie chart",
-      "markdown": "fence",
       "starter": {
         "slices": [
           {
@@ -551,8 +519,6 @@
         }
       ],
       "is_data": true,
-      "label": "Diagram",
-      "markdown": "fence",
       "starter": {
         "edges": [
           {
@@ -605,8 +571,6 @@
         }
       ],
       "is_data": true,
-      "label": "Sequence diagram",
-      "markdown": "fence",
       "starter": {
         "messages": [
           {
@@ -650,8 +614,6 @@
         }
       ],
       "is_data": true,
-      "label": "State diagram",
-      "markdown": "fence",
       "starter": {
         "states": [
           {
@@ -693,8 +655,6 @@
         }
       ],
       "is_data": true,
-      "label": "Node table",
-      "markdown": "fence",
       "starter": {
         "rows": [
           {
@@ -716,8 +676,6 @@
         }
       ],
       "is_data": true,
-      "label": "Tree",
-      "markdown": "fence",
       "starter": {
         "nodes": [
           {
@@ -758,8 +716,6 @@
         }
       ],
       "is_data": true,
-      "label": "Timeline",
-      "markdown": "fence",
       "starter": {
         "items": [
           {
@@ -801,8 +757,6 @@
         }
       ],
       "is_data": true,
-      "label": "Chapter header",
-      "markdown": "fence",
       "starter": {
         "title": "Title",
         "type": "chapter_header"
@@ -827,8 +781,6 @@
         }
       ],
       "is_data": false,
-      "label": "Footnote",
-      "markdown": "native-or-fence",
       "starter": {
         "label": "note-1",
         "md": "",
@@ -1246,5 +1198,6 @@
       "label": "3 columns",
       "wrap_columns": 3
     }
-  ]
+  ],
+  "source_digest": "fnv1a64:e0f4a10440e6ddb3"
 }

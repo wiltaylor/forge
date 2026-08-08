@@ -12,18 +12,19 @@
  */
 import { bannerLines } from './banner.mjs';
 import {
+  PRINT_WIDTH,
   REGISTRY_PATH,
-  SOURCE_PATH,
+  REGISTRY_SOURCE_PATH,
   docComment,
   entryLines,
   helperTypes,
   kinds,
   payloadEntries,
   quote,
+  via,
 } from './blocks-source.mjs';
 
 const INDENT = '  ';
-const PRINT_WIDTH = 100;
 
 /** One member of the union: the tag, then the fields in wire order. */
 function unionMember(kind) {
@@ -64,7 +65,7 @@ function helperImport() {
 /** The whole file. */
 export function renderBlocksTypes() {
   const lines = [
-    `/* ${bannerLines(SOURCE_PATH, REGISTRY_PATH).join('\n   ')} */`,
+    `/* ${bannerLines(REGISTRY_SOURCE_PATH, via(REGISTRY_PATH)).join('\n   ')} */`,
     "import { newId } from './id';",
     ...helperImport(),
     '',

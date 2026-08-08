@@ -7,13 +7,27 @@
 //! committed file: this module renders it, `src/bin/dump-contract.rs` writes
 //! it, and `tests/export.rs` fails while the committed copy is stale.
 //!
+//! Each dump carries a digest of the Rust file it came from, so the Node side
+//! can tell a stale dump from a current one without reading Rust. That is what
+//! keeps `just check` honest about the whole chain.
+//!
+//! The dump carries what the generators read and no more — a kind's label and
+//! markdown form are registry policy the web kit has no use for. Add a field
+//! here when a generator needs it.
+//!
 //! Nothing here is part of the editing model. It exists so that
 //! [`crate::KINDS`] and [`crate::EMOJI`] have exactly one author.
 
 use serde_json::{json, Value};
 
 use crate::emoji::EMOJI;
-use crate::registry::{MarkdownForm, PaletteAction, KINDS};
+use crate::registry::{PaletteAction, KINDS};
+
+/// The registry source, embedded so the dump can state its digest.
+const REGISTRY_SOURCE: &str = include_str!("registry.rs");
+
+/// The emoji source, likewise.
+const EMOJI_SOURCE: &str = include_str!("emoji.rs");
 
 /// Where the rendered registry belongs, relative to the repository root.
 pub const REGISTRY_PATH: &str = "contract/blocks-registry.json";
@@ -38,9 +52,7 @@ pub fn registry_json() -> String {
                 .collect();
             json!({
                 "type": entry.type_name,
-                "label": entry.label,
                 "is_data": entry.is_data,
-                "markdown": markdown_form(entry.markdown),
                 "doc": entry.doc,
                 "fields": fields,
                 "starter": starter_json(&(entry.starter)()),
@@ -67,6 +79,7 @@ pub fn registry_json() -> String {
 
     pretty(&json!({
         "generated_from": "crates/forge-blocks/src/registry.rs",
+        "source_digest": digest(REGISTRY_SOURCE),
         "kinds": kinds,
         "palette": palette,
     }))
@@ -77,15 +90,16 @@ pub fn registry_json() -> String {
 /// reader's JSON library reorder the pairs and the order is the table's index.
 ///
 /// One pair per line, rather than the pretty printer's four, so that a diff of
-/// eight hundred entries reads as one line per changed emoji.
+/// the whole table reads as one line per changed emoji.
 pub fn emoji_json() -> String {
     let pairs: Vec<String> = EMOJI
         .iter()
         .map(|(code, glyph)| format!("    [{}, {}]", string(code), string(glyph)))
         .collect();
     format!(
-        "{{\n  \"generated_from\": {},\n  \"emoji\": [\n{}\n  ]\n}}\n",
+        "{{\n  \"generated_from\": {},\n  \"source_digest\": {},\n  \"emoji\": [\n{}\n  ]\n}}\n",
         string("crates/forge-blocks/src/emoji.rs"),
+        string(&digest(EMOJI_SOURCE)),
         pairs.join(",\n")
     )
 }
@@ -95,23 +109,28 @@ fn string(text: &str) -> String {
     serde_json::to_string(text).expect("a string serializes")
 }
 
+/// A digest of one source file, for the reader that cannot parse it.
+///
+/// FNV-1a over the text with carriage returns dropped, so a checkout that
+/// rewrote the line endings still agrees. It answers one question — has this
+/// file changed since the dump was written — and nothing is trying to forge
+/// an answer, so a short non-cryptographic hash is the right size. The Node
+/// side recomputes it in `scripts/generate/blocks-source.mjs`; the two
+/// implementations must stay identical.
+pub fn digest(source: &str) -> String {
+    let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
+    for byte in source.bytes().filter(|b| *b != b'\r') {
+        hash ^= u64::from(byte);
+        hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
+    }
+    format!("fnv1a64:{hash:016x}")
+}
+
 /// Two-space JSON with the trailing newline every file in the tree ends with.
 fn pretty(value: &Value) -> String {
     let mut out = serde_json::to_string_pretty(value).expect("the dump holds no non-string keys");
     out.push('\n');
     out
-}
-
-/// The wire name of a markdown form. Kebab-case, because the generators read
-/// it as a tag rather than as prose.
-fn markdown_form(form: MarkdownForm) -> &'static str {
-    match form {
-        MarkdownForm::Native => "native",
-        MarkdownForm::NativeOrFence => "native-or-fence",
-        MarkdownForm::Fence => "fence",
-        MarkdownForm::CustomFence => "custom-fence",
-        MarkdownForm::Flattened => "flattened",
-    }
 }
 
 /// A starter payload, with every nested block id replaced by

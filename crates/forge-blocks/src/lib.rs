@@ -42,8 +42,8 @@ pub use ops::{
     table_remove_col, table_remove_row, wrap_in_columns, MergeResult, Shortcut,
 };
 pub use registry::{
-    kind_entry, palette_row, palette_rows, starter_kind, KindEntry, MarkdownForm, PaletteAction,
-    PaletteRow, WireField, KINDS,
+    kind_entry, palette_rows, starter_kind, KindEntry, MarkdownForm, PaletteAction, PaletteRow,
+    WireField, KINDS,
 };
 pub use schema::{
     Block, BlockKind, ChartPoint, ChartSeries, Column, DiagramDirection, DiagramEdge,

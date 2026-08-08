@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { bannerLines } from './banner.mjs';
-import { REGISTRY_PATH, SOURCE_PATH, palette } from './blocks-source.mjs';
+import { REGISTRY_PATH, REGISTRY_SOURCE_PATH, palette, via } from './blocks-source.mjs';
 import { renderBlocksSlash } from './blocks-slash.mjs';
 
 const ts = renderBlocksSlash();
@@ -46,7 +46,7 @@ function rowText(id) {
 
 test('the file opens with a header naming it generated and pointing at the source', () => {
   const head = ts.slice(0, ts.indexOf('*/'));
-  for (const line of bannerLines(SOURCE_PATH, REGISTRY_PATH)) {
+  for (const line of bannerLines(REGISTRY_SOURCE_PATH, via(REGISTRY_PATH))) {
     assert.ok(head.includes(line), `header is missing: ${line}`);
   }
 });
@@ -86,6 +86,7 @@ test('a row either makes a block or wraps in columns, never both', () => {
 
 test('the column counts the rows use are the ones the interface allows', () => {
   const allowed = ts.match(/columns\?: ([\d |]+);/)[1].split(' | ');
-  const used = [...new Set(palette.filter((r) => r.wrap_columns).map((r) => `${r.wrap_columns}`))];
+  const wraps = palette.filter((r) => r.wrap_columns !== undefined);
+  const used = [...new Set(wraps.map((r) => `${r.wrap_columns}`))];
   assert.deepEqual(allowed.sort(), used.sort());
 });

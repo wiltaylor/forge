@@ -4,8 +4,8 @@
  * The registry itself is Rust — `crates/forge-blocks/src/registry.rs`, where
  * the schema enum it describes also lives. Node cannot read that, so
  * `cargo run -p forge-blocks --bin dump-contract` writes it out as JSON and
- * this module loads the result. `cargo test -p forge-blocks` fails while the
- * JSON is stale, and `just check` fails while the TypeScript is.
+ * this module loads the result — refusing a dump older than the Rust file it
+ * came from, so a stale one cannot pass for current.
  *
  * Nothing here decides anything: it loads, and it spells JSON values as the
  * TypeScript literals that produce them.
@@ -16,28 +16,64 @@ import { fileURLToPath } from 'node:url';
 
 const REPO = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 
-/** The authored source, for the banner. */
-export const SOURCE_PATH = 'crates/forge-blocks/src/registry.rs';
+/** The authored registry, for the banner. */
+export const REGISTRY_SOURCE_PATH = 'crates/forge-blocks/src/registry.rs';
 
-/** The dump the generators read. */
+/** The dump the kind generators read. */
 export const REGISTRY_PATH = 'contract/blocks-registry.json';
+
+/** The authored emoji table, for its banner. */
+export const EMOJI_SOURCE_PATH = 'crates/forge-blocks/src/emoji.rs';
 
 /** The dump the emoji generator reads. */
 export const EMOJI_PATH = 'contract/emoji.json';
 
-/** The authored source of the emoji table, for its banner. */
-export const EMOJI_SOURCE_PATH = 'crates/forge-blocks/src/emoji.rs';
+/** What the banner says about a dump: which recipe rewrites it. */
+export const via = (path) => `${path}   (\`just generate-blocks\` rewrites it)`;
 
 /** The placeholder a starter carries where a fresh block id belongs. Written
     by `forge_blocks::export`; the generated constructor mints the real one. */
 const ID_PLACEHOLDER = '$id';
 
-const load = (path) => JSON.parse(readFileSync(join(REPO, path), 'utf8'));
-
-const registry = load(REGISTRY_PATH);
+const read = (path) => readFileSync(join(REPO, path), 'utf8');
 
 /**
- * Every kind, in schema order: `{ type, label, is_data, markdown, doc,
+ * The digest `forge_blocks::export::digest` writes beside a dump — FNV-1a over
+ * the source text, carriage returns dropped. Keep the two implementations
+ * identical.
+ */
+function digest(source) {
+  let hash = 0xcbf29ce484222325n;
+  for (const byte of Buffer.from(source, 'utf8')) {
+    if (byte === 0x0d) continue;
+    hash = BigInt.asUintN(64, (hash ^ BigInt(byte)) * 0x00000100000001b3n);
+  }
+  return `fnv1a64:${hash.toString(16).padStart(16, '0')}`;
+}
+
+/**
+ * A dump, refused if the Rust file it came from has changed since.
+ *
+ * Without this the Node generators would happily rewrite the TypeScript from a
+ * stale dump, and `just check` — which is Node only, on purpose — would call
+ * the result up to date. The digest is what lets it see the whole chain.
+ */
+function load(path, sourcePath) {
+  const dump = JSON.parse(read(path));
+  const wanted = digest(read(sourcePath));
+  if (dump.source_digest !== wanted) {
+    throw new Error(
+      `${path} was written from an older ${sourcePath}.\n` +
+        'Run `just generate-blocks` and commit the result.',
+    );
+  }
+  return dump;
+}
+
+const registry = load(REGISTRY_PATH, REGISTRY_SOURCE_PATH);
+
+/**
+ * Every kind, in schema order: `{ type, is_data, doc,
  * fields: [{ name, ts, optional }], starter }`.
  */
 export const kinds = registry.kinds;
@@ -49,7 +85,7 @@ export const kinds = registry.kinds;
 export const palette = registry.palette;
 
 /** The emoji table as `[shortcode, glyph]` pairs, in shortcode order. */
-export const emoji = load(EMOJI_PATH).emoji;
+export const emoji = load(EMOJI_PATH, EMOJI_SOURCE_PATH).emoji;
 
 /** The names of the hand-written helper types a field list refers to. */
 export function helperTypes(fields) {
@@ -103,7 +139,8 @@ export function payloadEntries(payload, fields) {
   return Object.entries(orderedPayload(payload, fields)).map(([key, value]) => ({ key, value }));
 }
 
-const PRINT_WIDTH = 100;
+/** The width the emitted TypeScript wraps at. */
+export const PRINT_WIDTH = 100;
 
 /**
  * Render a value as TypeScript, on one line while it fits and broken over

@@ -228,9 +228,10 @@ packages/blocks/src/slash.gen.ts      the slash palette rows
 packages/blocks/src/emoji.gen.ts      the emoji table
 ```
 
-`emoji.json` carries `crates/forge-blocks/src/emoji.rs` the same way: eight
-hundred and thirty-six `[shortcode, glyph]` pairs, one line each, in the table's
-own sorted order.
+`emoji.json` carries `crates/forge-blocks/src/emoji.rs` the same way: 836
+`[shortcode, glyph]` pairs, one line each, in the table's own sorted order.
 
-Editing the registry and forgetting to re-dump fails `cargo test`; re-dumping and
-forgetting to regenerate fails `just check`. Neither half can go stale quietly.
+Neither half can go stale quietly. Each dump records a digest of the Rust file it
+came from, so `just check` refuses a dump older than its source and says which
+recipe to run — Node compares the digest, and never has to read Rust.
+`cargo test -p forge-blocks` fails on the same mismatch from the other side.

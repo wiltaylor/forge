@@ -11,7 +11,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { bannerLines } from './banner.mjs';
-import { REGISTRY_PATH, SOURCE_PATH, helperTypes, kinds } from './blocks-source.mjs';
+import { REGISTRY_PATH, REGISTRY_SOURCE_PATH, helperTypes, kinds, via } from './blocks-source.mjs';
 import { renderBlocksTypes } from './blocks-types.mjs';
 
 const ts = renderBlocksTypes();
@@ -30,10 +30,10 @@ const starters = section('export function createBlock', '\n}\n');
 
 test('the file opens with a header naming it generated and pointing at the source', () => {
   const head = ts.slice(0, ts.indexOf('*/'));
-  for (const line of bannerLines(SOURCE_PATH, REGISTRY_PATH)) {
+  for (const line of bannerLines(REGISTRY_SOURCE_PATH, via(REGISTRY_PATH))) {
     assert.ok(head.includes(line), `header is missing: ${line}`);
   }
-  assert.ok(head.includes(SOURCE_PATH));
+  assert.ok(head.includes(REGISTRY_SOURCE_PATH));
   assert.ok(head.includes(REGISTRY_PATH), 'the header does not say which file it read');
 });
 

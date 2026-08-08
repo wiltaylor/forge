@@ -1,14 +1,14 @@
 /**
  * Tests for the emoji table generator.
  *
- * Eight hundred and thirty-six pairs are data, not policy, so what matters is
- * that none of them is lost, reordered or mis-quoted on the way out.
+ * The pairs are data, not policy, so what matters is that none of them is
+ * lost, reordered or mis-quoted on the way out.
  */
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { bannerLines } from './banner.mjs';
-import { EMOJI_PATH, EMOJI_SOURCE_PATH, emoji } from './blocks-source.mjs';
+import { EMOJI_PATH, EMOJI_SOURCE_PATH, emoji, via } from './blocks-source.mjs';
 import { renderBlocksEmoji } from './blocks-emoji.mjs';
 
 const ts = renderBlocksEmoji();
@@ -20,7 +20,7 @@ const entries = ts
 
 test('the file opens with a header naming it generated and pointing at the source', () => {
   const head = ts.slice(0, ts.indexOf('*/'));
-  for (const line of bannerLines(EMOJI_SOURCE_PATH, EMOJI_PATH)) {
+  for (const line of bannerLines(EMOJI_SOURCE_PATH, via(EMOJI_PATH))) {
     assert.ok(head.includes(line), `header is missing: ${line}`);
   }
 });

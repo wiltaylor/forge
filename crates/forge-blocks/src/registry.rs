@@ -153,9 +153,7 @@ pub static KINDS: &[KindEntry] = &[
         starter: || BlockKind::Paragraph { md: String::new() },
         doc: &[],
         fields: &[req("md", "string")],
-        palette: &[insert("text", "Text", None, || BlockKind::Paragraph {
-            md: String::new(),
-        })],
+        palette: &[insert("text", "Text", None, || starter_of("paragraph"))],
     },
     KindEntry {
         type_name: "heading",
@@ -214,9 +212,7 @@ pub static KINDS: &[KindEntry] = &[
         starter: || BlockKind::Quote { md: String::new() },
         doc: &[],
         fields: &[req("md", "string")],
-        palette: &[insert("quote", "Quote", Some(">"), || BlockKind::Quote {
-            md: String::new(),
-        })],
+        palette: &[insert("quote", "Quote", Some(">"), || starter_of("quote"))],
     },
     KindEntry {
         type_name: "divider",
@@ -227,7 +223,7 @@ pub static KINDS: &[KindEntry] = &[
         doc: &[],
         fields: &[],
         palette: &[insert("divider", "Divider", Some("---"), || {
-            BlockKind::Divider
+            starter_of("divider")
         })],
     },
     KindEntry {
@@ -241,10 +237,7 @@ pub static KINDS: &[KindEntry] = &[
         },
         doc: &[],
         fields: &[req("lang", "string"), req("code", "string")],
-        palette: &[insert("code", "Code", Some("```"), || BlockKind::Code {
-            lang: String::new(),
-            code: String::new(),
-        })],
+        palette: &[insert("code", "Code", Some("```"), || starter_of("code"))],
     },
     KindEntry {
         type_name: "table",
@@ -259,10 +252,7 @@ pub static KINDS: &[KindEntry] = &[
         },
         doc: &["Cells are inline-markdown strings."],
         fields: &[req("header", "string[]"), req("rows", "string[][]")],
-        palette: &[insert("table", "Table", None, || BlockKind::Table {
-            header: vec![String::new(); 3],
-            rows: vec![vec![String::new(); 3]; 2],
-        })],
+        palette: &[insert("table", "Table", None, || starter_of("table"))],
     },
     KindEntry {
         type_name: "admonition",
@@ -282,11 +272,7 @@ pub static KINDS: &[KindEntry] = &[
             req("md", "string"),
         ],
         palette: &[insert("callout", "Callout", Some(":::"), || {
-            BlockKind::Admonition {
-                tone: Tone::Info,
-                title: String::new(),
-                md: String::new(),
-            }
+            starter_of("admonition")
         })],
     },
     KindEntry {
@@ -757,14 +743,6 @@ pub fn palette_rows() -> Vec<&'static PaletteRow> {
         .filter(is_insert)
         .chain(rows().filter(|row| !is_insert(row)))
         .collect()
-}
-
-/// The palette row with this id, if the registry defines one.
-pub fn palette_row(id: &str) -> Option<&'static PaletteRow> {
-    KINDS
-        .iter()
-        .flat_map(|entry| entry.palette.iter())
-        .find(|row| row.id == id)
 }
 
 /// Compile-time proof that [`KindEntry::fields`] is asked to keep up with the

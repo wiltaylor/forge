@@ -13,13 +13,14 @@
 import { bannerLines } from './banner.mjs';
 import {
   REGISTRY_PATH,
-  SOURCE_PATH,
+  REGISTRY_SOURCE_PATH,
   entryLines,
   expression,
   kinds,
   orderedPayload,
   palette,
   valueLines,
+  via,
 } from './blocks-source.mjs';
 
 /** The kind entry a palette payload belongs to. */
@@ -53,7 +54,7 @@ export function renderBlocksSlash() {
     ...new Set(palette.filter((r) => r.wrap_columns !== undefined).map((r) => r.wrap_columns)),
   ];
   const lines = [
-    `/* ${bannerLines(SOURCE_PATH, REGISTRY_PATH).join('\n   ')} */`,
+    `/* ${bannerLines(REGISTRY_SOURCE_PATH, via(REGISTRY_PATH)).join('\n   ')} */`,
     "import type { BlockData } from './types';",
     '',
     '/** One built-in row of the `/` palette. A row either makes a block or wraps',
