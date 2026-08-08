@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from starlette.testclient import WebSocketDenialResponse
 
 from forge_server import ForgeApp
-from forge_server.events import QUEUE_SIZE, EventBus
+from forge_server.core.events import QUEUE_SIZE, EventBus
 
 
 async def test_bus_publish_reaches_queue():

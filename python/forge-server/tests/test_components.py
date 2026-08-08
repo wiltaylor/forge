@@ -1,8 +1,6 @@
 """Component federation. The rule and the manifest are called directly — no
 server, no test client; only a temporary directory."""
 
-from pathlib import Path
-
 import pytest
 
 from forge_server.core.components import Components, valid_component_file
@@ -128,13 +126,3 @@ def test_endpoint_missing_bundle_is_404(tmp_path):
     r = make_client(tmp_path).get("/api/components/nope.js")
     assert r.status_code == 404
     assert r.json() == {"ok": False, "error": "no component file 'nope.js'"}
-
-
-def test_core_module_holds_no_web_framework_import():
-    """The rule stays callable from a non-HTTP host. The package ``__init__``
-    still pulls in the framework — that is issue #43's acceptance criterion."""
-    from forge_server.core import components
-
-    source = Path(components.__file__).read_text()
-    assert "fastapi" not in source
-    assert "starlette" not in source

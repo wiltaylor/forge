@@ -11,6 +11,9 @@ requires-python = ">=3.11"
 # Floors track what uv.lock actually resolves and what the test suite runs
 # against, rather than the oldest version that once worked.
 dependencies = [
+    # The core runs sync actions on anyio's threadpool — the one the web
+    # framework uses — so it is a direct dependency, not a transitive one.
+    "anyio>=4",
     "fastapi>=0.140",
     "uvicorn>=0.51",
     "websockets>=16",
