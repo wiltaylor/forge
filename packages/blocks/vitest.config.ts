@@ -1,7 +1,16 @@
 import { defineConfig } from 'vitest/config';
+import solid from 'vite-plugin-solid';
 
+/* The block key corpus drives the real editor, so the suite needs a DOM and a
+   JSX transform. Read docs/web-testing.md before you copy this. The pure
+   suites (ops, serialize, emoji) run under the same config unchanged. */
 export default defineConfig({
+  plugins: [solid()],
+  /* The @forge/* deps ship preserved-JSX source under their `solid` export
+     condition; one Solid runtime, or reactivity breaks across the boundary. */
+  resolve: { dedupe: ['solid-js'] },
   test: {
-    environment: 'node',
+    environment: 'happy-dom',
+    setupFiles: ['tests/setup.ts'],
   },
 });

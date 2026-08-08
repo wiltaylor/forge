@@ -1,4 +1,17 @@
-//! Editing-op behavior shared by every platform's keyboard model.
+//! Pure document operations.
+//!
+//! What a keypress does with these is the block key corpus's, not this file's.
+//! The corpus is `contract/blocks/corpus.json`. Three drivers run it:
+//! `crates/forge-tui/tests/block_corpus.rs`, `crates/forge-egui/tests/block_corpus.rs`
+//! and `packages/blocks/tests/block_corpus.test.tsx`. It states splitting,
+//! merging, the demote-before-merge rule, indent clamping, block moves, the
+//! line-start shortcut grammar and the table keys. Two languages used to assert
+//! that model by hand, in near-duplicate suites; the corpus replaced them, so a
+//! rule is authored once and covers both.
+//!
+//! What stays here is what the corpus does not state: block removal, block
+//! moves at the end of a list, column wrapping and ratios, table row removal,
+//! the shortcut spellings no case types, and the markdown conversion.
 
 use forge_blocks::*;
 
@@ -15,86 +28,8 @@ fn md_at(d: &Document, addr: Address) -> &str {
 }
 
 #[test]
-fn split_paragraph() {
-    let mut d = doc(vec![p("hello world")]);
-    let focus = split(&mut d, Address::Root(0), 5).unwrap();
-    assert_eq!(focus, Address::Root(1));
-    assert_eq!(md_at(&d, Address::Root(0)), "hello");
-    assert_eq!(md_at(&d, Address::Root(1)), " world");
-}
-
-#[test]
-fn split_heading_tail_is_paragraph() {
-    let mut d = doc(vec![Block::new(BlockKind::Heading {
-        level: 2,
-        md: "ab".into(),
-    })]);
-    split(&mut d, Address::Root(0), 1).unwrap();
-    assert!(matches!(d.blocks[0].kind, BlockKind::Heading { .. }));
-    assert!(matches!(d.blocks[1].kind, BlockKind::Paragraph { .. }));
-}
-
-#[test]
-fn split_list_continues_list_and_empty_converts() {
-    let mut d = doc(vec![Block::new(BlockKind::ListItem {
-        style: ListStyle::Todo,
-        checked: Some(true),
-        indent: 2,
-        md: "task".into(),
-    })]);
-    split(&mut d, Address::Root(0), 4).unwrap();
-    match &d.blocks[1].kind {
-        BlockKind::ListItem {
-            style,
-            checked,
-            indent,
-            md,
-        } => {
-            assert_eq!(*style, ListStyle::Todo);
-            assert_eq!(*checked, Some(false)); // new todo starts unchecked
-            assert_eq!(*indent, 2);
-            assert!(md.is_empty());
-        }
-        k => panic!("expected list item, got {k:?}"),
-    }
-    // Enter on the now-empty item converts it to a paragraph in place.
-    let focus = split(&mut d, Address::Root(1), 0).unwrap();
-    assert_eq!(focus, Address::Root(1));
-    assert!(matches!(d.blocks[1].kind, BlockKind::Paragraph { .. }));
-    assert_eq!(d.blocks.len(), 2);
-}
-
-#[test]
-fn merge_appends_and_returns_caret() {
-    let mut d = doc(vec![p("ab"), p("cd")]);
-    let r = merge_with_previous(&mut d, Address::Root(1)).unwrap();
-    assert_eq!(r.focus, Address::Root(0));
-    assert_eq!(r.caret, 2);
-    assert_eq!(md_at(&d, Address::Root(0)), "abcd");
-    assert_eq!(d.blocks.len(), 1);
-}
-
-#[test]
-fn merge_first_block_is_none_and_divider_deletes() {
-    let mut d = doc(vec![p("a")]);
-    assert!(merge_with_previous(&mut d, Address::Root(0)).is_none());
-
-    let mut d = doc(vec![p("a"), Block::new(BlockKind::Divider), p("b")]);
-    let r = merge_with_previous(&mut d, Address::Root(2)).unwrap();
-    assert_eq!(r.focus, Address::Root(1));
-    assert_eq!(r.caret, 0);
-    assert_eq!(d.blocks.len(), 2);
-    assert_eq!(md_at(&d, Address::Root(1)), "b");
-}
-
-#[test]
-fn move_and_remove() {
+fn remove_refocuses_and_refills() {
     let mut d = doc(vec![p("a"), p("b"), p("c")]);
-    let addr = move_block(&mut d, Address::Root(0), 1).unwrap();
-    assert_eq!(addr, Address::Root(1));
-    assert_eq!(md_at(&d, Address::Root(0)), "b");
-    assert!(move_block(&mut d, Address::Root(2), 1).is_none());
-
     let focus = remove(&mut d, Address::Root(1)).unwrap();
     assert_eq!(focus, Address::Root(0));
     assert_eq!(d.blocks.len(), 2);
@@ -104,6 +39,16 @@ fn move_and_remove() {
     let focus = remove(&mut d, Address::Root(0)).unwrap();
     assert_eq!(focus, Address::Root(0));
     assert_eq!(md_at(&d, Address::Root(0)), "");
+}
+
+/// The bottom edge of a move. The corpus states the top one
+/// (`alt-up-at-the-top-changes-nothing`) and the move itself
+/// (`alt-down-moves-a-block-past-its-next-sibling`), but no case presses Alt+Down
+/// on the last block.
+#[test]
+fn move_stops_at_the_last_sibling() {
+    let mut d = doc(vec![p("a"), p("b")]);
+    assert!(move_block(&mut d, Address::Root(1), 1).is_none());
 }
 
 #[test]
@@ -160,55 +105,27 @@ fn column_ratios_normalize() {
     assert!(!set_column_ratios(&mut d, 0, &[-1.0, 2.0]));
 }
 
+/// Row removal, which no key in any kit reaches — the kits remove a row from a
+/// menu or a toolbar button. Column removal and both inserts are the corpus's
+/// (`table-alt-minus-*`, `table-alt-equals-*`, `table-ctrl-enter-*`).
 #[test]
-fn table_ops() {
+fn table_row_removal_keeps_the_last_row() {
     let mut d = doc(vec![Block::new(BlockKind::Table {
         header: vec!["A".into(), "B".into()],
         rows: vec![vec!["1".into(), "2".into()]],
     })]);
     let addr = Address::Root(0);
     assert!(table_insert_row(&mut d, addr, 1));
-    assert!(table_insert_col(&mut d, addr, 2));
-    match &d.blocks[0].kind {
-        BlockKind::Table { header, rows } => {
-            assert_eq!(header.len(), 3);
-            assert_eq!(rows.len(), 2);
-            assert!(rows.iter().all(|r| r.len() == 3));
-        }
-        _ => unreachable!(),
-    }
-    assert!(table_remove_col(&mut d, addr, 2));
     assert!(table_remove_row(&mut d, addr, 1));
-    // Last row / last column never removed.
     assert!(!table_remove_row(&mut d, addr, 0));
-    assert!(table_remove_col(&mut d, addr, 0));
-    assert!(!table_remove_col(&mut d, addr, 0));
 }
 
+/// The spellings no corpus case types. The corpus states the grammar a user
+/// reaches by typing at the start of a paragraph (`shortcut-*`); these are the
+/// arms it leaves out — the two todo prefixes a dash converts before, a code
+/// fence carrying a language, and the spellings that must *not* convert at all.
 #[test]
-fn indent_clamps() {
-    let mut d = doc(vec![Block::new(BlockKind::ListItem {
-        style: ListStyle::Bullet,
-        checked: None,
-        indent: 0,
-        md: "x".into(),
-    })]);
-    assert!(!indent_list(&mut d, Address::Root(0), -1));
-    for _ in 0..10 {
-        indent_list(&mut d, Address::Root(0), 1);
-    }
-    assert!(matches!(
-        d.blocks[0].kind,
-        BlockKind::ListItem { indent: 5, .. }
-    ));
-}
-
-#[test]
-fn shortcuts() {
-    let hit = line_start_shortcut("# Title").unwrap();
-    assert!(matches!(hit.kind, BlockKind::Heading { level: 1, ref md } if md == "Title"));
-    assert_eq!(hit.prefix_len, 2);
-
+fn shortcuts_the_corpus_does_not_type() {
     assert!(matches!(
         line_start_shortcut("- [x] done").unwrap().kind,
         BlockKind::ListItem {
@@ -218,37 +135,21 @@ fn shortcuts() {
         }
     ));
     assert!(matches!(
-        line_start_shortcut("1. first").unwrap().kind,
+        line_start_shortcut("- [ ] todo").unwrap().kind,
         BlockKind::ListItem {
-            style: ListStyle::Number,
+            style: ListStyle::Todo,
+            checked: Some(false),
             ..
         }
-    ));
-    assert!(matches!(
-        line_start_shortcut("> quoted").unwrap().kind,
-        BlockKind::Quote { .. }
     ));
     assert!(matches!(
         line_start_shortcut("```rust").unwrap().kind,
         BlockKind::Code { ref lang, .. } if lang == "rust"
     ));
-    assert!(matches!(
-        line_start_shortcut("---").unwrap().kind,
-        BlockKind::Divider
-    ));
-    assert!(matches!(
-        line_start_shortcut(":::warning").unwrap().kind,
-        BlockKind::Admonition {
-            tone: Tone::Warning,
-            ..
-        }
-    ));
 
-    // Non-shortcuts.
-    assert!(line_start_shortcut("#x").is_none());
+    assert!(line_start_shortcut("#x").is_none()); // needs the space
     assert!(line_start_shortcut("-x").is_none());
-    assert!(line_start_shortcut("##### five").is_none());
-    assert!(line_start_shortcut(":::nope").is_none());
+    assert!(line_start_shortcut("##### five").is_none()); // four levels only
 }
 
 #[test]

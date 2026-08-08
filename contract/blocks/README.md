@@ -14,10 +14,17 @@ Adding a case here covers every driver at once.
 |---|---|---|
 | `rust-tui` | `crates/forge-tui/tests/block_corpus.rs` | landed |
 | `rust-egui` | `crates/forge-egui/tests/block_corpus.rs` | landed |
-| `web` | — | issue #30 |
+| `web` | `packages/blocks/tests/block_corpus.test.tsx` | landed |
 
 The Rust drivers share the loader, the comparison and the runner:
-`crates/forge-block-corpus`. It knows nothing about an editor.
+`crates/forge-block-corpus`. It knows nothing about an editor. The web driver
+reads the same file through `packages/blocks/tests/corpus.ts`, which is that
+crate's shape in TypeScript. The two readings cannot be one module. That is the
+reason the corpus is a file and not shared code.
+
+The web driver mounts `<BlockEditor>` in a DOM, clicks the block the case
+addresses, and dispatches each key as a real event. It reads the document back
+from `onChange`, so it asserts on what the editor tells its owner.
 
 `just block-corpus-test` runs every driver.
 
@@ -174,3 +181,14 @@ is where an unexpected one gets noticed.
   moving down and appending, Ctrl+Enter inserting, Tab and Shift+Tab between
   cells, and the ratatui kit's column keys.
 - Splitting, list continuation, block moves, and editing inside a column cell.
+
+## What the corpus replaced
+
+Both languages used to assert this model by hand, in two suites that had drifted
+into near-duplicates of each other: `crates/forge-blocks/tests/ops.rs` and
+`packages/blocks/tests/ops.test.ts`. Everything the corpus states is gone from
+both, so a rule is authored once and adding a case covers both languages.
+
+What stayed in those suites is what no key reaches: column wrapping and ratios,
+row removal, the identity discipline the web editor's rendering depends on, the
+shortcut spellings that must *not* convert, and the markdown conversion.

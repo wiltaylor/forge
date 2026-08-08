@@ -1,7 +1,20 @@
+/* Pure document operations.
+
+   What a keypress does with these — splitting, merging, the demote-before-merge
+   rule, indent clamping, block moves, the line-start shortcut grammar and the
+   table keys — is the block key corpus's, not this file's:
+   `contract/blocks/corpus.json`, driven by `block_corpus.test.tsx` here and by
+   `crates/forge-tui/tests/block_corpus.rs` and its egui sibling over there. Two
+   languages ran near-duplicate hand-written assertions on that model; the corpus
+   replaced them, so adding a case now covers both.
+
+   What stays here is what no key reaches: the identity discipline the editor's
+   rendering depends on, column ratios, and the table operations the web kit
+   drives from its toolbar. */
 import { describe, it, expect } from 'vitest';
 import {
-  findBlock, insertAfter, iterBlocks, mergeWithPrevious, moveBlock, removeBlock,
-  replaceBlock, setColumnRatios, setListIndent, splitTextBlock, tableInsertCol,
+  findBlock, insertAfter, iterBlocks, moveBlock, removeBlock,
+  replaceBlock, setColumnRatios, setListIndent, tableInsertCol,
   tableInsertRow, tableRemoveCol, tableRemoveRow, tableSetCell, updateBlock,
   wrapInColumns, addColumn, removeColumn, prevEditable, nextEditable,
 } from '../src/ops';
@@ -25,53 +38,6 @@ describe('identity discipline', () => {
     const next = updateBlock(d, 'b', { md: 'B' });
     expect(next.blocks[0]).toBe(d.blocks[0]);
     expect(next.blocks[1]).not.toBe(d.blocks[1]);
-  });
-});
-
-describe('split / merge', () => {
-  it('splits a paragraph at the caret and merge restores it', () => {
-    const d = doc(p('hello world', 'a'));
-    const { doc: after, focusId } = splitTextBlock(d, 'a', 5);
-    expect(after.blocks).toHaveLength(2);
-    expect((after.blocks[0] as { md: string }).md).toBe('hello');
-    expect((after.blocks[1] as { md: string }).md).toBe(' world');
-    const merged = mergeWithPrevious(after, focusId)!;
-    expect(merged.caret).toBe(5);
-    expect((merged.doc.blocks[0] as { md: string }).md).toBe('hello world');
-    expect(merged.doc.blocks).toHaveLength(1);
-  });
-
-  it('heading tail becomes a paragraph; list continues the list', () => {
-    const h: Block = { id: 'h', type: 'heading', level: 2, md: 'ab' };
-    const { doc: afterH } = splitTextBlock(doc(h), 'h', 1);
-    expect(afterH.blocks[1]!.type).toBe('paragraph');
-
-    const li: Block = { id: 'l', type: 'list_item', style: 'todo', checked: true, indent: 2, md: 'task' };
-    const { doc: afterL } = splitTextBlock(doc(li), 'l', 4);
-    const tail = afterL.blocks[1] as Extract<Block, { type: 'list_item' }>;
-    expect(tail.style).toBe('todo');
-    expect(tail.indent).toBe(2);
-    expect(tail.checked).toBe(false);
-  });
-
-  it('enter on an empty list item converts it in place', () => {
-    const li: Block = { id: 'l', type: 'list_item', style: 'bullet', indent: 1, md: '' };
-    const { doc: after, focusId } = splitTextBlock(doc(li), 'l', 0);
-    expect(focusId).toBe('l');
-    expect(after.blocks).toHaveLength(1);
-    expect(after.blocks[0]!.type).toBe('paragraph');
-  });
-
-  it('merge with a divider deletes the divider', () => {
-    const d = doc(p('a', 'a'), { id: 'd', type: 'divider' }, p('b', 'b'));
-    const r = mergeWithPrevious(d, 'b')!;
-    expect(r.focusId).toBe('b');
-    expect(r.caret).toBe(0);
-    expect(r.doc.blocks).toHaveLength(2);
-  });
-
-  it('first block cannot merge', () => {
-    expect(mergeWithPrevious(doc(p('a', 'a')), 'a')).toBeNull();
   });
 });
 
@@ -120,16 +86,17 @@ describe('tables', () => {
     id: 't', type: 'table', header: ['A', 'B'], rows: [['1', '2']],
   });
 
-  it('edits cells including the header', () => {
-    let d = doc(table());
-    d = tableSetCell(d, 't', -1, 0, 'H');
-    d = tableSetCell(d, 't', 0, 1, 'x');
-    const t = d.blocks[0] as Extract<Block, { type: 'table' }>;
-    expect(t.header[0]).toBe('H');
+  // The corpus types into a header cell; no case a key reaches types into a
+  // body one, and the row indexes them differently (-1 is the header).
+  it('sets a body cell and ignores one outside the table', () => {
+    const d = doc(table());
+    const t = tableSetCell(d, 't', 0, 1, 'x').blocks[0] as Extract<Block, { type: 'table' }>;
     expect(t.rows[0]![1]).toBe('x');
     expect(tableSetCell(d, 't', 5, 0, 'y')).toBe(d);
+    expect(tableSetCell(d, 't', 0, 9, 'y')).toBe(d);
   });
 
+  // Reached from the table toolbar, not from a key — so not the corpus's.
   it('inserts and removes rows/cols with floors', () => {
     let d = doc(table());
     d = tableInsertRow(d, 't', 1);
@@ -147,12 +114,6 @@ describe('tables', () => {
 });
 
 describe('misc ops', () => {
-  it('moveBlock swaps within its list', () => {
-    const d = doc(p('a', 'a'), p('b', 'b'));
-    const next = moveBlock(d, 'a', 1);
-    expect(next.blocks.map((b) => b.id)).toEqual(['b', 'a']);
-  });
-
   it('removeBlock refills an emptied document', () => {
     const d = removeBlock(doc(p('only', 'a')), 'a');
     expect(d.blocks).toHaveLength(1);
@@ -164,14 +125,6 @@ describe('misc ops', () => {
     d = insertAfter(d, 'a', p('new', 'n'));
     expect(findBlock(d, 'n')!.parent.kind).toBe('column');
     expect(findBlock(d, 'n')!.index).toBe(1);
-  });
-
-  it('list indent clamps 0..5', () => {
-    const li: Block = { id: 'l', type: 'list_item', style: 'bullet', indent: 0, md: 'x' };
-    let d = doc(li);
-    expect(setListIndent(d, 'l', -1)).toBe(d);
-    for (let i = 0; i < 10; i++) d = setListIndent(d, 'l', 1);
-    expect((d.blocks[0] as { indent: number }).indent).toBe(5);
   });
 
   it('arrow navigation skips dividers', () => {
