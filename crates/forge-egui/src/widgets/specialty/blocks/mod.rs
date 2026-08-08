@@ -4,12 +4,14 @@
 //! [`BlockEditor`] renders a [`Document`] as a vertical list of blocks.
 //! Unfocused text blocks show styled inline markdown (via
 //! `forge_blocks::parse_inline`); clicking one swaps in a frameless
-//! `TextEdit` bound to the raw markdown source. The keyboard model is the
-//! shared Forge contract: Enter splits, Backspace-at-0 and Delete-at-end
-//! merge, Tab indents list items, Alt+↑/↓ moves blocks, `/` on an empty
-//! block opens the block palette, and `:pre` pops emoji completion. All
-//! document mutations go through `forge_blocks::ops`, so every platform
-//! edits identically.
+//! `TextEdit` bound to the raw markdown source.
+//!
+//! The keyboard model is not implemented here. [`forge_blocks::resolve_key`]
+//! owns it — Enter splits, Backspace-at-0 demotes then merges, Tab indents
+//! list items, Alt+↑/↓ moves blocks, `/` on an empty block opens the palette
+//! — and the [`keys`] module is this kit's adapter onto it: egui input in,
+//! an [`Op`](forge_blocks::Op) out, performed as an [`Action`] here. What is
+//! left in this file is the kit's own work: focus, drafts, popups and paint.
 //!
 //! ```ignore
 //! let mut state = BlockEditorState::new(Document::new());
@@ -20,6 +22,7 @@
 mod chrome;
 mod data;
 mod inline;
+mod keys;
 mod kinds;
 mod popups;
 mod text;
@@ -29,7 +32,7 @@ use crate::theme::Theme;
 use egui::Ui;
 use forge_blocks::{
     indent_list, insert_after, merge_with_previous, move_block, next_address, prev_address, remove,
-    set_kind, split, table_insert_row, wrap_in_columns, Address, Block, BlockKind, Document,
+    set_kind, split, table_insert_row, wrap_in_columns, Address, Block, BlockKind, Document, Mode,
 };
 
 /* ---------------- public API ---------------- */
@@ -245,7 +248,7 @@ impl<'a> BlockEditor<'a> {
         };
 
         if !self.read_only {
-            selection_keys(ui, st, &doc, &mut ecx.actions);
+            selection_keys(ui, &mut ecx, st, &doc);
         }
 
         let response = ui
@@ -283,13 +286,23 @@ pub(super) struct Ecx<'a> {
 
 /// Deferred document edits — structural ops apply after the walk so block
 /// indices stay valid while rendering.
+///
+/// Most of these are one resolved [`Op`](forge_blocks::Op) each, performed
+/// where the document can be mutated safely; the rest are the mouse's.
 #[derive(Clone, Debug)]
 pub(crate) enum Action {
     Focus(Address, CaretHint),
     Select(Address),
-    Split(Address),
-    BackspaceAt0(Address),
-    DeleteAtEnd(Address),
+    Split {
+        addr: Address,
+        /// Byte offset in the block's markdown source to split at.
+        caret: usize,
+    },
+    /// Turn a non-paragraph text block into a paragraph, keeping its
+    /// markdown — the rule that stands between Backspace-at-0 and a merge.
+    Demote(Address),
+    /// Append the paragraph at the address to the block above it.
+    Merge(Address),
     Shortcut {
         addr: Address,
         kind: BlockKind,
@@ -318,6 +331,8 @@ pub(crate) enum Action {
     },
     Duplicate(Address),
     Remove(Address),
+    /// Cycle the focused admonition's tone.
+    CycleTone(Address),
     TurnInto {
         addr: Address,
         kind: BlockKind,
@@ -333,9 +348,12 @@ pub(crate) enum Action {
         root: usize,
         col: usize,
     },
-    AppendTableRow {
+    /// Insert an empty table row at `at`, then focus the cell in `focus`
+    /// (display row 0 is the header).
+    InsertTableRow {
         addr: Address,
-        col: usize,
+        at: usize,
+        focus: (usize, usize),
     },
 }
 
@@ -421,10 +439,10 @@ fn dispatch_kind(
 
 /* ---------------- keyboard: block-selection mode ---------------- */
 
-/// Selection-mode keys: with a block selected but nothing being edited,
-/// ↑/↓ move the selection, Enter enters the block, Delete removes it,
-/// Alt+↑/↓ moves it, Esc deselects.
-fn selection_keys(ui: &Ui, st: &mut BlockEditorState, doc: &Document, actions: &mut Vec<Action>) {
+/// Selection-mode keys — a block selected, nothing being edited, no text
+/// caret anywhere. What they mean is [`forge_blocks::resolve_key`]'s call;
+/// this only says which block is listening.
+fn selection_keys(ui: &Ui, ecx: &mut Ecx, st: &mut BlockEditorState, doc: &Document) {
     let Some(addr) = st.focus else { return };
     if st.editing || st.slash.is_some() {
         return;
@@ -433,38 +451,18 @@ fn selection_keys(ui: &Ui, st: &mut BlockEditorState, doc: &Document, actions: &
     if ui.ctx().memory(|m| m.focused().is_some()) {
         return;
     }
-    use egui::{Key, Modifiers};
-    let (alt_up, alt_down, up, down, enter, delete, esc) = ui.ctx().input_mut(|i| {
-        (
-            i.consume_key(Modifiers::ALT, Key::ArrowUp),
-            i.consume_key(Modifiers::ALT, Key::ArrowDown),
-            i.consume_key(Modifiers::NONE, Key::ArrowUp),
-            i.consume_key(Modifiers::NONE, Key::ArrowDown),
-            i.consume_key(Modifiers::NONE, Key::Enter),
-            i.consume_key(Modifiers::NONE, Key::Delete)
-                || i.consume_key(Modifiers::NONE, Key::Backspace),
-            i.consume_key(Modifiers::NONE, Key::Escape),
-        )
-    });
-    if alt_up {
-        actions.push(Action::MoveBlock { addr, dir: -1 });
-    } else if alt_down {
-        actions.push(Action::MoveBlock { addr, dir: 1 });
-    } else if up {
-        if let Some(prev) = prev_address(doc, addr) {
-            actions.push(Action::Select(prev));
-        }
-    } else if down {
-        if let Some(next) = next_address(doc, addr) {
-            actions.push(Action::Select(next));
-        }
-    } else if enter {
-        actions.push(Action::Focus(addr, CaretHint::End));
-    } else if delete {
-        actions.push(Action::Remove(addr));
-    } else if esc {
-        st.focus = None;
-    }
+    keys::handle(
+        ui,
+        ecx,
+        st,
+        doc,
+        keys::Focused {
+            addr,
+            mode: Mode::Select,
+            buffer: None,
+            selection: false,
+        },
+    );
 }
 
 /* ---------------- action application ---------------- */
@@ -473,41 +471,25 @@ fn apply(st: &mut BlockEditorState, doc: &mut Document, action: Action) {
     match action {
         Action::Focus(addr, hint) => focus_block(st, doc, addr, hint),
         Action::Select(addr) => select_block(st, addr),
-        Action::Split(addr) => {
-            let caret = doc
-                .block(addr)
-                .and_then(|b| b.kind.md())
-                .map(|md| byte_of_char(md, st.caret.char_idx))
-                .unwrap_or(0);
+        Action::Split { addr, caret } => {
             if let Some(next) = split(doc, addr, caret) {
                 st.changed = true;
                 focus_block(st, doc, next, CaretHint::Start);
             }
         }
-        Action::BackspaceAt0(addr) => {
-            let kind = doc.block(addr).map(|b| b.kind.clone());
-            match kind {
-                Some(BlockKind::Paragraph { .. }) => merge_up(st, doc, addr),
-                // The shared keyboard rule: non-paragraph text kinds first
-                // demote to a paragraph (caret stays at 0, same block).
-                Some(k) if k.is_text() => {
-                    let md = k.md().unwrap_or("").to_owned();
-                    if set_kind(doc, addr, BlockKind::Paragraph { md }) {
-                        st.changed = true;
-                    }
-                }
-                _ => {}
+        Action::Demote(addr) => {
+            let md = doc
+                .block(addr)
+                .and_then(|b| b.kind.md())
+                .unwrap_or("")
+                .to_owned();
+            // The caret stays at 0 in the same block, so the draft the
+            // `TextEdit` is bound to is already right.
+            if set_kind(doc, addr, BlockKind::Paragraph { md }) {
+                st.changed = true;
             }
         }
-        // Delete at the end of a block is Backspace-at-0 of the block below
-        // it, so it is the same merge one address further on. It only fires
-        // when the navigation-order next block really is our next sibling
-        // (its merge target is its previous sibling, which is then us).
-        Action::DeleteAtEnd(addr) => {
-            if let Some(next) = next_address(doc, addr) {
-                merge_up(st, doc, next);
-            }
-        }
+        Action::Merge(addr) => merge_up(st, doc, addr),
         Action::Shortcut { addr, kind, caret } => {
             let md = kind.md().map(str::to_owned);
             let to_code = matches!(kind, BlockKind::Code { .. });
@@ -586,6 +568,14 @@ fn apply(st: &mut BlockEditorState, doc: &mut Document, action: Action) {
                 select_block(st, next);
             }
         }
+        Action::CycleTone(addr) => {
+            if let Some(BlockKind::Admonition { tone, .. }) =
+                doc.block_mut(addr).map(|b| &mut b.kind)
+            {
+                *tone = tone.next();
+                st.changed = true;
+            }
+        }
         Action::TurnInto { addr, kind } => {
             let to_code = matches!(kind, BlockKind::Code { .. });
             if set_kind(doc, addr, kind) {
@@ -622,14 +612,10 @@ fn apply(st: &mut BlockEditorState, doc: &mut Document, action: Action) {
                 select_block(st, next);
             }
         }
-        Action::AppendTableRow { addr, col } => {
-            let rows = match doc.block(addr).map(|b| &b.kind) {
-                Some(BlockKind::Table { rows, .. }) => rows.len(),
-                _ => return,
-            };
-            if table_insert_row(doc, addr, rows) {
+        Action::InsertTableRow { addr, at, focus } => {
+            if table_insert_row(doc, addr, at) {
                 st.changed = true;
-                st.pending_cell = Some((rows + 1, col));
+                st.pending_cell = Some(focus);
             }
         }
     }

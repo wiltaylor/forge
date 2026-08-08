@@ -31,9 +31,9 @@ from `onChange`, so it asserts on what the editor tells its owner.
 ## Why a corpus and not shared code
 
 The editing policy lives in `forge-blocks`: `resolve_key` turns a keypress, an
-address and a document into the operation to perform, and a Rust kit adapts its
-own key type onto the shared key shape (the ratatui kit does, issue #31; the
-egui kit follows in #32). The web kit cannot call Rust, so it keeps its own
+address and a document into the operation to perform, and both Rust kits adapt
+their own key type onto the shared key shape — the ratatui kit in issue #31,
+the egui kit in #32. The web kit cannot call Rust, so it keeps its own
 implementation. This file is how that third implementation stays honest: both
 languages run the same table, and a divergence in either fails a test.
 

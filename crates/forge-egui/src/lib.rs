@@ -38,6 +38,11 @@
 //! ```
 
 pub mod error;
+/// The crate's one US-layout bridge from [`egui::Key`] to the browser
+/// `KeyboardEvent` vocabulary, shared by the desktop viewer and the block
+/// editor.
+#[cfg(any(feature = "blocks", feature = "vnc", feature = "rdp"))]
+pub(crate) mod keys;
 pub mod response;
 #[cfg(any(feature = "term", feature = "vnc", feature = "rdp"))]
 pub mod rt;
