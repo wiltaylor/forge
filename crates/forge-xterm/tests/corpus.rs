@@ -10,8 +10,8 @@
 //! is worth asserting on.
 
 use forge_xterm::mouse::{
-    encode, is_reported, MouseEncoding, MouseMode, MouseReport, BUTTON_LEFT, BUTTON_MIDDLE,
-    BUTTON_NONE, BUTTON_RIGHT, WHEEL_DOWN, WHEEL_LEFT, WHEEL_RIGHT, WHEEL_UP,
+    encode, is_reported, Modifiers, MouseEncoding, MouseMode, MouseReport, BUTTON_LEFT,
+    BUTTON_MIDDLE, BUTTON_NONE, BUTTON_RIGHT, WHEEL_DOWN, WHEEL_LEFT, WHEEL_RIGHT, WHEEL_UP,
 };
 
 struct Case {
@@ -75,40 +75,60 @@ const CORPUS: &[Case] = &[
     // ---- Modifiers: shift +4, alt +8, ctrl +16. ----
     Case {
         name: "shift adds 4",
-        report: MouseReport::press(BUTTON_LEFT, 0, 0).with_modifiers(true, false, false),
+        report: MouseReport::press(BUTTON_LEFT, 0, 0).with_modifiers(Modifiers {
+            shift: true,
+            alt: false,
+            ctrl: false,
+        }),
         mode: MouseMode::AnyMotion,
         encoding: SGR,
         want: Some(b"\x1b[<4;1;1M"),
     },
     Case {
         name: "alt adds 8",
-        report: MouseReport::press(BUTTON_LEFT, 0, 0).with_modifiers(false, true, false),
+        report: MouseReport::press(BUTTON_LEFT, 0, 0).with_modifiers(Modifiers {
+            shift: false,
+            alt: true,
+            ctrl: false,
+        }),
         mode: MouseMode::AnyMotion,
         encoding: SGR,
         want: Some(b"\x1b[<8;1;1M"),
     },
     Case {
         name: "ctrl adds 16",
-        report: MouseReport::press(BUTTON_LEFT, 0, 0).with_modifiers(false, false, true),
+        report: MouseReport::press(BUTTON_LEFT, 0, 0).with_modifiers(Modifiers {
+            shift: false,
+            alt: false,
+            ctrl: true,
+        }),
         mode: MouseMode::AnyMotion,
         encoding: SGR,
         want: Some(b"\x1b[<16;1;1M"),
     },
     Case {
         name: "ctrl and shift together add 20",
-        report: MouseReport::press(BUTTON_LEFT, 0, 0).with_modifiers(true, false, true),
+        report: MouseReport::press(BUTTON_LEFT, 0, 0).with_modifiers(Modifiers {
+            shift: true,
+            alt: false,
+            ctrl: true,
+        }),
         mode: MouseMode::AnyMotion,
         encoding: SGR,
         want: Some(b"\x1b[<20;1;1M"),
     },
     Case {
         name: "all three modifiers on a drag add 28 plus the motion bit",
-        report: MouseReport::drag(BUTTON_LEFT, 0, 0).with_modifiers(true, true, true),
+        report: MouseReport::drag(BUTTON_LEFT, 0, 0).with_modifiers(Modifiers {
+            shift: true,
+            alt: true,
+            ctrl: true,
+        }),
         mode: MouseMode::AnyMotion,
         encoding: SGR,
         want: Some(b"\x1b[<60;1;1M"),
     },
-    // ---- Wheel: codes 64 and up, reported as presses. ----
+    // ---- Wheel: codes 64 to 67, reported as presses. ----
     Case {
         name: "wheel up is a press with code 64",
         report: MouseReport::press(WHEEL_UP, 3, 3),
@@ -139,10 +159,21 @@ const CORPUS: &[Case] = &[
     },
     Case {
         name: "a modifier on the wheel keeps the wheel code",
-        report: MouseReport::press(WHEEL_UP, 0, 0).with_modifiers(false, false, true),
+        report: MouseReport::press(WHEEL_UP, 0, 0).with_modifiers(Modifiers {
+            shift: false,
+            alt: false,
+            ctrl: true,
+        }),
         mode: MouseMode::AnyMotion,
         encoding: SGR,
         want: Some(b"\x1b[<80;1;1M"),
+    },
+    Case {
+        name: "the wheel has no release, so a mode that reports releases drops one",
+        report: MouseReport::release(WHEEL_UP, 0, 0),
+        mode: MouseMode::AnyMotion,
+        encoding: SGR,
+        want: None,
     },
     // ---- Default (X10): ESC [ M then three printable bytes. ----
     Case {
@@ -161,7 +192,11 @@ const CORPUS: &[Case] = &[
     },
     Case {
         name: "x10 release keeps the modifier bits it drops the button id from",
-        report: MouseReport::release(BUTTON_RIGHT, 0, 0).with_modifiers(false, false, true),
+        report: MouseReport::release(BUTTON_RIGHT, 0, 0).with_modifiers(Modifiers {
+            shift: false,
+            alt: false,
+            ctrl: true,
+        }),
         mode: MouseMode::AnyMotion,
         encoding: X10,
         want: Some(&[0x1b, b'[', b'M', 51, 33, 33]),

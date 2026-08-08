@@ -69,6 +69,30 @@ pub const WHEEL_LEFT: u16 = 66;
 /// Wheel right (horizontal scroll).
 pub const WHEEL_RIGHT: u16 = 67;
 
+/// The modifier keys held when the event happened.
+///
+/// A named type, because the three flags always travel together and a kit
+/// building them from its own modifier set would otherwise pass three bare
+/// booleans — where swapping two of them still compiles and still encodes.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct Modifiers {
+    /// Shift was held: `cb` bit 2.
+    pub shift: bool,
+    /// Alt was held: `cb` bit 3.
+    pub alt: bool,
+    /// Ctrl was held: `cb` bit 4.
+    pub ctrl: bool,
+}
+
+impl Modifiers {
+    /// No modifier held.
+    pub const NONE: Modifiers = Modifiers {
+        shift: false,
+        alt: false,
+        ctrl: false,
+    };
+}
+
 /// One event to report, in xterm's vocabulary.
 ///
 /// `col` and `row` are 0-based cells within the terminal grid; the wire form
@@ -86,12 +110,8 @@ pub struct MouseReport {
     pub col: u16,
     /// 0-based row.
     pub row: u16,
-    /// Shift was held.
-    pub shift: bool,
-    /// Alt was held.
-    pub alt: bool,
-    /// Ctrl was held.
-    pub ctrl: bool,
+    /// The modifier keys held.
+    pub modifiers: Modifiers,
 }
 
 impl MouseReport {
@@ -103,13 +123,12 @@ impl MouseReport {
             release: false,
             col,
             row,
-            shift: false,
-            alt: false,
-            ctrl: false,
+            modifiers: Modifiers::NONE,
         }
     }
 
-    /// A button coming up.
+    /// A button coming up. `button` must be a real button: the wheel has no
+    /// release, and [`is_reported`] drops one that claims otherwise.
     pub const fn release(button: u16, col: u16, row: u16) -> MouseReport {
         MouseReport {
             release: true,
@@ -131,34 +150,31 @@ impl MouseReport {
     }
 
     /// The same report with the modifier keys set.
-    pub const fn with_modifiers(self, shift: bool, alt: bool, ctrl: bool) -> MouseReport {
-        MouseReport {
-            shift,
-            alt,
-            ctrl,
-            ..self
-        }
+    pub const fn with_modifiers(self, modifiers: Modifiers) -> MouseReport {
+        MouseReport { modifiers, ..self }
     }
 
-    /// The wheel steps report as buttons 64 and up.
+    /// A wheel step rather than a button. The four wheel codes are the whole
+    /// range — xterm puts the extra buttons at 128 and up, not above 67.
     const fn is_wheel(&self) -> bool {
-        self.button >= WHEEL_UP
+        self.button >= WHEEL_UP && self.button <= WHEEL_RIGHT
     }
 
-    /// `cb`: the button code plus the modifier and motion bits.
+    /// `cb`: the button code with the modifier and motion bits set. The bits
+    /// are flags, so an out-of-range button cannot carry into them.
     const fn cb(&self) -> u16 {
         let mut cb = self.button;
-        if self.shift {
-            cb += 4;
+        if self.modifiers.shift {
+            cb |= 4;
         }
-        if self.alt {
-            cb += 8;
+        if self.modifiers.alt {
+            cb |= 8;
         }
-        if self.ctrl {
-            cb += 16;
+        if self.modifiers.ctrl {
+            cb |= 16;
         }
         if self.motion {
-            cb += 32;
+            cb |= 32;
         }
         cb
     }
@@ -172,6 +188,12 @@ impl MouseReport {
 /// Call this before [`encode`] and drop the event when it returns false.
 pub fn is_reported(report: &MouseReport, mode: MouseMode) -> bool {
     let wheel = report.is_wheel();
+    // A wheel step has no release — xterm never sends one, and the byte forms
+    // would report it as a horizontal scroll, since they carry the release in
+    // the button id.
+    if wheel && report.release {
+        return false;
+    }
     match mode {
         MouseMode::None => false,
         MouseMode::Press => !report.release && (!report.motion || wheel),
