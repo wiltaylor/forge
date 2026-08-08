@@ -779,7 +779,7 @@ fn chapter_view(
     }
     ui.label(
         egui::RichText::new(title)
-            .font(t.font(ui.ctx(), FontWeight::SemiBold, t.type_scale.h2))
+            .font(t.font(ui.ctx(), FontWeight::SemiBold, t.type_scale.xl2))
             .color(t.text(TextRole::Primary)),
     );
     let parts: Vec<&str> = meta.iter().flatten().copied().collect();

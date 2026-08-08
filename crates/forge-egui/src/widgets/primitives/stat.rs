@@ -45,7 +45,7 @@ impl<'a> Stat<'a> {
                 ui.add_space(t.space.x(1.0));
                 ui.label(
                     egui::RichText::new(self.value)
-                        .font(t.font(ui.ctx(), FontWeight::SemiBold, t.type_scale.h2))
+                        .font(t.font(ui.ctx(), FontWeight::SemiBold, t.type_scale.xl2))
                         .color(t.text(TextRole::Primary)),
                 );
                 if let Some((text, trend, tone)) = self.delta {

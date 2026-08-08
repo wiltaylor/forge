@@ -2,10 +2,10 @@
  * The authored Forge token source — the one place a token value changes.
  *
  * A generator makes each palette from this file, and the tree holds the result.
- * Today that is the CSS custom properties in `css/tokens.css` and both Rust kit
- * palettes. The typed theme follows as its generator lands. Run
- * `just generate` after you edit this file. `just check` fails while a
- * generated file is stale.
+ * Today that is the CSS custom properties in `css/tokens.css`, both Rust kit
+ * palettes, and forge-egui's geometry, type and motion tokens. The typed theme
+ * follows as its generator lands. Run `just generate` after you edit this file.
+ * `just check` fails while a generated file is stale.
  *
  * Shape
  * -----
@@ -18,6 +18,12 @@
  *   - `value` — one value for both schemes; declared in `:root` only, or
  *   - `dark` and `light` — a scheme token; declared in `:root` and repeated in
  *     each scheme-override block.
+ *
+ * A token belongs to every kit in `KITS` unless it names the ones it belongs to:
+ *   { name: 'sidebar-rail-w', only: ['egui'], … }
+ * `only` is for a dimension one kit has and the others have no equivalent of.
+ * Such a token gets no CSS custom property, and reading it from a kit it is not
+ * scoped to is an error rather than a silent value.
  *
  * Values
  * ------
@@ -232,6 +238,11 @@ export const groups = [
     tokens: [
       { name: 'sidebar-w', value: raw('240px') },
       { name: 'topbar-h', value: raw('48px') },
+      // The desktop shell collapses its sidebar to an icon rail and carries a
+      // status bar along the bottom. The web shell does neither, so these two
+      // are scoped to that kit rather than declared as custom properties.
+      { name: 'sidebar-rail-w', note: 'collapsed sidebar', only: ['egui'], value: raw('56px') },
+      { name: 'statusbar-h', only: ['egui'], value: raw('28px') },
     ],
   },
 ];
@@ -242,12 +253,37 @@ export const tokens = groups.flatMap((group) => group.tokens ?? []);
 /** True when the token is declared per scheme rather than once for both. */
 export const isSchemeToken = (token) => token.dark !== undefined;
 
+/** Every kit a token can be scoped to. The stylesheet and the typed theme are `web`. */
+export const KITS = ['web', 'tui', 'egui'];
+
+/** True when the kit declares this token — every kit, unless the token says otherwise. */
+export const inKit = (token, kit) => token.only === undefined || token.only.includes(kit);
+
+/**
+ * A misspelt kit would scope a token to nothing at all: it would vanish from
+ * the stylesheet, and no generator would claim it. Refuse at load instead.
+ */
+for (const token of tokens) {
+  for (const kit of token.only ?? []) {
+    if (!KITS.includes(kit)) {
+      throw new Error(`"${token.name}" is scoped to "${kit}", which is not one of ${KITS.join(', ')}`);
+    }
+  }
+}
+
 const byName = new Map(tokens.map((token) => [token.name, token]));
 
-/** The token of that name. Throws rather than emitting a palette with a hole in it. */
-export function tokenNamed(name) {
+/**
+ * The token of that name. Throws rather than emitting a palette with a hole in
+ * it. Naming a kit also refuses a token that kit does not declare, so a layout
+ * cannot quietly read another kit's dimension.
+ */
+export function tokenNamed(name, kit = undefined) {
   const token = byName.get(name);
   if (!token) throw new Error(`no token named "${name}" in ${SOURCE_PATH}`);
+  if (kit !== undefined && !inKit(token, kit)) {
+    throw new Error(`"${name}" is scoped to ${token.only.join(', ')}, so the ${kit} kit cannot read it`);
+  }
   return token;
 }
 

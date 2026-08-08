@@ -1,7 +1,10 @@
-//! The Forge theme: a Rust mirror of `packages/tokens/src/theme.ts`, sibling
-//! of `forge-tui/src/theme` — same token layout, real alpha instead of
-//! terminal pre-blending, plus the geometry/typography tokens a pixel canvas
-//! can express (radii, spacing, type scale, control heights, motion).
+//! The Forge theme: sibling of `forge-tui/src/theme` — same token layout, real
+//! alpha instead of terminal pre-blending, plus the geometry/typography tokens
+//! a pixel canvas can express (radii, spacing, type scale, control heights,
+//! motion).
+//!
+//! `palette.rs` and `tokens.rs` are both generated from
+//! `packages/tokens/tokens.source.mjs`. Edit that file, then `just generate`.
 //!
 //! Install a theme once with [`Theme::apply`]; widgets read it back with
 //! [`Theme::of`]. Overrides use plain struct-update syntax — Rust's native
@@ -26,12 +29,24 @@ mod tokens;
 pub use apply::scrim;
 pub use chart_palette::{chart_series, series_color, CHART_SERIES_LEN};
 pub use color::{blend, rgb, shift};
+pub use fonts::FontWeight;
 pub use tokens::{
-    ControlHeights, FontWeight, MotionDurations, Radius, Space, TypeScale, SIDEBAR_RAIL,
-    SIDEBAR_WIDTH, STATUSBAR_HEIGHT, TOPBAR_HEIGHT,
+    ControlHeights, MotionDurations, Radius, Space, TypeScale, SIDEBAR_RAIL, SIDEBAR_WIDTH,
+    STATUSBAR_HEIGHT, TOPBAR_HEIGHT,
 };
 
 use egui::Color32;
+
+impl Space {
+    /// `n` steps of the spacing scale: `x(6.0)` is what `--sp-6` declares.
+    ///
+    /// The kit holds the ramp as its first step alone. The generator checks
+    /// that every `--sp-*` really is its index times that step, so this
+    /// multiplication cannot drift away from the token source.
+    pub fn x(&self, n: f32) -> f32 {
+        self.base * n
+    }
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Scheme {

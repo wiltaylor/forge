@@ -41,7 +41,7 @@ impl<'a> Empty<'a> {
             ui.add_space(t.space.x(8.0));
             ui.label(
                 egui::RichText::new(self.icon.as_str())
-                    .size(t.type_scale.h2)
+                    .size(t.type_scale.xl2)
                     .color(t.text(TextRole::Disabled)),
             );
             ui.add_space(t.space.x(2.0));

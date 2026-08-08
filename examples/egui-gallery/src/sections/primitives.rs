@@ -106,7 +106,7 @@ pub fn draw(ui: &mut egui::Ui) {
                 .font(t.font(
                     ui.ctx(),
                     forge_egui::theme::FontWeight::SemiBold,
-                    t.type_scale.h3,
+                    t.type_scale.xl,
                 ))
                 .color(t.text(TextRole::Primary)),
         );

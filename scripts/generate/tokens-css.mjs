@@ -6,7 +6,7 @@
  * a preview pane show both schemes at once. Each of those blocks comes from the
  * same source entry, so the repeated ramps cannot drift apart.
  */
-import { CSS_TITLE, groups, isSchemeToken, valueFor } from '../../packages/tokens/tokens.source.mjs';
+import { CSS_TITLE, groups, inKit, isSchemeToken, valueFor } from '../../packages/tokens/tokens.source.mjs';
 import { bannerLines } from './banner.mjs';
 
 const RULE = '='.repeat(73);
@@ -44,11 +44,15 @@ function comment(lines, indent) {
  *
  * `wholeSet` renders every token with its comments — the `:root` default. The
  * override blocks restate the per-scheme tokens only, and without the comments.
+ * A token scoped to another kit is declared in neither: the stylesheet carries
+ * the web kit's tokens.
  */
 function declarations(scheme, { indent, wholeSet }) {
   const blocks = [];
   for (const group of groups) {
-    const tokens = (group.tokens ?? []).filter((t) => wholeSet || isSchemeToken(t));
+    const tokens = (group.tokens ?? [])
+      .filter((t) => inKit(t, 'web'))
+      .filter((t) => wholeSet || isSchemeToken(t));
     if (!tokens.length && !(wholeSet && group.comment)) continue;
 
     const lines = wholeSet && group.comment ? comment(group.comment, indent) : [];

@@ -13,8 +13,8 @@
  * `Theme` struct, so it lives beside the code that writes Rust.
  */
 import { SOURCE_PATH, tokenNamed, valueFor } from '../../packages/tokens/tokens.source.mjs';
-import { bannerLines } from './banner.mjs';
 import { alphaByte, flatten, toRgb } from './oklch.mjs';
+import { aligned, moduleDoc } from './rust.mjs';
 import { formatValue } from './tokens-css.mjs';
 
 /** An sRGB triple as the `0xRRGGBB` literal both kits' `rgb()` takes. */
@@ -123,24 +123,17 @@ function annotation(token, value, { namesOverSurface }) {
   return null;
 }
 
-/** Lay out `code // comment` rows, comments aligned one space past the widest row. */
-function aligned(rows, indent) {
-  const width = Math.max(0, ...rows.filter((row) => row.comment).map((row) => row.code.length));
-  return rows.map((row) =>
-    row.comment ? `${indent}${row.code.padEnd(width)} // ${row.comment}` : `${indent}${row.code}`,
-  );
-}
-
 /**
  * The body of one `Theme` literal, from `name:` to the last semantic triple.
  *
- * `kit` supplies the two things the kits differ by: how a value becomes a Rust
- * expression, and whether a tint's comment names the surface it flattened over.
+ * `kit` supplies the three things the kits differ by: which kit the source
+ * scopes their tokens to, how a value becomes a Rust expression, and whether a
+ * tint's comment names the surface it flattened over.
  */
 function themeBody(kit, { scheme, name, variant }, indent) {
   const inner = `${indent}    `;
   const cell = (tokenName) => {
-    const token = tokenNamed(tokenName);
+    const token = tokenNamed(tokenName, kit.id);
     const value = valueFor(token, scheme);
     return { value, comment: annotation(token, value, kit), expression: kit.expression(value, scheme) };
   };
@@ -166,17 +159,15 @@ function themeBody(kit, { scheme, name, variant }, indent) {
   return lines;
 }
 
-/** The `//!` header: the generated-file banner, then the module's own prose. */
-const moduleDoc = (prose) => [...bannerLines(), '', ...prose].map((line) => (line ? `//! ${line}` : '//!'));
-
 /* ------------------------------------------------------------------ forge-tui */
 
 const TUI = {
+  id: 'tui',
   namesOverSurface: true,
   /** Every colour is opaque: a tint arrives already composited over its surface. */
   expression(value, scheme) {
     if (!isTint(value)) return `rgb(${hexLiteral(toRgb(value))})`;
-    const surface = toRgb(valueFor(tokenNamed(value.over), scheme));
+    const surface = toRgb(valueFor(tokenNamed(value.over, this.id), scheme));
     return `rgb(${hexLiteral(flatten(toRgb(value), surface, value.alpha))})`;
   },
 };
@@ -220,6 +211,7 @@ export function renderTuiPalette() {
 /* ----------------------------------------------------------------- forge-egui */
 
 const EGUI = {
+  id: 'egui',
   namesOverSurface: false,
   /** A tint keeps its own colour and carries the alpha as a byte. */
   expression(value) {
@@ -229,8 +221,9 @@ const EGUI = {
 };
 
 /**
- * Geometry, type, motion and control heights still come from the kit's own
- * defaults. Issue #14 covers generating them.
+ * Geometry, type, motion and control heights do not vary by scheme, so both
+ * themes take them from the `Default` impls in `theme/tokens.rs`. Those come
+ * from the same source, through `./egui-tokens.mjs`.
  */
 const EGUI_DEFAULTED = ['radius', 'space', 'type_scale', 'control', 'motion'];
 
@@ -239,7 +232,7 @@ function tintAlphas() {
   const alphas = new Set();
   for (const tokenName of paletteTokens()) {
     for (const { scheme } of SCHEMES) {
-      const value = valueFor(tokenNamed(tokenName), scheme);
+      const value = valueFor(tokenNamed(tokenName, EGUI.id), scheme);
       if (isTint(value)) alphas.add(value.alpha);
     }
   }

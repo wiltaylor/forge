@@ -350,9 +350,11 @@ in-process, plus the terminal and VNC/RDP pages against
 
 Every token is authored in **`packages/tokens/tokens.source.mjs`** — one value
 per token per scheme, plus the derivation metadata for the translucent tints.
-`packages/tokens/css/tokens.css` is generated from it and committed, so
-installing Forge never runs a generator. Change a token there, then run
-`just generate`; `just check` fails while a generated file is stale.
+The CSS custom properties (`packages/tokens/css/tokens.css`), both Rust kit
+palettes, and forge-egui's geometry, type and motion tokens are generated from
+it and committed, so installing Forge never runs a generator. Change a token
+there, then run `just generate`; `just check` fails while a generated file is
+stale.
 
 The block editor's kind list works the same way, from the other direction: the
 registry is authored in Rust (`crates/forge-blocks/src/registry.rs`) and the web
