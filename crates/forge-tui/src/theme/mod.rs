@@ -1,16 +1,15 @@
 //! The Forge theme: a Rust mirror of `packages/tokens/src/theme.ts`.
 //!
 //! Widgets paint with the [ambient theme](ambient_theme), which the runtime
-//! installs and an app can swap at any time; no widget takes one. Overrides use
-//! plain struct-update syntax — Rust's native "DeepPartial":
+//! installs and an app can swap at any time; no widget takes one. Derive a
+//! brand theme with [`Theme::with_accent`], then adjust the public token
+//! fields in place:
 //!
 //! ```
-//! use forge_tui::theme::{Theme, Accent};
+//! use forge_tui::theme::Theme;
 //! use ratatui::style::Color;
-//! let custom = Theme {
-//!     accent: Accent { base: Color::Rgb(0x8A, 0x63, 0xD2), ..Theme::dark().accent },
-//!     ..Theme::dark()
-//! };
+//! let mut custom = Theme::dark().with_accent(Color::Rgb(0x8A, 0x63, 0xD2));
+//! custom.border.strong = custom.accent.base;
 //! ```
 
 mod ambient;
@@ -108,14 +107,18 @@ pub struct BorderTokens {
 
 /// The full Forge token set. Field layout mirrors the web `Theme` interface:
 /// `bg` rises page(0) → popover(4), `fg` descends primary(0) → disabled(3).
-/// Read those two ramps through [`Theme::surface`] and [`Theme::text`], which
-/// name each step.
+/// The two ramps are private so the mapping from role to step cannot be
+/// re-decided at a call site; read them through [`Theme::surface`] and
+/// [`Theme::text`], which name each step.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Theme {
     pub name: &'static str,
     pub scheme: Scheme,
-    pub bg: [Color; 5],
-    pub fg: [Color; 4],
+    /// Private: the 256-colour quantiser walks this ramp in order for its
+    /// collision avoidance. Read through [`Theme::surface`].
+    bg: [Color; 5],
+    /// Private: read through [`Theme::text`].
+    fg: [Color; 4],
     pub border: BorderTokens,
     pub accent: Accent,
     pub success: SemanticTriple,

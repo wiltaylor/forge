@@ -1,5 +1,7 @@
-//! Theme behaviour: which role selects which token, how a custom accent
-//! re-derives its dependants, and the frozen chart order.
+//! Theme behaviour: how a custom accent re-derives its dependants, the alpha
+//! the tints carry, and the frozen chart order. The role accessors themselves
+//! are not asserted against the ramps — the ramps are private, and such a
+//! test would only restate the implementation.
 //!
 //! The palette's values are NOT asserted here. `theme/palette.rs` is generated
 //! from `packages/tokens/tokens.source.mjs`. `just check` fails while the
@@ -14,32 +16,6 @@ use forge_egui::theme::{chart_series, series_color, Scheme, Severity, Surface, T
 fn each_theme_declares_its_scheme() {
     assert_eq!(Theme::dark().scheme, Scheme::Dark);
     assert_eq!(Theme::light().scheme, Scheme::Light);
-}
-
-/// The named roles select the steps of the two ramps in order: `bg` rises from
-/// the page to the popover, `fg` descends from primary text to disabled.
-#[test]
-fn roles_select_their_ramp_step() {
-    let t = Theme::dark();
-    let surfaces = [
-        Surface::Page,
-        Surface::Card,
-        Surface::Hover,
-        Surface::Pressed,
-        Surface::Popover,
-    ];
-    for (i, role) in surfaces.into_iter().enumerate() {
-        assert_eq!(t.surface(role), t.bg[i], "surface {role:?}");
-    }
-    let texts = [
-        TextRole::Primary,
-        TextRole::Secondary,
-        TextRole::Tertiary,
-        TextRole::Disabled,
-    ];
-    for (i, role) in texts.into_iter().enumerate() {
-        assert_eq!(t.text(role), t.fg[i], "text {role:?}");
-    }
 }
 
 /// forge-tui pre-composites its tints, because a terminal has no alpha channel.
@@ -79,7 +55,15 @@ fn with_accent_derives_interaction_states() {
     // Tint keeps the brand hue at the alpha the token source declares.
     assert_eq!(t.accent.bg.a(), Theme::dark().accent.bg.a());
     // Everything else untouched.
-    assert_eq!(t.bg, Theme::dark().bg);
+    for s in [
+        Surface::Page,
+        Surface::Card,
+        Surface::Hover,
+        Surface::Pressed,
+        Surface::Popover,
+    ] {
+        assert_eq!(t.surface(s), Theme::dark().surface(s), "surface {s:?}");
+    }
 }
 
 #[test]

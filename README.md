@@ -224,8 +224,9 @@ contract and of the web stack: any TUI app can depend on it alone.
   accent, semantic triples; OKLCH converted to sRGB). Degrades cleanly to
   256-color (collision-avoiding quantizer keeps the five near-black
   backgrounds distinct) and 16-color (semantic ANSI mapping). Override via
-  struct-update syntax or `Theme::dark().with_accent(color)`; force a mode
-  with `FORGE_TUI_COLOR=truecolor|256|16`.
+  `Theme::dark().with_accent(color)`, then adjust the public token fields;
+  the bg/fg ramps are private — read them through `surface()`/`text()`.
+  Force a mode with `FORGE_TUI_COLOR=truecolor|256|16`.
 - **Widgets** (~60, all plain ratatui `Widget`/`StatefulWidget`): primitives
   (Button, Badge, Card, Stat, Avatar, Skeleton, …), shell/structure
   (AppShell, Tabs, Pagination, SplitPane, Settings, HelpBar), full forms
@@ -292,8 +293,9 @@ the API contract; unlike Tauri there is no webview and no JS anywhere.
   default-on `fonts` feature (SIL OFL, see `LICENSES/`). Install once with
   `Theme::apply(ctx)` — it also maps onto egui's `Style`/`Visuals` so
   third-party egui widgets look approximately right; swap themes at runtime
-  with `Ctx::set_theme`. Override via struct-update syntax or
-  `Theme::dark().with_accent(color)`.
+  with `Ctx::set_theme`. Override via `Theme::dark().with_accent(color)`,
+  then adjust the public token fields; the bg/fg ramps are private — read
+  them through `surface()`/`text()`.
 - **Widgets** (~60): one shape everywhere — builder + `.show(ui)` returning
   a `ForgeResponse` whose `#[must_use] Outcome` mirrors the kit-wide
   contract (`Ignored/Consumed/Changed/Submitted/Cancelled`). Value-bound

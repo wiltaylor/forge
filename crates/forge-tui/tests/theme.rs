@@ -17,13 +17,20 @@ fn the_ambient_theme_starts_dark() {
 #[test]
 fn dark_bg_ramp_stays_distinct_in_256_colors() {
     let q = Theme::dark().quantized(ColorMode::Indexed256);
-    let mut indices: Vec<u8> =
-        q.bg.iter()
-            .map(|c| match c {
-                Color::Indexed(i) => *i,
-                other => panic!("expected indexed color, got {other:?}"),
-            })
-            .collect();
+    let surfaces = [
+        Surface::Page,
+        Surface::Card,
+        Surface::Hover,
+        Surface::Pressed,
+        Surface::Popover,
+    ];
+    let mut indices: Vec<u8> = surfaces
+        .into_iter()
+        .map(|s| match q.surface(s) {
+            Color::Indexed(i) => i,
+            other => panic!("expected indexed color for {s:?}, got {other:?}"),
+        })
+        .collect();
     indices.dedup();
     assert_eq!(indices.len(), 5, "bg ramp collapsed: {indices:?}");
 }
