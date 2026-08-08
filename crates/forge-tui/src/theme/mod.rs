@@ -1,9 +1,9 @@
 //! The Forge theme: a Rust mirror of `packages/tokens/src/theme.ts`.
 //!
-//! Widgets take a theme via their `.theme(&theme)` builder method; without
-//! one they fall back to the process-wide default (set once by
-//! [`set_default_theme`], usually from `runtime::run`). Overrides use plain
-//! struct-update syntax — Rust's native "DeepPartial":
+//! Widgets take a theme via their `.theme(&theme)` builder method; without one
+//! they paint with the [ambient theme](ambient_theme), which the runtime
+//! installs and an app can swap at any time. Overrides use plain struct-update
+//! syntax — Rust's native "DeepPartial":
 //!
 //! ```
 //! use forge_tui::theme::{Theme, Accent};
@@ -14,10 +14,12 @@
 //! };
 //! ```
 
+mod ambient;
 mod chart_palette;
 pub mod color;
 mod palette;
 
+pub use ambient::{ambient_theme, resolve_theme, set_ambient_theme};
 pub use chart_palette::{chart_series, series_color, CHART_SERIES_LEN};
 pub use color::{blend, quantize, rgb, shift, ColorMode};
 
@@ -250,8 +252,13 @@ impl Default for Theme {
 
 static DEFAULT_THEME: OnceLock<Theme> = OnceLock::new();
 
-/// The process-wide fallback theme used by widgets built without an explicit
-/// `.theme(...)`. Dark until [`set_default_theme`] is called.
+/// The set-once process default theme. Dark until [`set_default_theme`] is
+/// called.
+///
+/// Superseded by [`ambient_theme`], which widgets read instead: this one can
+/// only be set once, so an app that switches theme at runtime is stuck with
+/// whatever it booted with. Kept for callers outside the kit until it is
+/// removed.
 pub fn default_theme() -> &'static Theme {
     DEFAULT_THEME.get_or_init(Theme::dark)
 }
@@ -259,6 +266,8 @@ pub fn default_theme() -> &'static Theme {
 /// Set the process-wide default theme (once — typically from `runtime::run`
 /// with the quantized theme). Returns the rejected theme if one was already
 /// set or defaulted.
+///
+/// Superseded by [`set_ambient_theme`], which can be called again.
 pub fn set_default_theme(theme: Theme) -> Result<(), Theme> {
     DEFAULT_THEME.set(theme)
 }

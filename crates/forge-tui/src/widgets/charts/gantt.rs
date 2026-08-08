@@ -1,5 +1,5 @@
 use crate::text;
-use crate::theme::{default_theme, series_color, Severity, Theme};
+use crate::theme::{resolve_theme, series_color, Severity, Theme};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::Style;
@@ -64,7 +64,7 @@ impl Widget for Gantt<'_> {
         if area.is_empty() || self.tasks.is_empty() {
             return;
         }
-        let t = self.theme.unwrap_or_else(|| default_theme());
+        let t = &*resolve_theme(self.theme);
         let (min, max) = self.bounds.unwrap_or_else(|| {
             let min = self
                 .tasks

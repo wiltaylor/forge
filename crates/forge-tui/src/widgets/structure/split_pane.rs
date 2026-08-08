@@ -1,5 +1,5 @@
 use crate::event::{is_press, Outcome};
-use crate::theme::{default_theme, Theme};
+use crate::theme::{resolve_theme, Theme};
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent, MouseEventKind};
 use ratatui::layout::Rect;
@@ -154,7 +154,7 @@ impl<'a> StatefulWidget for SplitPane<'a> {
             return;
         }
         state.last_area = area;
-        let t = self.theme.unwrap_or_else(|| default_theme());
+        let t = &*resolve_theme(self.theme);
         let dx = area.x + self.divider_x(area, state);
         let color = if self.focused {
             t.accent.base

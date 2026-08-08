@@ -1,5 +1,5 @@
 use crate::text;
-use crate::theme::{default_theme, Severity, Theme};
+use crate::theme::{resolve_theme, Severity, Theme};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::Style;
@@ -43,7 +43,7 @@ impl Widget for Badge<'_> {
         if area.is_empty() {
             return;
         }
-        let t = self.theme.unwrap_or_else(|| default_theme());
+        let t = &*resolve_theme(self.theme);
         let style = match self.severity {
             Some(s) => {
                 let tri = t.severity(s);

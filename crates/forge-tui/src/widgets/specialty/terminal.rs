@@ -5,7 +5,7 @@
 //! Tab is NOT forwarded so the default focus traversal still works).
 
 use crate::event::{in_area, is_press, Outcome};
-use crate::theme::{default_theme, Theme};
+use crate::theme::{resolve_theme, Theme};
 use portable_pty::{native_pty_system, ChildKiller, CommandBuilder, PtySize};
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{
@@ -398,7 +398,7 @@ impl<'a> StatefulWidget for Terminal<'a> {
             return;
         }
         state.last_area = area;
-        let t = self.theme.unwrap_or_else(|| default_theme());
+        let t = &*resolve_theme(self.theme);
         state.resize(area.height, area.width);
         let screen = state.parser.screen();
         buf.set_style(area, Style::new().bg(t.bg[0]));

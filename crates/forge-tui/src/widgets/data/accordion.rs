@@ -1,6 +1,6 @@
 use crate::event::{clicked, is_press, Outcome};
 use crate::text;
-use crate::theme::{default_theme, Theme};
+use crate::theme::{resolve_theme, Theme};
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
 use ratatui::layout::Rect;
@@ -118,7 +118,7 @@ impl<'a> StatefulWidget for Collapsible<'a> {
         if area.is_empty() {
             return;
         }
-        let t = self.theme.unwrap_or_else(|| default_theme());
+        let t = &*resolve_theme(self.theme);
         let chevron = if state.open { "▾" } else { "▸" };
         let mut style = Style::new().fg(t.fg[0]);
         if self.focused {
@@ -245,7 +245,7 @@ impl<'a> StatefulWidget for Accordion<'a> {
         if area.is_empty() {
             return;
         }
-        let t = self.theme.unwrap_or_else(|| default_theme());
+        let t = &*resolve_theme(self.theme);
         let bottom = area.y + area.height;
         let mut y = area.y;
         for (i, (title, body)) in self.items.iter().enumerate() {

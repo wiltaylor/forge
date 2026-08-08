@@ -4,7 +4,7 @@
 //! hyperlinks).
 
 use crate::text;
-use crate::theme::{default_theme, Theme};
+use crate::theme::{resolve_theme, Theme};
 use pulldown_cmark::{CodeBlockKind, Event, HeadingLevel, Options, Parser, Tag, TagEnd};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
@@ -300,7 +300,7 @@ impl<'a> Markdown<'a> {
 
     /// Total rows at `width` cells.
     pub fn height(&self, width: u16) -> u16 {
-        let t = self.theme.unwrap_or_else(|| default_theme());
+        let t = &*resolve_theme(self.theme);
         markdown_lines(self.source, width as usize, t).len() as u16
     }
 }
@@ -310,7 +310,7 @@ impl Widget for Markdown<'_> {
         if area.is_empty() {
             return;
         }
-        let t = self.theme.unwrap_or_else(|| default_theme());
+        let t = &*resolve_theme(self.theme);
         let lines = markdown_lines(self.source, area.width as usize, t);
         for (i, line) in lines.iter().skip(self.scroll as usize).enumerate() {
             if i as u16 >= area.height {

@@ -1,5 +1,5 @@
 use crate::text;
-use crate::theme::{default_theme, Theme};
+use crate::theme::{resolve_theme, Theme};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::{Color, Style};
@@ -48,7 +48,7 @@ impl Widget for Spinner<'_> {
         if area.is_empty() {
             return;
         }
-        let t = self.theme.unwrap_or_else(|| default_theme());
+        let t = &*resolve_theme(self.theme);
         let color = self.color.unwrap_or(t.accent.base);
         let glyph = FRAMES[(self.frame as usize) % FRAMES.len()];
         buf.set_string(area.x, area.y, glyph, Style::new().fg(color));

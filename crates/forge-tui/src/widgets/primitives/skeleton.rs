@@ -1,4 +1,4 @@
-use crate::theme::{default_theme, Theme};
+use crate::theme::{resolve_theme, Theme};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::Style;
@@ -34,7 +34,7 @@ impl Widget for Skeleton<'_> {
         if area.is_empty() {
             return;
         }
-        let t = self.theme.unwrap_or_else(|| default_theme());
+        let t = &*resolve_theme(self.theme);
         let base = Style::new().fg(t.bg[3]).bg(t.bg[1]);
         let shine = Style::new().fg(t.bg[4]).bg(t.bg[1]);
         let sweep = (self.frame * 2) as i64;

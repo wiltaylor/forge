@@ -34,7 +34,7 @@ use ratatui::layout::Rect;
 use ratatui::widgets::StatefulWidget;
 
 use crate::event::{in_area, is_press, left_down, scroll_delta, Outcome};
-use crate::theme::{default_theme, Severity, Theme};
+use crate::theme::{resolve_theme, Severity, Theme};
 use crate::widgets::forms::TextareaState;
 
 use popups::{builtin_kind, emoji_query, slash_commands, EmojiState, Popup, SlashState};
@@ -1458,7 +1458,7 @@ impl<'a> StatefulWidget for BlockEditor<'a> {
         if area.is_empty() {
             return;
         }
-        let t = self.theme.unwrap_or_else(|| default_theme());
+        let t = &*resolve_theme(self.theme);
 
         let selecting =
             !self.read_only && !state.custom_active && matches!(state.editing, Editing::None);

@@ -1,5 +1,5 @@
 use crate::text;
-use crate::theme::{default_theme, series_color, Theme};
+use crate::theme::{resolve_theme, series_color, Theme};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::Style;
@@ -32,7 +32,7 @@ impl Widget for Legend<'_> {
         if area.is_empty() {
             return;
         }
-        let t = self.theme.unwrap_or_else(|| default_theme());
+        let t = &*resolve_theme(self.theme);
         let right = area.x + area.width;
         let mut x = area.x;
         for (i, label) in self.labels.iter().enumerate() {

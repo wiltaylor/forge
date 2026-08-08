@@ -1,6 +1,6 @@
 use crate::event::{clicked, is_press, left_down, Outcome};
 use crate::text;
-use crate::theme::{default_theme, Theme};
+use crate::theme::{resolve_theme, Theme};
 use crate::widgets::forms::{ListBox, ListBoxState};
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
@@ -155,7 +155,7 @@ impl<'a> StatefulWidget for Select<'a> {
         if area.is_empty() {
             return;
         }
-        let t = self.theme.unwrap_or_else(|| default_theme());
+        let t = &*resolve_theme(self.theme);
         let edge = if self.focused && !self.disabled {
             t.accent.base
         } else {

@@ -5,7 +5,7 @@
 
 use crate::event::{clicked, is_press, Outcome};
 use crate::text;
-use crate::theme::{default_theme, Theme};
+use crate::theme::{resolve_theme, Theme};
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent};
 use ratatui::layout::Rect;
@@ -270,7 +270,7 @@ impl<'a> StatefulWidget for AppShell<'a> {
             state.content = Rect::ZERO;
             return;
         }
-        let t = self.theme.unwrap_or_else(|| default_theme());
+        let t = &*resolve_theme(self.theme);
         buf.set_style(area, Style::new().bg(t.bg[0]).fg(t.fg[0]));
 
         let slim = state.collapsed.unwrap_or(area.width < 72);
