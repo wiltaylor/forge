@@ -10,11 +10,16 @@
 //! verbatim with `@forge/blocks` on the web — see `tests/schema.rs` for the
 //! literal fixtures. Editors in forge-tui and forge-egui build on [`ops`] and
 //! [`Address`] so every platform shares one keyboard/editing model.
+//!
+//! [`KINDS`] is the registry: one entry per kind, carrying the label, the
+//! data-ness, the starter payload and the markdown form. Read it to enumerate
+//! the kinds rather than reading a kit's palette.
 
 mod address;
 mod emoji;
 mod id;
 mod ops;
+mod registry;
 mod schema;
 
 #[cfg(feature = "md")]
@@ -33,12 +38,12 @@ pub use ops::{
     remove, remove_column, set_column_ratios, set_kind, split, table_insert_col, table_insert_row,
     table_remove_col, table_remove_row, wrap_in_columns, MergeResult, Shortcut,
 };
+pub use registry::{kind_entry, starter_kind, KindEntry, MarkdownForm, KINDS};
 pub use schema::{
-    starter_kind, Block, BlockKind, ChartPoint, ChartSeries, Column, DiagramDirection, DiagramEdge,
+    Block, BlockKind, ChartPoint, ChartSeries, Column, DiagramDirection, DiagramEdge,
     DiagramEdgeKind, DiagramNode, DiagramNodeKind, Document, ListStyle, MessageKind, NodeTableRow,
     ParticipantKind, PieSlice, SeqMessage, SeqNote, SeqParticipant, StateNode, StateTransition,
-    TimelineDirection, TimelineItem, TimelinePhase, TimelineSide, Tone, TreeNode,
-    DOCUMENT_VERSION,
+    TimelineDirection, TimelineItem, TimelinePhase, TimelineSide, Tone, TreeNode, DOCUMENT_VERSION,
 };
 
 #[cfg(feature = "md")]
