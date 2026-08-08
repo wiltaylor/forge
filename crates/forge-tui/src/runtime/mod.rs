@@ -72,6 +72,11 @@ impl Default for RunOptions {
 /// Per-run context handed to every [`App`] callback.
 pub struct Ctx {
     /// The active theme, already quantized for the terminal's color mode.
+    ///
+    /// This is what the runtime paints its own chrome with. Assigning it does
+    /// *not* reach a widget that carries no explicit `.theme(...)`: those paint
+    /// with the ambient theme, so an app that switches theme mid-run must also
+    /// call [`set_ambient_theme`](crate::theme::set_ambient_theme).
     pub theme: Theme,
     pub focus: FocusRing,
     pub overlays: OverlayStack,
@@ -229,7 +234,8 @@ impl Drop for TerminalGuard {
 ///
 /// An app that switches theme mid-run installs the new one with
 /// [`set_ambient_theme`](crate::theme::set_ambient_theme); every widget built
-/// without an explicit `.theme(...)` follows on the next frame.
+/// without an explicit `.theme(...)` follows on the next frame. Assigning
+/// [`Ctx::theme`] alone repaints the runtime's chrome and nothing else.
 pub fn run(app: &mut dyn App, theme: Theme, opts: RunOptions) -> Result<()> {
     let mode = opts.color_mode.unwrap_or_else(ColorMode::detect);
     let theme = theme.quantized(mode);

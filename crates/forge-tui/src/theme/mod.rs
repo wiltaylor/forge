@@ -257,8 +257,9 @@ static DEFAULT_THEME: OnceLock<Theme> = OnceLock::new();
 ///
 /// Superseded by [`ambient_theme`], which widgets read instead: this one can
 /// only be set once, so an app that switches theme at runtime is stuck with
-/// whatever it booted with. Kept for callers outside the kit until it is
-/// removed.
+/// whatever it booted with. It also goes stale — after a
+/// [`set_ambient_theme`] this still returns the boot theme while every widget
+/// paints the new one. Kept for callers outside the kit until it is removed.
 pub fn default_theme() -> &'static Theme {
     DEFAULT_THEME.get_or_init(Theme::dark)
 }

@@ -4,8 +4,8 @@
 //! The ambient theme is one process-wide slot, so every test here writes shared
 //! state. Two rules keep that safe. First, each test takes `AMBIENT_LOCK` and
 //! installs the theme it wants, so no test depends on what ran before it.
-//! Second, all of the swapping lives in this file: `tests/*.rs` is one binary
-//! per file, so no other test can see it.
+//! Second, no other test binary swaps the ambient theme — `tests/*.rs` is one
+//! binary per file, so these swaps cannot reach them.
 
 use forge_tui::theme::{ambient_theme, resolve_theme, set_ambient_theme, Theme};
 use forge_tui::widgets::Spinner;
@@ -33,16 +33,22 @@ fn glyph_color(spinner: Spinner<'_>) -> Color {
     buf[(0, 0)].fg
 }
 
-/// The bug this whole change exists to fix: a widget built without a theme
-/// must follow a theme switch, not keep the scheme it booted with.
+/// The bug this whole change exists to fix: a widget built without a theme must
+/// follow a theme switch, not keep the scheme it booted with.
+///
+/// The spinner is built once, before either swap, and painted twice. Building a
+/// fresh one after each swap would pass even if the theme were captured at
+/// build time — which is the bug.
 #[test]
 fn switching_the_ambient_theme_repaints_a_widget_that_carries_none() {
     let _guard = lock_ambient();
+    let spinner = Spinner::new();
+
     set_ambient_theme(Theme::dark());
-    assert_eq!(glyph_color(Spinner::new()), Theme::dark().accent.base);
+    assert_eq!(glyph_color(spinner.clone()), Theme::dark().accent.base);
 
     set_ambient_theme(Theme::light());
-    assert_eq!(glyph_color(Spinner::new()), Theme::light().accent.base);
+    assert_eq!(glyph_color(spinner), Theme::light().accent.base);
 }
 
 #[test]

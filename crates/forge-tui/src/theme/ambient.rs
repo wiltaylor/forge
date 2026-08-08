@@ -34,8 +34,9 @@ static AMBIENT: RwLock<Theme> = RwLock::new(Theme::dark());
 /// A snapshot of the ambient theme.
 ///
 /// Callers get a clone rather than a borrow, so holding the result cannot block
-/// a concurrent [`set_ambient_theme`] — and so a swap part-way through a frame
-/// cannot change a theme a widget is already painting with.
+/// a concurrent [`set_ambient_theme`] — and so a swap cannot change a theme a
+/// widget is already painting with. It can still land between two widgets of
+/// one frame, which is why an app swaps between frames, not during one.
 pub fn ambient_theme() -> Theme {
     AMBIENT
         .read()
