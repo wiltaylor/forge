@@ -74,8 +74,8 @@ generate-check:
 token-scan:
 	node scripts/token-scan.mjs
 
-# Run npm package tests (includes the block key corpus's web driver — see
-# block-corpus-test)
+# Run npm package tests (includes the contract corpus's ts-client driver and
+# the block key corpus's web driver — see corpus-test and block-corpus-test)
 [group('test')]
 frontend-test: frontend-install
 	pnpm test
@@ -90,11 +90,12 @@ rust-test:
 # one. Each driver builds the fixture the corpus describes, so no recipe here
 # needs a server that is already up.
 [group('test')]
-corpus-test:
+corpus-test: frontend-install
 	cargo test -p forge-contract
 	cargo test -p forge-server --test corpus
 	cargo test --manifest-path crates/forge-tauri/Cargo.toml --test corpus
 	uv run --project python/forge-server --extra dev pytest python/forge-server/tests/test_contract.py python/forge-server/tests/test_corpus.py
+	pnpm --filter @forge/client test:corpus
 
 # Run the block key corpus (contract/blocks/corpus.json) against every kit
 # that has a driver. Each driver builds the document the corpus describes, so

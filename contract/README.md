@@ -19,12 +19,20 @@ every driver at once.
 |---|---|---|
 | `rust-http` | `crates/forge-server/tests/corpus.rs` | landed |
 | `python-http` | `python/forge-server/tests/test_corpus.py` | landed |
-| `ts-client` | — | issue #38 |
+| `ts-client` | `packages/client/tests/corpus.test.ts` | landed |
 | `rust-ipc` | `crates/forge-tauri/tests/corpus.rs` | landed |
 
 The Rust drivers share the loader and the matcher: `crates/forge-contract`.
 The Python driver has the same pair in
-`python/forge-server/tests/contract/`. Neither knows about HTTP.
+`python/forge-server/tests/contract/`, and the TypeScript driver in
+`packages/client/tests/contract/`. None of them knows about HTTP.
+
+The TypeScript driver is the one consumer, not a fifth implementation: it
+runs every case through the client's own methods against a backend that
+`python/forge-server/tests/corpus_fixture_server.py` builds with the Python
+driver's harness, and observes the wire through the client's injectable
+`fetch`. What it checks on top of the envelope is the client's reading of it —
+data unwrapped on success, an `ApiError` carrying the status on failure.
 
 `just corpus-test` runs every driver. `just test` runs all of them except
 `rust-ipc`: forge-tauri is its own workspace, because tauri pulls wry/tao/gtk

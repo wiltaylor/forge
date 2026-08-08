@@ -501,8 +501,10 @@
       "id": "doc-name-rejected-dot-dot",
       "title": "A document name of two dots is rejected with 400",
       "note": "Percent-encoded so the dot segment reaches the doc-name rule instead of being collapsed by a URL normaliser.",
-      "applies": ["rust-http", "python-http", "rust-ipc", "ts-client"],
-      "inapplicable": {},
+      "applies": ["rust-http", "python-http", "rust-ipc"],
+      "inapplicable": {
+        "ts-client": "Every fetch resolves its target through the WHATWG URL parser, which reads %2E%2E as a dot segment and collapses it away before the wire, so the client cannot send this path."
+      },
       "steps": [
         {
           "request": {

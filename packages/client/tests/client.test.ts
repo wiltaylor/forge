@@ -1,3 +1,10 @@
+/* Client-specific behaviour a corpus case cannot state: URL construction,
+   the token lifecycle, debouncing, and what the client resolves or throws
+   around the wire. Contract behaviour — the envelope, the statuses, the
+   payload shapes — is covered against a real backend by `corpus.test.ts`.
+   The mocked envelopes below are scaffolding for those client-side
+   assertions, never the thing being asserted. */
+
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ApiError, createClient, type ClientOptions } from '../src/index';
 
@@ -41,28 +48,9 @@ afterEach(() => {
 });
 
 describe('envelope handling', () => {
-  it('unwraps {ok:true,data} success envelopes', async () => {
-    const { c, calls } = client(() => ({
-      body: { ok: true, data: { uptime_s: 5, version: '1.0.0', app: 'demo', auth_enabled: true, actions: ['ping'] } },
-    }));
-    const health = await c.health();
-    expect(health.app).toBe('demo');
-    expect(health.actions).toEqual(['ping']);
-    expect(calls[0]?.url).toBe('/api/health');
-    expect(calls[0]?.method).toBe('GET');
-  });
-
   it('treats success envelopes with omitted data as undefined (mutations)', async () => {
     const { c } = client(() => ({ body: { ok: true } }));
     await expect(c.data.put('doc', { a: 1 })).resolves.toBeUndefined();
-  });
-
-  it('throws ApiError with status + message on {ok:false,error}', async () => {
-    const { c } = client(() => ({ status: 400, body: { ok: false, error: 'invalid name' } }));
-    const err = await c.request('GET', '/api/data/BAD').catch((e: unknown) => e);
-    expect(err).toBeInstanceOf(ApiError);
-    expect((err as ApiError).status).toBe(400);
-    expect((err as ApiError).message).toBe('invalid name');
   });
 
   it('falls back to statusText when the error body is not an envelope', async () => {
@@ -89,31 +77,6 @@ describe('auth', () => {
     ok: true,
     data: { token: 'jwt-abc', expires_at: 1234567890, user: { name: 'admin', roles: ['ops'] } },
   };
-
-  it('login stores the token and subsequent requests carry the Authorization header', async () => {
-    const { c, calls } = client((call) =>
-      call.url === '/api/auth/login'
-        ? { body: loginBody }
-        : { body: { ok: true, data: { sub: 'admin', roles: ['ops'] } } },
-    );
-
-    expect(c.auth.token()).toBeNull();
-    expect(c.auth.header()).toEqual({});
-    expect(calls[0]?.headers.Authorization).toBeUndefined();
-
-    const result = await c.auth.login('admin', 'admin');
-    expect(result.token).toBe('jwt-abc');
-    expect(calls[0]?.method).toBe('POST');
-    expect(calls[0]?.body).toEqual({ username: 'admin', password: 'admin' });
-    // Login itself must not send a stale Authorization header requirement,
-    // but afterwards the token is stored and attached everywhere.
-    expect(c.auth.token()).toBe('jwt-abc');
-    expect(c.auth.header()).toEqual({ Authorization: 'Bearer jwt-abc' });
-
-    const me = await c.auth.me();
-    expect(me.sub).toBe('admin');
-    expect(calls[1]?.headers.Authorization).toBe('Bearer jwt-abc');
-  });
 
   it('logout clears the token', async () => {
     const { c } = client(() => ({ body: loginBody }));
@@ -154,12 +117,6 @@ describe('auth', () => {
 });
 
 describe('data', () => {
-  it('get returns the doc payload', async () => {
-    const { c, calls } = client(() => ({ body: { ok: true, data: { hello: 'world' } } }));
-    await expect(c.data.get('mydoc')).resolves.toEqual({ hello: 'world' });
-    expect(calls[0]?.url).toBe('/api/data/mydoc');
-  });
-
   it('get returns null on 404', async () => {
     const { c } = client(() => ({ status: 404, body: { ok: false, error: 'not found' } }));
     await expect(c.data.get('missing')).resolves.toBeNull();
@@ -212,31 +169,9 @@ describe('data', () => {
 });
 
 describe('actions', () => {
-  it('posts the payload and unwraps the result', async () => {
-    const { c, calls } = client(() => ({ body: { ok: true, data: { echoed: 42 } } }));
-    const out = await c.actions.call<{ echoed: number }>('echo', { value: 42 });
-    expect(out).toEqual({ echoed: 42 });
-    expect(calls[0]).toMatchObject({
-      method: 'POST',
-      url: '/api/actions/echo',
-      body: { value: 42 },
-    });
-  });
-
   it('defaults to an empty object payload', async () => {
     const { c, calls } = client(() => ({ body: { ok: true, data: null } }));
     await c.actions.call('ping');
     expect(calls[0]?.body).toEqual({});
-  });
-
-  it('surfaces unknown-action 404s as ApiError', async () => {
-    const { c } = client(() => ({
-      status: 404,
-      body: { ok: false, error: "unknown action 'nope'; registered: ping, echo" },
-    }));
-    const err = await c.actions.call('nope').catch((e: unknown) => e);
-    expect(err).toBeInstanceOf(ApiError);
-    expect((err as ApiError).status).toBe(404);
-    expect((err as ApiError).message).toContain('registered');
   });
 });
