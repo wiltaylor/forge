@@ -291,12 +291,12 @@ loosely and passed while the two backends answered with different key sets —
 one carrying `iat` and dropping a null `iss`, the other the reverse. It now
 states the four members the contract names, and nothing else.
 
-That tightening left one difference the contract does not settle: what `exp`
-means for an identity that never came from a token. Rust mints a far-future
-expiry, Python answers null, and `docs/api-contract.md` says only that the
-anonymous identity is `sub = "anonymous"`, `roles = []`. Raised as issue #115
-rather than chosen here; `auth-disabled-identity-is-anonymous` states every
-other member, so `exp` is the only thing left open.
+That tightening surfaced one more difference: what `exp` means for an
+identity that never came from a token. Rust minted a far-future expiry,
+Python answered null. Issue #115 settled it as null — there is no expiry
+because there was no token — and `auth-disabled-identity-is-anonymous` now
+states all four members under `$exact`, the same discipline as
+`me-with-bearer`.
 
 ## The block kind registry
 

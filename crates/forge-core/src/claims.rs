@@ -13,8 +13,11 @@ pub struct Claims {
     pub roles: Vec<String>,
     /// Issued-at (unix seconds).
     pub iat: i64,
-    /// Expiry (unix seconds) = `iat` + TTL.
-    pub exp: i64,
+    /// Expiry (unix seconds) = `iat` + TTL. `None` only for the anonymous
+    /// identity: no token, so nothing to expire (issue #115). A wire token
+    /// always carries a numeric `exp` — decoding requires it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub exp: Option<i64>,
     /// Issuer (default `"forge"`); validated only when explicitly configured.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub iss: Option<String>,
@@ -22,15 +25,14 @@ pub struct Claims {
 
 impl Claims {
     /// The identity handlers see when auth is disabled:
-    /// `sub = "anonymous"`, `roles = []`.
+    /// `sub = "anonymous"`, `roles = []`, `exp = None` — there is no expiry
+    /// because there was no token (issue #115).
     pub fn anonymous() -> Self {
-        let now = unix_now();
         Self {
             sub: "anonymous".to_string(),
             roles: Vec::new(),
-            iat: now,
-            // Far-future expiry; anonymous claims are never wire tokens.
-            exp: now + 10 * 365 * 24 * 3600,
+            iat: unix_now(),
+            exp: None,
             iss: None,
         }
     }
@@ -47,7 +49,7 @@ impl Claims {
             sub: sub.into(),
             roles,
             iat: now,
-            exp: now + ttl_secs as i64,
+            exp: Some(now + ttl_secs as i64),
             iss,
         }
     }

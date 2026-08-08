@@ -926,7 +926,7 @@
       "id": "auth-disabled-identity-is-anonymous",
       "title": "With no auth configured, a request with no token is the anonymous identity",
       "fixture": "auth-disabled",
-      "note": "Everything the document decides, and one member short of `me-with-bearer`'s `$exact`. The two backends disagree on what `exp` means for an identity that never came from a token — Rust mints a far-future expiry, Python answers null — and the contract is silent on it, so the difference is raised as issue #115 rather than settled here. `exp` is the only member this case leaves open; a backend that drops `iss`, or that adds a member, still fails.",
+      "note": "The same `$exact` discipline as `me-with-bearer`, over the same four members. Issue #115 settled `exp` for an identity that never came from a token: it is null, because there is no token to expire. A backend that mints a numeric expiry for the anonymous identity, drops `iss`, or adds a member fails.",
       "applies": ["rust-http", "python-http", "rust-ipc", "ts-client"],
       "inapplicable": {},
       "steps": [
@@ -936,7 +936,9 @@
             "status": 200,
             "body": {
               "ok": true,
-              "data": { "sub": "anonymous", "roles": { "$exact": [] }, "iss": null }
+              "data": {
+                "$exact": { "sub": "anonymous", "roles": [], "iss": null, "exp": null }
+              }
             }
           }
         }
