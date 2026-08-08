@@ -25,3 +25,24 @@ and handlers see anonymous claims.
 
 Password hashes: `python -m forge_server.hash <password>` (requires the
 `argon2` extra).
+
+## Layout
+
+`forge_server.core` holds the contract's rules — the doc store, the action
+registry, the event bus and component federation. It imports no web framework:
+a rule that says no raises a `ForgeError` (`BadRequest`, `NotFound`,
+`Internal`), and the routing layer maps that to a status. So the rules are
+callable, and testable, with FastAPI absent:
+
+```python
+from forge_server.core import DocStore, NotFound
+
+store = DocStore("data")
+store.write("notes", {"a": 1})
+```
+
+The modules beside it — `docstore.py`, `actions.py`, `events.py`,
+`components.py` and `static.py` — are the routing layer, and `app.py` wires
+them onto FastAPI. `auth.py` is not unwelded yet: it still holds its rules and
+its routes together. This mirrors the Rust `forge-core` / `forge-server`
+split.

@@ -229,6 +229,7 @@ name = "forge-server"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "anyio" },
     { name = "fastapi" },
     { name = "pyjwt" },
     { name = "python-dotenv" },
@@ -250,6 +251,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "anyio", specifier = ">=4" },
     { name = "argon2-cffi", marker = "extra == 'argon2'", specifier = ">=25" },
     { name = "argon2-cffi", marker = "extra == 'dev'", specifier = ">=25" },
     { name = "fastapi", specifier = ">=0.140" },

@@ -35,9 +35,9 @@ from . import docstore as _docstore
 from . import envelope
 from . import events as _events
 from . import static as _static
-from .actions import ActionContext, ActionRegistry
-from .docstore import DocStore
-from .events import EventBus
+from .core.actions import ActionContext, ActionRegistry
+from .core.docstore import DocStore
+from .core.events import EventBus
 
 
 class ForgeApp:
