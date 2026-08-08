@@ -1,4 +1,5 @@
-//! Tiny inline trend line: tertiary-text 1.5pt stroke + a toned endpoint dot.
+//! Tiny inline trend line: a [`TextRole::Tertiary`] 1.5pt stroke + a toned
+//! endpoint dot.
 //! No axes, no tooltip — web `Sparkline` parity (default 96×28).
 
 use crate::response::{ForgeResponse, Outcome};

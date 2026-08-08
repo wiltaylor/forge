@@ -2,8 +2,8 @@
 //!
 //! The order is CVD-validated and load-bearing: adjacent series stay
 //! distinguishable under the common color-vision deficiencies. NEVER reorder
-//! or cycle it; series beyond the fifth fold into a tertiary-text "Other"
-//! bucket.
+//! or cycle it; series beyond the fifth fold into a [`TextRole::Tertiary`]
+//! "Other" bucket.
 
 use super::{TextRole, Theme};
 use egui::Color32;

@@ -1,5 +1,6 @@
 //! Centered modal dialog — wraps `egui::Modal` (backdrop + Esc + input
-//! blocking) with Forge chrome: theme scrim, bg\[4\] panel, title row with a
+//! blocking) with Forge chrome: theme scrim, [`Surface::Popover`] panel,
+//! title row with a
 //! close button, and an optional footer slot.
 
 use crate::theme::{scrim, FontWeight, Surface, TextRole, Theme};

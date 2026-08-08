@@ -103,6 +103,11 @@ impl Theme {
         let radius = CornerRadius::same(self.radius.md as u8);
         let w = &mut v.widgets;
 
+        // egui's state names sit one step below the Forge surface of the same
+        // name: an `inactive` control rests on `Hover`, and `hovered`/`active`
+        // both go to `Pressed`. The offset is deliberate — egui calls a resting
+        // interactive control "inactive", which Forge paints as a raised
+        // surface. Do not "correct" these to the matching role name.
         w.noninteractive.bg_fill = self.surface(Surface::Card);
         w.noninteractive.weak_bg_fill = self.surface(Surface::Card);
         w.noninteractive.bg_stroke = Stroke::new(1.0, self.border.subtle);

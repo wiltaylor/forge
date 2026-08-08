@@ -1,5 +1,6 @@
 //! Forge-styled hover tooltip — a thin restyle of `on_hover_ui`. The outer
-//! frame comes from the themed visuals (bg\[4\], default border, no shadow);
+//! frame comes from the themed visuals ([`Surface::Popover`](crate::theme::Surface::Popover),
+//! default border, no shadow);
 //! this adds the Forge text treatment and padding.
 
 use crate::theme::{FontWeight, TextRole, Theme};

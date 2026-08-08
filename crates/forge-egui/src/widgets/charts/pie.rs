@@ -1,6 +1,6 @@
 //! Donut/pie chart. Slices take the locked palette in order; anything past
-//! the fifth slice folds into a single tertiary-text "Other" slice (the
-//! palette contract — never cycle). Hover expands a slice by 2pt and shows a
+//! the fifth slice folds into a single [`TextRole::Tertiary`] "Other" slice
+//! (the palette contract — never cycle). Hover expands a slice by 2pt and shows a
 //! percentage tooltip; a swatch legend renders at the right.
 
 use crate::response::{ForgeResponse, Outcome};

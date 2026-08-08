@@ -103,7 +103,8 @@ impl<'a> Accordion<'a> {
     }
 }
 
-/// Shared header chrome: card row, hover surface, rotating chevron + title.
+/// Shared header chrome: a [`Surface::Card`] row that hovers to
+/// [`Surface::Hover`], a rotating chevron + title.
 fn header_row(
     ui: &mut Ui,
     t: &Theme,

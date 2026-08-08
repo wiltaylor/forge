@@ -93,7 +93,8 @@ fn mono_fonts(ui: &Ui, size: f32) -> (FontId, FontId) {
 }
 
 /// Highlight `code` into styled `(format, text)` runs per line. Unknown
-/// languages (or unparsable scope selectors) fall back to plain secondary text.
+/// languages (or unparsable scope selectors) fall back to plain
+/// [`TextRole::Secondary`] text.
 fn highlight_runs(
     ui: &Ui,
     t: &Theme,

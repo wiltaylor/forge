@@ -159,8 +159,9 @@ impl<'a> DatePicker<'a> {
                 );
                 util::focus_ring(ui, &response, rect, t.radius.md, &t);
 
+                let dim = t.text(TextRole::Disabled);
                 let glyph_color = if disabled {
-                    t.text(TextRole::Disabled)
+                    dim
                 } else {
                     t.text(TextRole::Tertiary)
                 };
@@ -180,15 +181,12 @@ impl<'a> DatePicker<'a> {
                     Some(value) => (
                         value,
                         if disabled {
-                            t.text(TextRole::Disabled)
+                            dim
                         } else {
                             t.text(TextRole::Primary)
                         },
                     ),
-                    None => (
-                        placeholder.unwrap_or("Pick a date…"),
-                        t.text(TextRole::Disabled),
-                    ),
+                    None => (placeholder.unwrap_or("Pick a date…"), dim),
                 };
                 let g = util::galley(
                     ui,

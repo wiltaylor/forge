@@ -1,7 +1,7 @@
 //! Zero-dep charts on the locked CVD palette. Colors come from
 //! [`theme::series_color`](crate::theme::series_color) — `[accent, danger,
 //! success, warning, info]`, with everything past the fifth series folded
-//! into a tertiary-text "Other" bucket (never cycled). Geometry mirrors
+//! into a [`TextRole::Tertiary`] "Other" bucket (never cycled). Geometry mirrors
 //! `packages/charts/src/charts.tsx`; every chart fills the available width,
 //! takes `.height(..)`, and shows a Forge-framed tooltip on hover.
 

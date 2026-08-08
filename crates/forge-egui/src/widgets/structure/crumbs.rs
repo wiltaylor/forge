@@ -1,5 +1,5 @@
-//! Breadcrumb path. The last item is the current page (primary text); earlier
-//! items are clickable.
+//! Breadcrumb path. The last item is the current page
+//! ([`TextRole::Primary`]); earlier items are clickable.
 
 use crate::response::{ForgeResponse, Outcome};
 use crate::theme::{TextRole, Theme};

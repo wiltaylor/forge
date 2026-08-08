@@ -158,16 +158,17 @@ impl<'a> Combobox<'a> {
                     let border = field::well_border(&t, false, response.has_focus(), disabled);
                     field::well(ui, &t, rect, border);
                     util::focus_ring(ui, &response, rect, t.radius.md, &t);
+                    let dim = t.text(TextRole::Disabled);
                     let (text, color) = match display {
                         Some(text) => (
                             text,
                             if disabled {
-                                t.text(TextRole::Disabled)
+                                dim
                             } else {
                                 t.text(TextRole::Primary)
                             },
                         ),
-                        None => (placeholder.unwrap_or(""), t.text(TextRole::Disabled)),
+                        None => (placeholder.unwrap_or(""), dim),
                     };
                     let g = util::galley(
                         ui,
@@ -180,16 +181,12 @@ impl<'a> Combobox<'a> {
                         g,
                         color,
                     );
-                    field::chevron(
-                        ui,
-                        &t,
-                        rect,
-                        if disabled {
-                            t.text(TextRole::Disabled)
-                        } else {
-                            t.text(TextRole::Tertiary)
-                        },
-                    );
+                    let chevron = if disabled {
+                        dim
+                    } else {
+                        t.text(TextRole::Tertiary)
+                    };
+                    field::chevron(ui, &t, rect, chevron);
                 }
                 response
             };

@@ -1,6 +1,6 @@
 //! Inline-markdown rendering for unfocused text blocks: `parse_inline` spans
 //! mapped onto one [`egui::text::LayoutJob`] with Forge tokens (strong →
-//! SemiBold, emphasis → italics, strike, code chips on the pressed surface,
+//! SemiBold, emphasis → italics, strike, code chips on [`Surface::Pressed`],
 //! links in the accent tone). Emoji shortcodes are already resolved by the
 //! parser.
 

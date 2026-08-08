@@ -241,7 +241,7 @@ pub(super) fn table_block(
 }
 
 /// Unfocused table: a light grid of inline-markdown labels, header row on
-/// the hover surface — click anywhere to enter cell editing.
+/// [`Surface::Hover`] — click anywhere to enter cell editing.
 fn table_static(ui: &mut Ui, ecx: &mut Ecx, doc: &Document, addr: Address) {
     let Some(BlockKind::Table { header, rows }) = doc.block(addr).map(|b| &b.kind) else {
         return;

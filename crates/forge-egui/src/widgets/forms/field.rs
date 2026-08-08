@@ -39,7 +39,8 @@ pub(super) fn well_border(t: &Theme, error: bool, focused: bool, disabled: bool)
     }
 }
 
-/// Popover surface for Select/Combobox flyouts: bg\[4\] over a 1pt border.
+/// Popover surface for Select/Combobox flyouts: [`Surface::Popover`] over a
+/// 1pt border.
 pub(super) fn flyout_frame(t: &Theme) -> egui::Frame {
     egui::Frame::new()
         .fill(t.surface(Surface::Popover))
