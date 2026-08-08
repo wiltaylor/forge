@@ -71,6 +71,10 @@ Dev loop for the frontend: `just gallery-dev` (Vite on :5173, proxying `/api`
 to `FORGE_PORT`, default :8765 — start a demo backend alongside; use
 `FORGE_PORT=8899 just gallery-dev` to pair with rust-demo).
 
+To mount a SolidJS component in a test and click it, read
+[`docs/web-testing.md`](docs/web-testing.md). `packages/ui` is the reference
+setup.
+
 ## Using Forge in another app
 
 No npm registry yet — consume via git (pnpm supports subdir git deps):
