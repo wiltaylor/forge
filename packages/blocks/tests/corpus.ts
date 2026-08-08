@@ -73,77 +73,78 @@ export interface Corpus {
   cases: Case[];
 }
 
-/** Parse the authored corpus and check that every case says where `kit`
+/** Parse the authored corpus and check that every case says where the web kit
     stands — in exactly one of `applies`, `inapplicable` or `diverges`. A gap
     has to be written down; it cannot be created by forgetting. */
-export function loadCorpus(kit: string = WEB): Corpus {
+export function loadCorpus(): Corpus {
   const corpus = JSON.parse(readFileSync(CORPUS_PATH, 'utf8')) as Corpus;
-  if (!corpus.kits.includes(kit)) throw new Error(`the corpus names no kit ${kit}`);
+  if (!corpus.kits.includes(WEB)) throw new Error(`the corpus names no kit ${WEB}`);
   for (const c of corpus.cases) {
     const stated = [
-      c.applies.includes(kit),
-      kit in (c.inapplicable ?? {}),
-      kit in (c.diverges ?? {}),
+      c.applies.includes(WEB),
+      WEB in (c.inapplicable ?? {}),
+      WEB in (c.diverges ?? {}),
     ].filter(Boolean).length;
     if (stated !== 1)
       throw new Error(
-        `${c.id}: kit ${kit} is stated ${stated} times, not once — see contract/blocks/README.md`,
+        `${c.id}: kit ${WEB} is stated ${stated} times, not once — see contract/blocks/README.md`,
       );
   }
   return corpus;
 }
 
-/** What a kit must do with a case: produce [`expected`](#expected), produce
-    something else (a recorded divergence), or not run it at all. */
+/** What the web kit must do with a case: produce [`caseExpected`](#caseExpected),
+    produce something else (a recorded divergence), or not run it at all. */
 export type Verdict = 'match' | 'differ' | 'skip';
 
-export function verdictFor(c: Case, kit: string): Verdict {
-  if (c.applies.includes(kit)) return 'match';
-  if (kit in (c.diverges ?? {})) return 'differ';
+export function webVerdict(c: Case): Verdict {
+  if (c.applies.includes(WEB)) return 'match';
+  if (WEB in (c.diverges ?? {})) return 'differ';
   return 'skip';
 }
 
 /** The starting document. Ids are minted here — the corpus does not author
     them, because block identity is not part of the editing policy. */
 export function caseDocument(c: Case): BlockDocument {
-  return { version: DOC_VERSION, blocks: withIds(c.doc) };
+  return { version: DOC_VERSION, blocks: mapBlocks(c.doc, mintId) as unknown as Block[] };
 }
 
 /** The document the keys must produce. */
 export function caseExpected(c: Case): BlockDocument {
-  return { version: DOC_VERSION, blocks: withIds(c.expect) };
-}
-
-/** Authored, id-less blocks as blocks. The corpus is data, so this is the one
-    place the shape is taken on trust; a wrong shape fails the case it is in. */
-function withIds(blocks: unknown[]): Block[] {
-  return blocks.map((b) => {
-    const block: Record<string, unknown> = { id: newId(), ...(b as Record<string, unknown>) };
-    const columns = block.columns;
-    if (Array.isArray(columns))
-      block.columns = columns.map((col: Record<string, unknown>) => ({
-        ...col,
-        blocks: withIds((col.blocks as unknown[]) ?? []),
-      }));
-    return block as unknown as Block;
-  });
+  return { version: DOC_VERSION, blocks: mapBlocks(c.expect, mintId) as unknown as Block[] };
 }
 
 /** A document as the corpus judges it: every block id removed. Block identity
     is editor bookkeeping, not editing policy — two documents that differ only
     by id are the same document to a case. */
 export function judged(doc: BlockDocument): unknown {
-  return { version: doc.version, blocks: doc.blocks.map(stripId) };
+  return { version: doc.version, blocks: mapBlocks(doc.blocks, dropId) };
 }
 
-function stripId(block: Block): unknown {
-  const { id: _id, ...rest } = block as Record<string, unknown> & { id: string };
-  if (Array.isArray(rest.columns))
-    rest.columns = rest.columns.map((col: Record<string, unknown>) => ({
-      ...col,
-      blocks: ((col.blocks as Block[]) ?? []).map(stripId),
-    }));
-  return rest;
+/** A block as JSON. An authored block arrives without an id, and a judged one
+    leaves without one, so the walk below reads both as plain objects. */
+type RawBlock = Record<string, unknown>;
+
+const mintId = (block: RawBlock): RawBlock => ({ id: newId(), ...block });
+const dropId = ({ id: _id, ...rest }: RawBlock): RawBlock => rest;
+
+/** Apply `f` to every block in a list, down through the cells of any `columns`
+    block. One walker, because minting ids and dropping them are the same
+    traversal — the shape `walk_blocks` has in `crates/forge-block-corpus`.
+
+    The corpus is data, so this is the one place a block's shape is taken on
+    trust; a wrong shape fails the case it is in. */
+function mapBlocks(blocks: unknown[], f: (block: RawBlock) => RawBlock): RawBlock[] {
+  return blocks.map((b) => {
+    const block = f({ ...(b as RawBlock) });
+    const columns = block.columns;
+    if (Array.isArray(columns))
+      block.columns = columns.map((col: RawBlock) => ({
+        ...col,
+        blocks: mapBlocks((col.blocks as unknown[]) ?? [], f),
+      }));
+    return block;
+  });
 }
 
 /** How a key reads in a failure report: `Shift+Tab`, `KeyA "a"`. */

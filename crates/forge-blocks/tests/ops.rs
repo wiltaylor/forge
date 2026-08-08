@@ -1,16 +1,17 @@
 //! Pure document operations.
 //!
-//! What a keypress does with these — splitting, merging, the demote-before-merge
-//! rule, indent clamping, block moves, the line-start shortcut grammar and the
-//! table keys — is the block key corpus's, not this file's:
-//! `contract/blocks/corpus.json`, driven by `crates/forge-tui/tests/block_corpus.rs`
-//! and its egui sibling here, and by `packages/blocks/tests/block_corpus.test.tsx`
-//! over there. Two languages ran near-duplicate hand-written assertions on that
-//! model; the corpus replaced them, so adding a case now covers both.
+//! What a keypress does with these is the block key corpus's, not this file's.
+//! The corpus is `contract/blocks/corpus.json`. Three drivers run it:
+//! `crates/forge-tui/tests/block_corpus.rs`, `crates/forge-egui/tests/block_corpus.rs`
+//! and `packages/blocks/tests/block_corpus.test.tsx`. It states splitting,
+//! merging, the demote-before-merge rule, indent clamping, block moves, the
+//! line-start shortcut grammar and the table keys. Two languages used to assert
+//! that model by hand, in near-duplicate suites; the corpus replaced them, so a
+//! rule is authored once and covers both.
 //!
-//! What stays here is what no key reaches: column wrapping and ratios, row
-//! removal, the shortcut spellings the corpus does not state, and the markdown
-//! conversion.
+//! What stays here is what the corpus does not state: block removal, block
+//! moves at the end of a list, column wrapping and ratios, table row removal,
+//! the shortcut spellings no case types, and the markdown conversion.
 
 use forge_blocks::*;
 
@@ -38,6 +39,16 @@ fn remove_refocuses_and_refills() {
     let focus = remove(&mut d, Address::Root(0)).unwrap();
     assert_eq!(focus, Address::Root(0));
     assert_eq!(md_at(&d, Address::Root(0)), "");
+}
+
+/// The bottom edge of a move. The corpus states the top one
+/// (`alt-up-at-the-top-changes-nothing`) and the move itself
+/// (`alt-down-moves-a-block-past-its-next-sibling`), but no case presses Alt+Down
+/// on the last block.
+#[test]
+fn move_stops_at_the_last_sibling() {
+    let mut d = doc(vec![p("a"), p("b")]);
+    assert!(move_block(&mut d, Address::Root(1), 1).is_none());
 }
 
 #[test]
@@ -109,10 +120,33 @@ fn table_row_removal_keeps_the_last_row() {
     assert!(!table_remove_row(&mut d, addr, 0));
 }
 
-/// The spellings that must *not* convert. The grammar's positive arms are the
-/// corpus's (`shortcut-*`), which states every prefix all three kits offer.
+/// The spellings no corpus case types. The corpus states the grammar a user
+/// reaches by typing at the start of a paragraph (`shortcut-*`); these are the
+/// arms it leaves out — the two todo prefixes a dash converts before, a code
+/// fence carrying a language, and the spellings that must *not* convert at all.
 #[test]
-fn shortcuts_reject_a_prefix_they_do_not_know() {
+fn shortcuts_the_corpus_does_not_type() {
+    assert!(matches!(
+        line_start_shortcut("- [x] done").unwrap().kind,
+        BlockKind::ListItem {
+            style: ListStyle::Todo,
+            checked: Some(true),
+            ..
+        }
+    ));
+    assert!(matches!(
+        line_start_shortcut("- [ ] todo").unwrap().kind,
+        BlockKind::ListItem {
+            style: ListStyle::Todo,
+            checked: Some(false),
+            ..
+        }
+    ));
+    assert!(matches!(
+        line_start_shortcut("```rust").unwrap().kind,
+        BlockKind::Code { ref lang, .. } if lang == "rust"
+    ));
+
     assert!(line_start_shortcut("#x").is_none()); // needs the space
     assert!(line_start_shortcut("-x").is_none());
     assert!(line_start_shortcut("##### five").is_none()); // four levels only

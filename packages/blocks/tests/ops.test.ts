@@ -86,8 +86,12 @@ describe('tables', () => {
     id: 't', type: 'table', header: ['A', 'B'], rows: [['1', '2']],
   });
 
-  it('ignores a cell outside the table', () => {
+  // The corpus types into a header cell; no case a key reaches types into a
+  // body one, and the row indexes them differently (-1 is the header).
+  it('sets a body cell and ignores one outside the table', () => {
     const d = doc(table());
+    const t = tableSetCell(d, 't', 0, 1, 'x').blocks[0] as Extract<Block, { type: 'table' }>;
+    expect(t.rows[0]![1]).toBe('x');
     expect(tableSetCell(d, 't', 5, 0, 'y')).toBe(d);
     expect(tableSetCell(d, 't', 0, 9, 'y')).toBe(d);
   });

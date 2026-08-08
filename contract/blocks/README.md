@@ -19,8 +19,8 @@ Adding a case here covers every driver at once.
 The Rust drivers share the loader, the comparison and the runner:
 `crates/forge-block-corpus`. It knows nothing about an editor. The web driver
 reads the same file through `packages/blocks/tests/corpus.ts`, which is that
-crate's shape in TypeScript — the corpus cannot be shared as code across the
-language boundary, which is the whole reason it is a file.
+crate's shape in TypeScript. The two readings cannot be one module. That is the
+reason the corpus is a file and not shared code.
 
 The web driver mounts `<BlockEditor>` in a DOM, clicks the block the case
 addresses, and dispatches each key as a real event. It reads the document back

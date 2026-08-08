@@ -17,10 +17,10 @@ import { BlockEditor } from '../src/editor';
 import type { Block, BlockDocument } from '../src/types';
 import type { Case, Key } from './corpus';
 import {
-  WEB, caretIndex, caseDocument, caseExpected, judged, keyLabel, loadCorpus, verdictFor,
+  WEB, caretIndex, caseDocument, caseExpected, judged, keyLabel, loadCorpus, webVerdict,
 } from './corpus';
 
-const corpus = loadCorpus(WEB);
+const corpus = loadCorpus();
 
 /* ---------------- keys --------------------------------------------------- */
 
@@ -73,7 +73,15 @@ async function drive(c: Case): Promise<BlockDocument> {
 
 /** Click the block the case addresses, then take up the case's mode. Clicking
     is how a user reaches a block, so the address is set through the editor
-    rather than around it. */
+    rather than around it.
+
+    `docs/web-testing.md` says to query by role and accessible name. This
+    driver is the documented exception, because a case addresses a block by
+    *position* — root block 2, cell (1, 0) — and a document of eight paragraphs
+    gives eight identical textboxes. The Rust drivers address the same way, by
+    `Address`. So the queries here are positional, and the price is that a
+    markup change moves them: `[data-block-id]` on the row, `.fbk-static` for
+    the unfocused view, and `data-row`/`data-col` on a table cell. */
 async function focusAddress(container: HTMLElement, doc: BlockDocument, c: Case): Promise<void> {
   const id = addressedId(doc, c);
   const row = container.querySelector<HTMLElement>(`[data-block-id="${id}"]`);
@@ -138,7 +146,7 @@ async function press(c: Case, key: Key): Promise<void> {
     ctrlKey: key.ctrl ?? false,
     altKey: key.alt ?? false,
   });
-  if (notTaken && key.key !== undefined && isField(target)) type(target, key.key);
+  if (notTaken && key.key !== undefined && isField(target)) typeInto(target, key.key);
   await flush();
 }
 
@@ -148,7 +156,7 @@ function isField(el: HTMLElement): el is Field {
 
 /** Insert the produced character at the caret and report the input, which is
     what a focused text field does. */
-function type(field: Field, text: string): void {
+function typeInto(field: Field, text: string): void {
   const start = field.selectionStart ?? field.value.length;
   const end = field.selectionEnd ?? start;
   field.value = field.value.slice(0, start) + text + field.value.slice(end);
@@ -169,12 +177,12 @@ async function flush(): Promise<void> {
 
 describe('the block key corpus', () => {
   it('has cases for the web kit', () => {
-    const running = corpus.cases.filter((c) => verdictFor(c, WEB) !== 'skip');
+    const running = corpus.cases.filter((c) => webVerdict(c) !== 'skip');
     expect(running.length).toBeGreaterThan(0);
   });
 
   for (const c of corpus.cases) {
-    const verdict = verdictFor(c, WEB);
+    const verdict = webVerdict(c);
     if (verdict === 'skip') continue;
 
     it(`${c.id}: ${c.title}`, async () => {
