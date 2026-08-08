@@ -157,14 +157,9 @@
     {
       "id": "delete-at-the-end-merges-the-next-paragraph-forward",
       "title": "Delete at the end of a paragraph pulls the next paragraph into it",
-      "note": "Divergence 3 of the four. Spec #3 names the web kit as the one without the binding, but the web kit forward-merges (packages/blocks/src/textedit.tsx) and the egui kit does not. The corpus records the kit that actually differs.",
-      "applies": ["rust-tui", "web"],
-      "diverges": {
-        "rust-egui": {
-          "issue": 28,
-          "why": "The egui kit's text-mode key table has no Delete arm, so the caret-at-end press falls through to the TextEdit and the document is untouched."
-        }
-      },
+      "note": "Was divergence 3 of the four, closed by #28. Spec #3 names the web kit as the one without the binding, but the web kit forward-merges (packages/blocks/src/textedit.tsx) and the egui kit did not. The corpus recorded the kit that actually differed.",
+      "applies": ["rust-egui", "rust-tui", "web"],
+      "diverges": {},
       "doc": [
         { "type": "paragraph", "md": "hello " },
         { "type": "paragraph", "md": "world" }
@@ -648,14 +643,9 @@
     {
       "id": "slash-palette-offers-a-heading-4",
       "title": "The slash palette offers four heading levels",
-      "note": "Divergence 1 of the four: the ratatui kit's palette stops at Heading 3, so the query matches nothing and the block is untouched.",
-      "applies": ["rust-egui", "web"],
-      "diverges": {
-        "rust-tui": {
-          "issue": 28,
-          "why": "The ratatui kit's built-in palette lists Heading 1 to 3 only, so the query has no match and Enter picks nothing."
-        }
-      },
+      "note": "Was divergence 1 of the four: the ratatui kit's palette stopped at Heading 3. Closed by #28, which takes the levels off the registry.",
+      "applies": ["rust-egui", "rust-tui", "web"],
+      "diverges": {},
       "doc": [{ "type": "paragraph", "md": "" }],
       "at": { "block": 0, "caret": 0 },
       "keys": [
@@ -676,14 +666,9 @@
     {
       "id": "slash-palette-starts-a-three-by-two-table",
       "title": "A new table starts three columns wide and two rows deep",
-      "note": "Divergence 2 of the four: the ratatui kit builds its own two-by-one table instead of the registry starter.",
-      "applies": ["rust-egui", "web"],
-      "diverges": {
-        "rust-tui": {
-          "issue": 28,
-          "why": "The ratatui kit's palette builds a two-column, one-row table of its own rather than reading the registry starter."
-        }
-      },
+      "note": "Was divergence 2 of the four, closed by #28: the ratatui kit built its own two-by-one table instead of the registry starter.",
+      "applies": ["rust-egui", "rust-tui", "web"],
+      "diverges": {},
       "doc": [{ "type": "paragraph", "md": "" }],
       "at": { "block": 0, "caret": 0 },
       "keys": [
@@ -709,7 +694,7 @@
     {
       "id": "slash-palette-offers-the-line-chart-kind",
       "title": "The slash palette offers the line chart, with the registry's starter payload",
-      "note": "Divergence 4 of the four is the line chart missing from one kit's painted-output snapshot list. The palette entry and starter payload are the behaviour a key corpus can state; the snapshot list is a test fixture and #28 fills it in.",
+      "note": "Was divergence 4 of the four, closed by #28: the line chart was missing from one kit's painted-output snapshot list. The palette entry and starter payload are the behaviour a key corpus can state; the snapshot list is a test fixture that #28 filled in.",
       "applies": ["rust-tui", "rust-egui", "web"],
       "doc": [{ "type": "paragraph", "md": "" }],
       "at": { "block": 0, "caret": 0 },

@@ -129,12 +129,13 @@ This is not a skip. The runner presses the keys and asserts the result is
 **still wrong**. Close the gap and the run turns red — "this now passes, drop
 the note" — so a stale divergence cannot outlive the fix that ended it.
 
-## The four known divergences
+## The four known divergences — closed
 
 The spec (#3) records four ways the three kits had already drifted apart.
-Issue #28 closes them. Three are keypress behaviour and are cases here:
+Issue #28 closed them. Three were keypress behaviour and are cases here; each
+now lists every kit in `applies` and carries no `diverges` note:
 
-| Divergence | Case | Kit that differs |
+| Divergence | Case | Kit that differed |
 |---|---|---|
 | A heading level offered in two kits but not the third | `slash-palette-offers-a-heading-4` | `rust-tui` |
 | A table starter three-by-two in two kits and two-by-one in the third | `slash-palette-starts-a-three-by-two-table` | `rust-tui` |
@@ -142,16 +143,21 @@ Issue #28 closes them. Three are keypress behaviour and are cases here:
 
 Spec #3 names the *web* kit as the one missing the forward merge. It is not:
 `packages/blocks/src/textedit.tsx` handles Delete at the end of a block, and
-the egui kit's text-mode key table has no Delete arm at all. The corpus records
-the kit that differs, so #28 fixes the right one.
+the egui kit's text-mode key table had no Delete arm at all. The corpus
+recorded the kit that differed, so #28 fixed the right one.
 
 The fourth — a chart kind missing from one kit's painted-output snapshot list —
-is a test fixture, not a keypress. `slash-palette-offers-the-line-chart-kind`
+was a test fixture, not a keypress. `slash-palette-offers-the-line-chart-kind`
 covers the behaviour a key corpus can state (the palette entry and the
-registry's starter payload); #28 fills the snapshot list in.
+registry's starter payload); #28 filled the snapshot list in.
 
 Where the kits differed, the corpus states the **majority** behaviour, as the
 spec decided.
+
+The register is empty now. That is not a permanent state: a newly found
+divergence gets a `diverges` note naming the issue that will close it, and
+`the_known_divergences_are_recorded` in `crates/forge-block-corpus/tests/`
+is where an unexpected one gets noticed.
 
 ## What the corpus covers
 
