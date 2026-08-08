@@ -1,8 +1,10 @@
-"""The transport-free core: the contract's rules called without a server.
+"""The seam itself: the core is framework-free and its verdicts carry statuses.
 
-The rules refuse with a :class:`ForgeError`, not with an HTTP exception, and
-the routing layer turns that verdict into a status. These tests only need a
-temporary directory.
+What each rule *does* is tested next to the rule — test_docstore.py,
+test_actions.py, test_events.py and test_components.py call their subjects
+directly. This file only proves the seam: no web-framework import, domain
+errors carrying the status the routing layer maps, and a core that still
+works with the framework refused at import time.
 """
 
 import subprocess
@@ -17,8 +19,6 @@ from forge_server.core import components as core_components
 from forge_server.core import docstore as core_docstore
 from forge_server.core import error as core_error
 from forge_server.core import events as core_events
-from forge_server.core.actions import ActionContext, ActionRegistry
-from forge_server.core.docstore import DocStore
 from forge_server.core.error import BadRequest, ForgeError, Internal, NotFound
 
 CORE_MODULES = [
@@ -28,67 +28,6 @@ CORE_MODULES = [
     core_error,
     core_events,
 ]
-
-# -- the doc store ---------------------------------------------------------
-
-
-@pytest.mark.parametrize(
-    "bad", ["UPPER", "-leading", "_leading", "has.dot", "a" * 65, "sp ace", "../secret"]
-)
-def test_doc_name_rule_refuses_with_a_400(tmp_path, bad):
-    with pytest.raises(BadRequest) as e:
-        DocStore(tmp_path).path(bad)
-    assert e.value.status == 400
-
-
-def test_doc_path_joins_valid_names(tmp_path):
-    assert DocStore(tmp_path).path("notes") == tmp_path / "notes.json"
-
-
-def test_missing_doc_is_a_404(tmp_path):
-    with pytest.raises(NotFound) as e:
-        DocStore(tmp_path).read("nope")
-    assert (e.value.status, e.value.message) == (404, "no document 'nope'")
-
-
-def test_delete_still_applies_the_name_rule(tmp_path):
-    with pytest.raises(BadRequest):
-        DocStore(tmp_path).delete("UPPER")
-
-
-def test_a_corrupt_doc_file_is_a_500(tmp_path):
-    (tmp_path / "notes.json").write_text("{ not json")
-    with pytest.raises(Internal) as e:
-        DocStore(tmp_path).read("notes")
-    assert e.value.status == 500
-
-
-# -- the action registry ---------------------------------------------------
-
-
-def _ctx() -> ActionContext:
-    return ActionContext(claims={"sub": "tester"}, app=None, events=None)
-
-
-async def test_dispatch_runs_a_sync_action_off_the_loop():
-    """The core runs a sync action on the threadpool it no longer reaches
-    through the framework, so this is the path the move changed."""
-    registry = ActionRegistry()
-    registry.register("echo", lambda payload: payload)
-    assert await registry.dispatch("echo", {"n": 1}, _ctx()) == {"n": 1}
-
-
-async def test_unknown_action_is_a_404_listing_the_names():
-    registry = ActionRegistry()
-    registry.register("echo", lambda payload: payload)
-    registry.register("boom", lambda payload: None)
-    with pytest.raises(NotFound) as e:
-        await registry.dispatch("nope", {}, _ctx())
-    assert e.value.status == 404
-    assert "['boom', 'echo']" in e.value.message
-
-
-# -- the seam --------------------------------------------------------------
 
 
 @pytest.mark.parametrize("module", CORE_MODULES, ids=lambda m: m.__name__.split(".")[-1])
