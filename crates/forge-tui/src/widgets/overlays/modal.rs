@@ -1,4 +1,5 @@
-use crate::theme::{resolve_theme, Theme};
+use crate::theme::{ambient_theme, Theme};
+use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
@@ -14,7 +15,6 @@ pub struct Modal<'a> {
     footer: Option<&'a str>,
     width: u16,
     height: u16,
-    theme: Option<&'a Theme>,
 }
 
 impl<'a> Modal<'a> {
@@ -24,7 +24,6 @@ impl<'a> Modal<'a> {
             footer: None,
             width: 56,
             height: 10,
-            theme: None,
         }
     }
 
@@ -43,11 +42,6 @@ impl<'a> Modal<'a> {
     pub fn size(mut self, width: u16, height: u16) -> Self {
         self.width = width;
         self.height = height;
-        self
-    }
-
-    pub fn theme(mut self, theme: &'a Theme) -> Self {
-        self.theme = Some(theme);
         self
     }
 
@@ -96,7 +90,7 @@ impl<'a> Modal<'a> {
 
     /// The content region inside the panel.
     pub fn inner(&self, area: Rect) -> Rect {
-        let t = &*resolve_theme(self.theme);
+        let t = &ambient_theme();
         self.block(t).inner(self.panel(area))
     }
 }
@@ -109,13 +103,11 @@ impl Default for Modal<'_> {
 
 impl Widget for Modal<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        if area.is_empty() {
-            return;
-        }
-        let t = &*resolve_theme(self.theme);
-        let panel = self.panel(area);
-        Clear.render(panel, buf);
-        self.block(t).render(panel, buf);
+        paint(area, |t| {
+            let panel = self.panel(area);
+            Clear.render(panel, buf);
+            self.block(t).render(panel, buf);
+        });
     }
 }
 
@@ -131,7 +123,12 @@ mod tests {
             let area = Rect::new(0, 0, w, h);
             let panel = modal.panel(area);
             assert!(panel.width <= w, "panel width {} > area {}", panel.width, w);
-            assert!(panel.height <= h, "panel height {} > area {}", panel.height, h);
+            assert!(
+                panel.height <= h,
+                "panel height {} > area {}",
+                panel.height,
+                h
+            );
             assert!(panel.right() <= area.right());
             assert!(panel.bottom() <= area.bottom());
         }

@@ -5,7 +5,8 @@
 
 use crate::event::{clicked, is_press, Outcome};
 use crate::text;
-use crate::theme::{resolve_theme, Theme};
+use crate::theme::Theme;
+use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent};
 use ratatui::layout::Rect;
@@ -109,7 +110,6 @@ pub struct AppShell<'a> {
     status_right: Option<&'a str>,
     nav_focused: bool,
     sidebar_width: u16,
-    theme: Option<&'a Theme>,
 }
 
 impl<'a> AppShell<'a> {
@@ -124,7 +124,6 @@ impl<'a> AppShell<'a> {
             status_right: None,
             nav_focused: false,
             sidebar_width: 24,
-            theme: None,
         }
     }
 
@@ -162,11 +161,6 @@ impl<'a> AppShell<'a> {
 
     pub fn sidebar_width(mut self, width: u16) -> Self {
         self.sidebar_width = width;
-        self
-    }
-
-    pub fn theme(mut self, theme: &'a Theme) -> Self {
-        self.theme = Some(theme);
         self
     }
 
@@ -266,84 +260,84 @@ impl<'a> StatefulWidget for AppShell<'a> {
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut ShellState) {
         state.nav_len = self.sections.iter().map(|s| s.items.len()).sum();
         state.selected = state.selected.min(state.nav_len.saturating_sub(1));
-        if area.is_empty() {
-            state.content = Rect::ZERO;
-            return;
-        }
-        let t = &*resolve_theme(self.theme);
-        buf.set_style(area, Style::new().bg(t.bg[0]).fg(t.fg[0]));
+        // Overwritten below once the layout is known; left as ZERO when there
+        // is nothing to lay out, which is what `paint` returns early on.
+        state.content = Rect::ZERO;
+        paint(area, |t| {
+            buf.set_style(area, Style::new().bg(t.bg[0]).fg(t.fg[0]));
 
-        let slim = state.collapsed.unwrap_or(area.width < 72);
-        let sidebar_w = if slim { 4 } else { self.sidebar_width }.min(area.width);
-        let has_status = self.status.is_some() || self.status_right.is_some();
-        let status_h: u16 = u16::from(has_status);
-        let has_topbar = self.topbar.is_some() || self.topbar_right.is_some();
-        let topbar_h: u16 = u16::from(has_topbar);
+            let slim = state.collapsed.unwrap_or(area.width < 72);
+            let sidebar_w = if slim { 4 } else { self.sidebar_width }.min(area.width);
+            let has_status = self.status.is_some() || self.status_right.is_some();
+            let status_h: u16 = u16::from(has_status);
+            let has_topbar = self.topbar.is_some() || self.topbar_right.is_some();
+            let topbar_h: u16 = u16::from(has_topbar);
 
-        let sidebar = Rect::new(
-            area.x,
-            area.y,
-            sidebar_w,
-            area.height - status_h.min(area.height),
-        );
-        self.draw_sidebar(sidebar, buf, t, state, slim);
+            let sidebar = Rect::new(
+                area.x,
+                area.y,
+                sidebar_w,
+                area.height - status_h.min(area.height),
+            );
+            self.draw_sidebar(sidebar, buf, t, state, slim);
 
-        let main_x = area.x + sidebar_w;
-        let main_w = area.width.saturating_sub(sidebar_w);
-        if has_topbar && area.height > status_h {
-            let topbar = Rect::new(main_x, area.y, main_w, 1);
-            buf.set_style(topbar, Style::new().bg(t.bg[1]));
-            if let Some(text_) = self.topbar {
-                buf.set_string(
-                    main_x + 2,
-                    area.y,
-                    text::truncate(text_, main_w.saturating_sub(3) as usize),
-                    Style::new().fg(t.fg[1]).bg(t.bg[1]),
-                );
-            }
-            if let Some(right) = self.topbar_right {
-                let rw = text::width(right) as u16;
-                if main_w > rw + 3 {
+            let main_x = area.x + sidebar_w;
+            let main_w = area.width.saturating_sub(sidebar_w);
+            if has_topbar && area.height > status_h {
+                let topbar = Rect::new(main_x, area.y, main_w, 1);
+                buf.set_style(topbar, Style::new().bg(t.bg[1]));
+                if let Some(text_) = self.topbar {
                     buf.set_string(
-                        main_x + main_w - rw - 1,
+                        main_x + 2,
                         area.y,
-                        right,
-                        Style::new().fg(t.fg[2]).bg(t.bg[1]),
+                        text::truncate(text_, main_w.saturating_sub(3) as usize),
+                        Style::new().fg(t.fg[1]).bg(t.bg[1]),
                     );
                 }
+                if let Some(right) = self.topbar_right {
+                    let rw = text::width(right) as u16;
+                    if main_w > rw + 3 {
+                        buf.set_string(
+                            main_x + main_w - rw - 1,
+                            area.y,
+                            right,
+                            Style::new().fg(t.fg[2]).bg(t.bg[1]),
+                        );
+                    }
+                }
             }
-        }
-        if has_status {
-            let y = area.y + area.height - 1;
-            let status = Rect::new(area.x, y, area.width, 1);
-            buf.set_style(status, Style::new().bg(t.bg[1]));
-            if let Some(left) = self.status {
-                buf.set_string(
-                    area.x + 1,
-                    y,
-                    text::truncate(left, area.width.saturating_sub(2) as usize),
-                    Style::new().fg(t.fg[2]).bg(t.bg[1]),
-                );
-            }
-            if let Some(right) = self.status_right {
-                let rw = text::width(right) as u16;
-                if area.width > rw + 2 {
+            if has_status {
+                let y = area.y + area.height - 1;
+                let status = Rect::new(area.x, y, area.width, 1);
+                buf.set_style(status, Style::new().bg(t.bg[1]));
+                if let Some(left) = self.status {
                     buf.set_string(
-                        area.x + area.width - rw - 1,
+                        area.x + 1,
                         y,
-                        right,
+                        text::truncate(left, area.width.saturating_sub(2) as usize),
                         Style::new().fg(t.fg[2]).bg(t.bg[1]),
                     );
                 }
+                if let Some(right) = self.status_right {
+                    let rw = text::width(right) as u16;
+                    if area.width > rw + 2 {
+                        buf.set_string(
+                            area.x + area.width - rw - 1,
+                            y,
+                            right,
+                            Style::new().fg(t.fg[2]).bg(t.bg[1]),
+                        );
+                    }
+                }
             }
-        }
 
-        let content_y = area.y + topbar_h;
-        let content_h = area
-            .height
-            .saturating_sub(topbar_h)
-            .saturating_sub(status_h);
-        state.content = Rect::new(main_x, content_y, main_w, content_h)
-            .inner(ratatui::layout::Margin::new(2, 1));
+            let content_y = area.y + topbar_h;
+            let content_h = area
+                .height
+                .saturating_sub(topbar_h)
+                .saturating_sub(status_h);
+            state.content = Rect::new(main_x, content_y, main_w, content_h)
+                .inner(ratatui::layout::Margin::new(2, 1));
+        });
     }
 }

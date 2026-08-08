@@ -1,6 +1,7 @@
 use crate::event::{is_press, left_down, mouse_pos, Outcome};
 use crate::text;
-use crate::theme::{resolve_theme, Theme};
+use crate::theme::Theme;
+use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent};
 use ratatui::layout::Rect;
@@ -290,7 +291,6 @@ pub struct Input<'a> {
     focused: bool,
     disabled: bool,
     masked: bool,
-    theme: Option<&'a Theme>,
 }
 
 impl<'a> Input<'a> {
@@ -321,11 +321,6 @@ impl<'a> Input<'a> {
     /// Render the value as `•` per grapheme (passwords).
     pub fn masked(mut self, masked: bool) -> Self {
         self.masked = masked;
-        self
-    }
-
-    pub fn theme(mut self, theme: &'a Theme) -> Self {
-        self.theme = Some(theme);
         self
     }
 
@@ -415,27 +410,25 @@ impl<'a> StatefulWidget for Input<'a> {
     type State = InputState;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut InputState) {
-        if area.is_empty() {
-            return;
-        }
-        let t = &*resolve_theme(self.theme);
-        let edge = if self.invalid {
-            t.danger.base
-        } else if self.focused {
-            t.accent.base
-        } else {
-            t.border.default
-        };
-        if area.height >= 3 {
-            let block = Block::bordered().border_style(Style::new().fg(edge));
-            let inner = block.inner(area);
-            block.render(area, buf);
-            let line = Rect::new(inner.x + 1, inner.y, inner.width.saturating_sub(2), 1);
-            self.render_line(line, buf, t, state);
-        } else {
-            buf.set_string(area.x, area.y, "▎", Style::new().fg(edge).bg(t.bg[2]));
-            let line = Rect::new(area.x + 1, area.y, area.width.saturating_sub(2), 1);
-            self.render_line(line, buf, t, state);
-        }
+        paint(area, |t| {
+            let edge = if self.invalid {
+                t.danger.base
+            } else if self.focused {
+                t.accent.base
+            } else {
+                t.border.default
+            };
+            if area.height >= 3 {
+                let block = Block::bordered().border_style(Style::new().fg(edge));
+                let inner = block.inner(area);
+                block.render(area, buf);
+                let line = Rect::new(inner.x + 1, inner.y, inner.width.saturating_sub(2), 1);
+                self.render_line(line, buf, t, state);
+            } else {
+                buf.set_string(area.x, area.y, "▎", Style::new().fg(edge).bg(t.bg[2]));
+                let line = Rect::new(area.x + 1, area.y, area.width.saturating_sub(2), 1);
+                self.render_line(line, buf, t, state);
+            }
+        });
     }
 }

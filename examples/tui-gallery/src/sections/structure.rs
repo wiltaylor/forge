@@ -57,7 +57,7 @@ impl StructureState {
     }
 }
 
-pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut StructureState) {
+pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, state: &mut StructureState) {
     let mut y = area.y;
     let bottom = area.y + area.height;
     let row = |h: u16, gap: u16, y: &mut u16| -> Option<Rect> {
@@ -70,13 +70,12 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
     };
 
     if let Some(r) = row(1, 0, &mut y) {
-        frame.render_widget(Crumbs::new(&["forge", "tui", "structure"]).theme(t), r);
+        frame.render_widget(Crumbs::new(&["forge", "tui", "structure"]), r);
     }
     if let Some(r) = row(2, 1, &mut y) {
         frame.render_widget(
             PageHead::new("Structure")
-                .description("Crumbs, page head, tabs, pagination, split pane, settings rows")
-                .theme(t),
+                .description("Crumbs, page head, tabs, pagination, split pane, settings rows"),
             r,
         );
     }
@@ -84,9 +83,7 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
     if let Some(r) = row(2, 1, &mut y) {
         let focused = ctx.focus.register(TABS);
         frame.render_stateful_widget(
-            Tabs::new(&["Overview", "Metrics", "Logs", "Config"])
-                .focused(focused)
-                .theme(t),
+            Tabs::new(&["Overview", "Metrics", "Logs", "Config"]).focused(focused),
             r,
             &mut state.tabs,
         );
@@ -95,7 +92,7 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
     if let Some(r) = row(1, 1, &mut y) {
         let focused = ctx.focus.register(PAGES);
         frame.render_stateful_widget(
-            Pagination::new().focused(focused).theme(t),
+            Pagination::new().focused(focused),
             Rect::new(r.x, r.y, r.width.min(40), 1),
             &mut state.pages,
         );
@@ -103,47 +100,40 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
 
     if let Some(r) = row(6, 1, &mut y) {
         let focused = ctx.focus.register(SPLIT);
-        let pane = SplitPane::new().min(10).focused(focused).theme(t);
+        let pane = SplitPane::new().min(10).focused(focused);
         let (left, right) = pane.areas(r, &mut state.split);
         frame.render_stateful_widget(pane, r, &mut state.split);
-        let left_card = Card::new().title(" Nodes ").theme(t);
-        let right_card = Card::new().title(" Detail ").theme(t);
+        let left_card = Card::new().title(" Nodes ");
+        let right_card = Card::new().title(" Detail ");
         let li = left_card.inner(left);
         frame.render_widget(left_card, left);
         frame.render_widget(right_card, right);
         frame.render_widget(
-            Empty::new("←/→ resize when focused")
-                .glyph(Glyph::ChevronRight)
-                .theme(t),
+            Empty::new("←/→ resize when focused").glyph(Glyph::ChevronRight),
             li,
         );
     }
 
     if let Some(r) = row(2, 0, &mut y) {
-        frame.render_widget(SettingsSection::new("Cluster").theme(t), r);
+        frame.render_widget(SettingsSection::new("Cluster"), r);
     }
     if let Some(r) = row(1, 0, &mut y) {
-        let sr = SettingsRow::new("Auto-heal").theme(t);
+        let sr = SettingsRow::new("Auto-heal");
         let control = sr.control_area(r);
         frame.render_widget(sr, r);
-        frame.render_widget(
-            Badge::new("on").severity(Severity::Success).theme(t),
-            control,
-        );
+        frame.render_widget(Badge::new("on").severity(Severity::Success), control);
     }
     if let Some(r) = row(2, 1, &mut y) {
-        let sr = SettingsRow::new("Replicas")
-            .help("Rolling restarts keep quorum")
-            .theme(t);
+        let sr = SettingsRow::new("Replicas").help("Rolling restarts keep quorum");
         let control = sr.control_area(r);
         frame.render_widget(sr, r);
         frame.render_widget(
-            Progress::new(0.6).label("3/5").show_percent(false).theme(t),
+            Progress::new(0.6).label("3/5").show_percent(false),
             Rect::new(control.x, control.y, control.width.min(20), 1),
         );
     }
 
     if let Some(r) = row(1, 0, &mut y) {
-        frame.render_widget(HelpBar::new(&state.keymap).theme(t), r);
+        frame.render_widget(HelpBar::new(&state.keymap), r);
     }
 }

@@ -139,7 +139,7 @@ impl PickersState {
     }
 }
 
-pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut PickersState) {
+pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, state: &mut PickersState) {
     // Register focus in VISUAL order (Tab order = registration order), even
     // though the dropdown-carrying widgets render last for z-order.
     let f_region = ctx.focus.register(REGION);
@@ -184,23 +184,19 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
         (lbl_pkgs, "Packages (ListBox multi)"),
     ] {
         if let Some(r) = r {
-            frame.render_widget(Eyebrow::new(s).theme(t), r);
+            frame.render_widget(Eyebrow::new(s), r);
         }
     }
 
     if let Some(r) = r_cpu {
-        frame.render_stateful_widget(Slider::new().focused(f_cpu).theme(t), r, &mut state.cpu);
+        frame.render_stateful_widget(Slider::new().focused(f_cpu), r, &mut state.cpu);
     }
     if let Some(r) = r_view {
-        frame.render_stateful_widget(
-            ToggleGroup::new(VIEWS).focused(f_view).theme(t),
-            r,
-            &mut state.view,
-        );
+        frame.render_stateful_widget(ToggleGroup::new(VIEWS).focused(f_view), r, &mut state.view);
     }
     if let Some(r) = r_pkgs {
         frame.render_stateful_widget(
-            ListBox::new(PACKAGES).focused(f_pkgs).theme(t),
+            ListBox::new(PACKAGES).focused(f_pkgs),
             r,
             &mut state.packages,
         );
@@ -209,14 +205,11 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
     // Right column: textarea.
     if right.height > 2 {
         frame.render_widget(
-            Eyebrow::new("Notes (Textarea)").theme(t),
+            Eyebrow::new("Notes (Textarea)"),
             Rect::new(right.x, right.y, right.width, 1),
         );
         frame.render_stateful_widget(
-            Textarea::new()
-                .placeholder("Notes…")
-                .focused(f_notes)
-                .theme(t),
+            Textarea::new().placeholder("Notes…").focused(f_notes),
             Rect::new(
                 right.x,
                 right.y + 1,
@@ -229,18 +222,13 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
 
     // Dropdown-carrying widgets render LAST so their popups overpaint.
     if let Some(r) = r_region {
-        frame.render_stateful_widget(
-            Select::new(REGIONS).focused(f_region).theme(t),
-            r,
-            &mut state.region,
-        );
+        frame.render_stateful_widget(Select::new(REGIONS).focused(f_region), r, &mut state.region);
     }
     if let Some(r) = r_image {
         frame.render_stateful_widget(
             Combobox::new(IMAGES)
                 .placeholder("Search images…")
-                .focused(f_image)
-                .theme(t),
+                .focused(f_image),
             r,
             &mut state.image,
         );

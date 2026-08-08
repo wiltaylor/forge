@@ -5,7 +5,7 @@
 //! Tab is NOT forwarded so the default focus traversal still works).
 
 use crate::event::{in_area, is_press, Outcome};
-use crate::theme::{resolve_theme, Theme};
+use crate::widgets::paint;
 use portable_pty::{native_pty_system, ChildKiller, CommandBuilder, PtySize};
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{
@@ -369,13 +369,12 @@ fn map_color(c: vt100::Color, default: Color) -> Color {
 
 /// The terminal pane view. Resizes the PTY to the render area.
 #[derive(Clone, Debug, Default)]
-pub struct Terminal<'a> {
+pub struct Terminal {
     focused: bool,
-    theme: Option<&'a Theme>,
 }
 
-impl<'a> Terminal<'a> {
-    pub fn new() -> Terminal<'a> {
+impl Terminal {
+    pub fn new() -> Terminal {
         Terminal::default()
     }
 
@@ -383,61 +382,54 @@ impl<'a> Terminal<'a> {
         self.focused = focused;
         self
     }
-
-    pub fn theme(mut self, theme: &'a Theme) -> Self {
-        self.theme = Some(theme);
-        self
-    }
 }
 
-impl<'a> StatefulWidget for Terminal<'a> {
+impl StatefulWidget for Terminal {
     type State = TerminalState;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut TerminalState) {
-        if area.is_empty() {
-            return;
-        }
-        state.last_area = area;
-        let t = &*resolve_theme(self.theme);
-        state.resize(area.height, area.width);
-        let screen = state.parser.screen();
-        buf.set_style(area, Style::new().bg(t.bg[0]));
-        for row in 0..area.height.min(state.size.0) {
-            for col in 0..area.width.min(state.size.1) {
-                let Some(cell) = screen.cell(row, col) else {
-                    continue;
-                };
-                let x = area.x + col;
-                let y = area.y + row;
-                let mut style = Style::new()
-                    .fg(map_color(cell.fgcolor(), t.fg[0]))
-                    .bg(map_color(cell.bgcolor(), t.bg[0]));
-                if cell.bold() {
-                    style = style.add_modifier(Modifier::BOLD);
+        paint(area, |t| {
+            state.last_area = area;
+            state.resize(area.height, area.width);
+            let screen = state.parser.screen();
+            buf.set_style(area, Style::new().bg(t.bg[0]));
+            for row in 0..area.height.min(state.size.0) {
+                for col in 0..area.width.min(state.size.1) {
+                    let Some(cell) = screen.cell(row, col) else {
+                        continue;
+                    };
+                    let x = area.x + col;
+                    let y = area.y + row;
+                    let mut style = Style::new()
+                        .fg(map_color(cell.fgcolor(), t.fg[0]))
+                        .bg(map_color(cell.bgcolor(), t.bg[0]));
+                    if cell.bold() {
+                        style = style.add_modifier(Modifier::BOLD);
+                    }
+                    if cell.italic() {
+                        style = style.add_modifier(Modifier::ITALIC);
+                    }
+                    if cell.underline() {
+                        style = style.add_modifier(Modifier::UNDERLINED);
+                    }
+                    if cell.inverse() {
+                        style = style.add_modifier(Modifier::REVERSED);
+                    }
+                    let contents = cell.contents();
+                    let symbol = if contents.is_empty() { " " } else { &contents };
+                    buf.set_string(x, y, symbol, style);
                 }
-                if cell.italic() {
-                    style = style.add_modifier(Modifier::ITALIC);
-                }
-                if cell.underline() {
-                    style = style.add_modifier(Modifier::UNDERLINED);
-                }
-                if cell.inverse() {
-                    style = style.add_modifier(Modifier::REVERSED);
-                }
-                let contents = cell.contents();
-                let symbol = if contents.is_empty() { " " } else { &contents };
-                buf.set_string(x, y, symbol, style);
             }
-        }
-        if self.focused && !screen.hide_cursor() {
-            let (cr, cc) = screen.cursor_position();
-            if cr < area.height && cc < area.width {
-                buf.set_style(
-                    Rect::new(area.x + cc, area.y + cr, 1, 1),
-                    Style::new().add_modifier(Modifier::REVERSED),
-                );
+            if self.focused && !screen.hide_cursor() {
+                let (cr, cc) = screen.cursor_position();
+                if cr < area.height && cc < area.width {
+                    buf.set_style(
+                        Rect::new(area.x + cc, area.y + cr, 1, 1),
+                        Style::new().add_modifier(Modifier::REVERSED),
+                    );
+                }
             }
-        }
+        });
     }
 }
 

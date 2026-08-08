@@ -162,10 +162,7 @@ struct SheetDemo;
 
 impl Overlay for SheetDemo {
     fn draw(&mut self, frame: &mut Frame, area: Rect, theme: &Theme) {
-        let sheet = Sheet::new(Side::Right)
-            .size(34)
-            .title(" node-3 ")
-            .theme(theme);
+        let sheet = Sheet::new(Side::Right).size(34).title(" node-3 ");
         let inner = sheet.inner(area);
         frame.render_widget(sheet, area);
         let rows = [
@@ -201,7 +198,8 @@ impl Overlay for SheetDemo {
     }
 }
 
-pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut OverlaysState) {
+pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, state: &mut OverlaysState) {
+    let t = &ambient_theme();
     state.btn_rects.clear();
     let mut y = area.y;
     let bottom = area.y + area.height;
@@ -215,7 +213,7 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
     };
 
     if let Some(r) = row(1, 0, &mut y) {
-        frame.render_widget(Eyebrow::new("Dialogs · Menus · Palette").theme(t), r);
+        frame.render_widget(Eyebrow::new("Dialogs · Menus · Palette"), r);
     }
     if let Some(r) = row(1, 1, &mut y) {
         let mut bx = r.x;
@@ -226,10 +224,7 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
                 1 => Variant::Danger,
                 _ => Variant::Default,
             };
-            let b = Button::new(label)
-                .variant(variant)
-                .focused(focused)
-                .theme(t);
+            let b = Button::new(label).variant(variant).focused(focused);
             let bw = b.width();
             if bx + bw > r.x + r.width {
                 break;
@@ -244,26 +239,17 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
     }
 
     if let Some(r) = row(1, 0, &mut y) {
-        frame.render_widget(Eyebrow::new("Tooltip · Popover (inline)").theme(t), r);
+        frame.render_widget(Eyebrow::new("Tooltip · Popover (inline)"), r);
     }
     if let Some(r) = row(8, 1, &mut y) {
         // Static anchored demos: a badge with a tooltip, a popover panel.
         let anchor = Rect::new(r.x + 2, r.y + 1, 10, 1);
-        frame.render_widget(
-            Badge::new("hover me").severity(Severity::Info).theme(t),
-            anchor,
-        );
-        frame.render_widget(
-            Tooltip::new("Tooltips anchor to a rect", anchor).theme(t),
-            r,
-        );
+        frame.render_widget(Badge::new("hover me").severity(Severity::Info), anchor);
+        frame.render_widget(Tooltip::new("Tooltips anchor to a rect", anchor), r);
 
         let pop_anchor = Rect::new(r.x + 30, r.y, 12, 1);
-        frame.render_widget(Badge::new("popover ▾").theme(t), pop_anchor);
-        let popover = Popover::new(pop_anchor)
-            .size(30, 6)
-            .title(" Node info ")
-            .theme(t);
+        frame.render_widget(Badge::new("popover ▾"), pop_anchor);
+        let popover = Popover::new(pop_anchor).size(30, 6).title(" Node info ");
         let inner = popover.inner(r);
         frame.render_widget(popover, r);
         let buf = frame.buffer_mut();
@@ -292,7 +278,7 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
 
     if let Some(r) = row(1, 0, &mut y) {
         frame.render_widget(
-            Eyebrow::new("Sheet — press s (docked panel, Esc closes)").theme(t),
+            Eyebrow::new("Sheet — press s (docked panel, Esc closes)"),
             r,
         );
     }

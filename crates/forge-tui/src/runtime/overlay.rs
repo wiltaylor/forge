@@ -22,6 +22,12 @@ pub enum OverlayOutcome {
 }
 
 pub trait Overlay {
+    /// `theme` is [`Ctx::theme`](crate::runtime::Ctx), which paints the
+    /// runtime's own chrome. Widgets paint with the ambient theme instead, so
+    /// every overlay in this kit ignores this argument and reads
+    /// [`ambient_theme`](crate::theme::ambient_theme) — an overlay painted from
+    /// two themes is worse than one painted from the wrong theme. The argument
+    /// is kept until the two slots become one.
     fn draw(&mut self, frame: &mut Frame, area: Rect, theme: &Theme);
     fn handle(&mut self, event: &Event) -> OverlayOutcome;
     /// Dim the content below this overlay (scrim). Defaults to true.

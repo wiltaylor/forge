@@ -1,5 +1,5 @@
 use crate::event::{clicked, is_press, Outcome};
-use crate::theme::{resolve_theme, Theme};
+use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
 use ratatui::layout::Rect;
@@ -64,23 +64,17 @@ impl PaginationState {
 /// `‹ 1 2 … 7 8 9 … 42 ›` — a window around the current page with first/last
 /// anchors, current page on an accent chip.
 #[derive(Clone, Debug, Default)]
-pub struct Pagination<'a> {
+pub struct Pagination {
     focused: bool,
-    theme: Option<&'a Theme>,
 }
 
-impl<'a> Pagination<'a> {
-    pub fn new() -> Pagination<'a> {
+impl Pagination {
+    pub fn new() -> Pagination {
         Pagination::default()
     }
 
     pub fn focused(mut self, focused: bool) -> Self {
         self.focused = focused;
-        self
-    }
-
-    pub fn theme(mut self, theme: &'a Theme) -> Self {
-        self.theme = Some(theme);
         self
     }
 }
@@ -106,65 +100,66 @@ fn page_model(page: usize, pages: usize) -> Vec<Option<usize>> {
     out
 }
 
-impl<'a> StatefulWidget for Pagination<'a> {
+impl StatefulWidget for Pagination {
     type State = PaginationState;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut PaginationState) {
         state.targets.clear();
-        if area.is_empty() || state.pages == 0 {
-            return;
-        }
-        let t = &*resolve_theme(self.theme);
-        let right = area.x + area.width;
-        let mut x = area.x;
-        let arrow = |enabled: bool| {
-            Style::new().fg(if enabled {
-                if self.focused {
-                    t.accent.fg
-                } else {
-                    t.fg[1]
-                }
-            } else {
-                t.fg[3]
-            })
-        };
-        state
-            .targets
-            .push((Rect::new(x, area.y, 1, 1), state.page.saturating_sub(1)));
-        buf.set_string(x, area.y, "‹", arrow(state.page > 0));
-        x += 2;
-        for entry in page_model(state.page, state.pages) {
-            match entry {
-                None => {
-                    if x + 2 > right {
-                        break;
-                    }
-                    buf.set_string(x, area.y, "…", Style::new().fg(t.fg[3]));
-                    x += 2;
-                }
-                Some(p) => {
-                    let label = (p + 1).to_string();
-                    let w = label.len() as u16 + 2;
-                    if x + w > right {
-                        break;
-                    }
-                    let style = if p == state.page {
-                        Style::new().fg(t.accent.contrast).bg(t.accent.base)
-                    } else {
-                        Style::new().fg(t.fg[1])
-                    };
-                    state.targets.push((Rect::new(x, area.y, w, 1), p));
-                    buf.set_style(Rect::new(x, area.y, w, 1), style);
-                    buf.set_string(x + 1, area.y, label, style);
-                    x += w + 1;
-                }
+        paint(area, |t| {
+            if state.pages == 0 {
+                return;
             }
-        }
-        if x < right {
+            let right = area.x + area.width;
+            let mut x = area.x;
+            let arrow = |enabled: bool| {
+                Style::new().fg(if enabled {
+                    if self.focused {
+                        t.accent.fg
+                    } else {
+                        t.fg[1]
+                    }
+                } else {
+                    t.fg[3]
+                })
+            };
             state
                 .targets
-                .push((Rect::new(x, area.y, 1, 1), state.page + 1));
-            buf.set_string(x, area.y, "›", arrow(state.page + 1 < state.pages));
-        }
+                .push((Rect::new(x, area.y, 1, 1), state.page.saturating_sub(1)));
+            buf.set_string(x, area.y, "‹", arrow(state.page > 0));
+            x += 2;
+            for entry in page_model(state.page, state.pages) {
+                match entry {
+                    None => {
+                        if x + 2 > right {
+                            break;
+                        }
+                        buf.set_string(x, area.y, "…", Style::new().fg(t.fg[3]));
+                        x += 2;
+                    }
+                    Some(p) => {
+                        let label = (p + 1).to_string();
+                        let w = label.len() as u16 + 2;
+                        if x + w > right {
+                            break;
+                        }
+                        let style = if p == state.page {
+                            Style::new().fg(t.accent.contrast).bg(t.accent.base)
+                        } else {
+                            Style::new().fg(t.fg[1])
+                        };
+                        state.targets.push((Rect::new(x, area.y, w, 1), p));
+                        buf.set_style(Rect::new(x, area.y, w, 1), style);
+                        buf.set_string(x + 1, area.y, label, style);
+                        x += w + 1;
+                    }
+                }
+            }
+            if x < right {
+                state
+                    .targets
+                    .push((Rect::new(x, area.y, 1, 1), state.page + 1));
+                buf.set_string(x, area.y, "›", arrow(state.page + 1 < state.pages));
+            }
+        });
     }
 }

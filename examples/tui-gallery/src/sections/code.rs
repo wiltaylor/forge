@@ -68,7 +68,7 @@ impl CodeState {
     }
 }
 
-pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut CodeState) {
+pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, state: &mut CodeState) {
     let f_code = ctx.focus.register(CODE);
     let f_diff = ctx.focus.register(DIFF);
     let cols = Grid::new(2).gap(2).cells(area, 2, area.height);
@@ -77,25 +77,22 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
     }
 
     frame.render_widget(
-        Eyebrow::new("CodeView — gutter marks · scroll").theme(t),
+        Eyebrow::new("CodeView — gutter marks · scroll"),
         Rect::new(cols[0].x, cols[0].y, cols[0].width, 1),
     );
     let marks = [(5usize, Severity::Warning), (7usize, Severity::Danger)];
     frame.render_stateful_widget(
-        CodeView::new(SOURCE, "rs")
-            .marks(&marks)
-            .focused(f_code)
-            .theme(t),
+        CodeView::new(SOURCE, "rs").marks(&marks).focused(f_code),
         Rect::new(cols[0].x, cols[0].y + 1, cols[0].width, cols[0].height - 1),
         &mut state.code,
     );
 
     frame.render_widget(
-        Eyebrow::new("DiffView — built-in line diff").theme(t),
+        Eyebrow::new("DiffView — built-in line diff"),
         Rect::new(cols[1].x, cols[1].y, cols[1].width, 1),
     );
     frame.render_stateful_widget(
-        DiffView::new(OLD, NEW).theme(t),
+        DiffView::new(OLD, NEW),
         Rect::new(cols[1].x, cols[1].y + 1, cols[1].width, cols[1].height - 1),
         &mut state.diff,
     );

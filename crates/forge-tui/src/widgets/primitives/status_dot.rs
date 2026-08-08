@@ -1,5 +1,6 @@
 use crate::text;
-use crate::theme::{resolve_theme, Severity, Theme};
+use crate::theme::Severity;
+use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::{Color, Style};
@@ -14,7 +15,6 @@ pub struct StatusDot<'a> {
     label: Option<&'a str>,
     pulse: bool,
     frame: u64,
-    theme: Option<&'a Theme>,
 }
 
 impl<'a> StatusDot<'a> {
@@ -25,7 +25,6 @@ impl<'a> StatusDot<'a> {
             label: None,
             pulse: false,
             frame: 0,
-            theme: None,
         }
     }
 
@@ -49,35 +48,28 @@ impl<'a> StatusDot<'a> {
         self.frame = frame;
         self
     }
-
-    pub fn theme(mut self, theme: &'a Theme) -> Self {
-        self.theme = Some(theme);
-        self
-    }
 }
 
 impl Widget for StatusDot<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        if area.is_empty() {
-            return;
-        }
-        let t = &*resolve_theme(self.theme);
-        let color = self.color.unwrap_or(t.severity(self.severity).base);
-        let dot = if self.pulse && self.frame % 8 < 4 {
-            "◌"
-        } else {
-            "●"
-        };
-        buf.set_string(area.x, area.y, dot, Style::new().fg(color));
-        if let Some(label) = self.label {
-            if area.width > 2 {
-                buf.set_string(
-                    area.x + 2,
-                    area.y,
-                    text::truncate(label, area.width as usize - 2),
-                    Style::new().fg(t.fg[1]),
-                );
+        paint(area, |t| {
+            let color = self.color.unwrap_or(t.severity(self.severity).base);
+            let dot = if self.pulse && self.frame % 8 < 4 {
+                "◌"
+            } else {
+                "●"
+            };
+            buf.set_string(area.x, area.y, dot, Style::new().fg(color));
+            if let Some(label) = self.label {
+                if area.width > 2 {
+                    buf.set_string(
+                        area.x + 2,
+                        area.y,
+                        text::truncate(label, area.width as usize - 2),
+                        Style::new().fg(t.fg[1]),
+                    );
+                }
             }
-        }
+        });
     }
 }

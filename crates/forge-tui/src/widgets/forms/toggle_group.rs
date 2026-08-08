@@ -1,6 +1,6 @@
 use crate::event::{clicked, is_press, Outcome};
 use crate::text;
-use crate::theme::{resolve_theme, Theme};
+use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
 use ratatui::layout::Rect;
@@ -71,7 +71,6 @@ pub struct ToggleGroup<'a> {
     items: &'a [&'a str],
     focused: bool,
     disabled: bool,
-    theme: Option<&'a Theme>,
 }
 
 impl<'a> ToggleGroup<'a> {
@@ -80,7 +79,6 @@ impl<'a> ToggleGroup<'a> {
             items,
             focused: false,
             disabled: false,
-            theme: None,
         }
     }
 
@@ -93,11 +91,6 @@ impl<'a> ToggleGroup<'a> {
         self.disabled = disabled;
         self
     }
-
-    pub fn theme(mut self, theme: &'a Theme) -> Self {
-        self.theme = Some(theme);
-        self
-    }
 }
 
 impl<'a> StatefulWidget for ToggleGroup<'a> {
@@ -106,32 +99,30 @@ impl<'a> StatefulWidget for ToggleGroup<'a> {
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut ToggleGroupState) {
         state.len = self.items.len();
         state.item_rects.clear();
-        if area.is_empty() {
-            return;
-        }
-        let t = &*resolve_theme(self.theme);
-        let right = area.x + area.width;
-        let mut x = area.x;
-        for (i, item) in self.items.iter().enumerate() {
-            let w = text::width(item) as u16 + 2;
-            if x + w > right {
-                break;
+        paint(area, |t| {
+            let right = area.x + area.width;
+            let mut x = area.x;
+            for (i, item) in self.items.iter().enumerate() {
+                let w = text::width(item) as u16 + 2;
+                if x + w > right {
+                    break;
+                }
+                let active = i == state.selected;
+                let mut style = if self.disabled {
+                    Style::new().fg(t.fg[3]).bg(t.bg[2])
+                } else if active {
+                    Style::new().fg(t.accent.contrast).bg(t.accent.base)
+                } else {
+                    Style::new().fg(t.fg[1]).bg(t.bg[3])
+                };
+                if active && self.focused {
+                    style = style.add_modifier(Modifier::BOLD | Modifier::UNDERLINED);
+                }
+                state.item_rects.push(Rect::new(x, area.y, w, 1));
+                buf.set_style(Rect::new(x, area.y, w, 1), style);
+                buf.set_string(x + 1, area.y, *item, style);
+                x += w + 1;
             }
-            let active = i == state.selected;
-            let mut style = if self.disabled {
-                Style::new().fg(t.fg[3]).bg(t.bg[2])
-            } else if active {
-                Style::new().fg(t.accent.contrast).bg(t.accent.base)
-            } else {
-                Style::new().fg(t.fg[1]).bg(t.bg[3])
-            };
-            if active && self.focused {
-                style = style.add_modifier(Modifier::BOLD | Modifier::UNDERLINED);
-            }
-            state.item_rects.push(Rect::new(x, area.y, w, 1));
-            buf.set_style(Rect::new(x, area.y, w, 1), style);
-            buf.set_string(x + 1, area.y, *item, style);
-            x += w + 1;
-        }
+        });
     }
 }

@@ -1,6 +1,6 @@
 use crate::event::{clicked, is_press, Outcome};
 use crate::text;
-use crate::theme::{resolve_theme, Theme};
+use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
 use ratatui::layout::Rect;
@@ -51,7 +51,6 @@ pub struct Toggle<'a> {
     label: &'a str,
     focused: bool,
     disabled: bool,
-    theme: Option<&'a Theme>,
 }
 
 impl<'a> Toggle<'a> {
@@ -60,7 +59,6 @@ impl<'a> Toggle<'a> {
             label,
             focused: false,
             disabled: false,
-            theme: None,
         }
     }
 
@@ -73,11 +71,6 @@ impl<'a> Toggle<'a> {
         self.disabled = disabled;
         self
     }
-
-    pub fn theme(mut self, theme: &'a Theme) -> Self {
-        self.theme = Some(theme);
-        self
-    }
 }
 
 impl<'a> StatefulWidget for Toggle<'a> {
@@ -85,38 +78,36 @@ impl<'a> StatefulWidget for Toggle<'a> {
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut ToggleState) {
         state.area = Rect::new(area.x, area.y, area.width, 1);
-        if area.is_empty() {
-            return;
-        }
-        let t = &*resolve_theme(self.theme);
-        let (track, knob) = if self.disabled {
-            (t.fg[3], t.fg[3])
-        } else if state.on {
-            (t.accent.base, t.accent.base)
-        } else {
-            (t.border.strong, t.fg[2])
-        };
-        let switch = if state.on { "──●" } else { "○──" };
-        // Paint track and knob separately so the knob pops.
-        buf.set_string(area.x, area.y, switch, Style::new().fg(track));
-        let knob_x = if state.on { area.x + 2 } else { area.x };
-        buf.set_string(
-            knob_x,
-            area.y,
-            if state.on { "●" } else { "○" },
-            Style::new().fg(knob),
-        );
-        if area.width > 4 {
-            let mut style = Style::new().fg(if self.disabled { t.fg[3] } else { t.fg[0] });
-            if self.focused {
-                style = style.add_modifier(Modifier::UNDERLINED);
-            }
+        paint(area, |t| {
+            let (track, knob) = if self.disabled {
+                (t.fg[3], t.fg[3])
+            } else if state.on {
+                (t.accent.base, t.accent.base)
+            } else {
+                (t.border.strong, t.fg[2])
+            };
+            let switch = if state.on { "──●" } else { "○──" };
+            // Paint track and knob separately so the knob pops.
+            buf.set_string(area.x, area.y, switch, Style::new().fg(track));
+            let knob_x = if state.on { area.x + 2 } else { area.x };
             buf.set_string(
-                area.x + 4,
+                knob_x,
                 area.y,
-                text::truncate(self.label, area.width as usize - 4),
-                style,
+                if state.on { "●" } else { "○" },
+                Style::new().fg(knob),
             );
-        }
+            if area.width > 4 {
+                let mut style = Style::new().fg(if self.disabled { t.fg[3] } else { t.fg[0] });
+                if self.focused {
+                    style = style.add_modifier(Modifier::UNDERLINED);
+                }
+                buf.set_string(
+                    area.x + 4,
+                    area.y,
+                    text::truncate(self.label, area.width as usize - 4),
+                    style,
+                );
+            }
+        });
     }
 }

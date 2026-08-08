@@ -1,6 +1,6 @@
 use crate::event::{in_area, is_press, left_down, scroll_delta, Outcome};
 use crate::text;
-use crate::theme::{resolve_theme, Theme};
+use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
 use ratatui::layout::Rect;
@@ -171,7 +171,6 @@ pub struct Table<'a> {
     columns: &'a [Column<'a>],
     rows: &'a [Vec<&'a str>],
     focused: bool,
-    theme: Option<&'a Theme>,
 }
 
 impl<'a> Table<'a> {
@@ -180,17 +179,11 @@ impl<'a> Table<'a> {
             columns,
             rows,
             focused: false,
-            theme: None,
         }
     }
 
     pub fn focused(mut self, focused: bool) -> Self {
         self.focused = focused;
-        self
-    }
-
-    pub fn theme(mut self, theme: &'a Theme) -> Self {
-        self.theme = Some(theme);
         self
     }
 
@@ -226,82 +219,84 @@ impl<'a> StatefulWidget for Table<'a> {
         state.cols = self.columns.len();
         state.view_h = area.height.saturating_sub(1) as usize;
         state.area = area;
-        if area.is_empty() || self.columns.is_empty() {
-            return;
-        }
-        let t = &*resolve_theme(self.theme);
-        let widths = self.widths(area.width);
-        state.col_spans = {
-            let mut spans = Vec::with_capacity(widths.len());
-            let mut cx = area.x;
-            for w in &widths {
-                spans.push((cx, cx + w + 2));
-                cx += w + 2;
+        paint(area, |t| {
+            if self.columns.is_empty() {
+                return;
             }
-            spans
-        };
-
-        // Header (sticky by construction).
-        let header_style = Style::new()
-            .fg(t.fg[1])
-            .bg(t.bg[2])
-            .add_modifier(Modifier::BOLD);
-        buf.set_style(Rect::new(area.x, area.y, area.width, 1), header_style);
-        let mut x = area.x;
-        for (i, (col, w)) in self.columns.iter().zip(&widths).enumerate() {
-            let arrow = match state.sort {
-                Some((c, asc)) if c == i => {
-                    if asc {
-                        " ▲"
-                    } else {
-                        " ▼"
-                    }
+            let widths = self.widths(area.width);
+            state.col_spans = {
+                let mut spans = Vec::with_capacity(widths.len());
+                let mut cx = area.x;
+                for w in &widths {
+                    spans.push((cx, cx + w + 2));
+                    cx += w + 2;
                 }
-                _ => "",
+                spans
             };
-            let title = format!("{}{}", col.title, arrow);
-            let style = if arrow.is_empty() {
-                header_style
-            } else {
-                header_style.fg(t.accent.fg)
-            };
-            Table::put_cell(buf, x, area.y, *w, &title, col.align, style);
-            x += w + 2;
-        }
 
-        if state.view_h == 0 {
-            return;
-        }
-        state.cursor = state.cursor.min(state.len.saturating_sub(1));
-        if state.cursor < state.offset {
-            state.offset = state.cursor;
-        } else if state.cursor >= state.offset + state.view_h {
-            state.offset = state.cursor + 1 - state.view_h;
-        }
-
-        for (vis, ri) in (state.offset..state.len.min(state.offset + state.view_h)).enumerate() {
-            let y = area.y + 1 + vis as u16;
-            let is_cursor = ri == state.cursor;
-            let is_selected = state.is_selected(ri);
-            let mut row_style = Style::new().fg(t.fg[1]);
-            if is_selected {
-                row_style = row_style.fg(t.accent.fg).bg(t.accent.bg);
-            }
-            if is_cursor {
-                row_style = row_style.fg(t.fg[0]).bg(t.bg[3]);
-                if self.focused {
-                    row_style = row_style.add_modifier(Modifier::BOLD);
-                }
-            }
-            if is_cursor || is_selected {
-                buf.set_style(Rect::new(area.x, y, area.width, 1), row_style);
-            }
+            // Header (sticky by construction).
+            let header_style = Style::new()
+                .fg(t.fg[1])
+                .bg(t.bg[2])
+                .add_modifier(Modifier::BOLD);
+            buf.set_style(Rect::new(area.x, area.y, area.width, 1), header_style);
             let mut x = area.x;
-            for (ci, (col, w)) in self.columns.iter().zip(&widths).enumerate() {
-                let value = self.rows[ri].get(ci).copied().unwrap_or("");
-                Table::put_cell(buf, x, y, *w, value, col.align, row_style);
+            for (i, (col, w)) in self.columns.iter().zip(&widths).enumerate() {
+                let arrow = match state.sort {
+                    Some((c, asc)) if c == i => {
+                        if asc {
+                            " ▲"
+                        } else {
+                            " ▼"
+                        }
+                    }
+                    _ => "",
+                };
+                let title = format!("{}{}", col.title, arrow);
+                let style = if arrow.is_empty() {
+                    header_style
+                } else {
+                    header_style.fg(t.accent.fg)
+                };
+                Table::put_cell(buf, x, area.y, *w, &title, col.align, style);
                 x += w + 2;
             }
-        }
+
+            if state.view_h == 0 {
+                return;
+            }
+            state.cursor = state.cursor.min(state.len.saturating_sub(1));
+            if state.cursor < state.offset {
+                state.offset = state.cursor;
+            } else if state.cursor >= state.offset + state.view_h {
+                state.offset = state.cursor + 1 - state.view_h;
+            }
+
+            for (vis, ri) in (state.offset..state.len.min(state.offset + state.view_h)).enumerate()
+            {
+                let y = area.y + 1 + vis as u16;
+                let is_cursor = ri == state.cursor;
+                let is_selected = state.is_selected(ri);
+                let mut row_style = Style::new().fg(t.fg[1]);
+                if is_selected {
+                    row_style = row_style.fg(t.accent.fg).bg(t.accent.bg);
+                }
+                if is_cursor {
+                    row_style = row_style.fg(t.fg[0]).bg(t.bg[3]);
+                    if self.focused {
+                        row_style = row_style.add_modifier(Modifier::BOLD);
+                    }
+                }
+                if is_cursor || is_selected {
+                    buf.set_style(Rect::new(area.x, y, area.width, 1), row_style);
+                }
+                let mut x = area.x;
+                for (ci, (col, w)) in self.columns.iter().zip(&widths).enumerate() {
+                    let value = self.rows[ri].get(ci).copied().unwrap_or("");
+                    Table::put_cell(buf, x, y, *w, value, col.align, row_style);
+                    x += w + 2;
+                }
+            }
+        });
     }
 }

@@ -1,6 +1,6 @@
 use crate::event::{is_press, left_down, mouse_pos, scroll_delta, Outcome};
 use crate::text;
-use crate::theme::{resolve_theme, Theme};
+use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent};
 use ratatui::layout::Rect;
@@ -283,7 +283,6 @@ pub struct Textarea<'a> {
     invalid: bool,
     focused: bool,
     disabled: bool,
-    theme: Option<&'a Theme>,
 }
 
 impl<'a> Textarea<'a> {
@@ -310,80 +309,73 @@ impl<'a> Textarea<'a> {
         self.disabled = disabled;
         self
     }
-
-    pub fn theme(mut self, theme: &'a Theme) -> Self {
-        self.theme = Some(theme);
-        self
-    }
 }
 
 impl<'a> StatefulWidget for Textarea<'a> {
     type State = TextareaState;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut TextareaState) {
-        if area.is_empty() {
-            return;
-        }
-        let t = &*resolve_theme(self.theme);
-        let edge = if self.invalid {
-            t.danger.base
-        } else if self.focused {
-            t.accent.base
-        } else {
-            t.border.default
-        };
-        let block = Block::bordered().border_style(Style::new().fg(edge));
-        let inner = block.inner(area);
-        block.render(area, buf);
-        if inner.is_empty() {
-            return;
-        }
-        state.view = (inner.width, inner.height);
-        state.area = inner;
-
-        // Follow the cursor.
-        let cursor_cells = cells_at(&state.lines[state.row], state.col);
-        if state.row < state.scroll_row {
-            state.scroll_row = state.row;
-        } else if state.row >= state.scroll_row + inner.height as usize {
-            state.scroll_row = state.row + 1 - inner.height as usize;
-        }
-        if cursor_cells < state.scroll_col {
-            state.scroll_col = cursor_cells;
-        } else if cursor_cells >= state.scroll_col + inner.width as usize {
-            state.scroll_col = cursor_cells + 1 - inner.width as usize;
-        }
-
-        let fg = if self.disabled { t.fg[3] } else { t.fg[0] };
-        let empty = state.lines.len() == 1 && state.lines[0].is_empty();
-        if empty && !self.placeholder.is_empty() {
-            buf.set_string(
-                inner.x,
-                inner.y,
-                text::truncate(self.placeholder, inner.width as usize),
-                Style::new().fg(t.fg[3]),
-            );
-        } else {
-            for vis in 0..inner.height as usize {
-                let li = state.scroll_row + vis;
-                let Some(line) = state.lines.get(li) else {
-                    break;
-                };
-                let start = byte_at_cells(line, state.scroll_col);
-                let visible = text::truncate(&line[start..], inner.width as usize);
-                buf.set_string(inner.x, inner.y + vis as u16, visible, Style::new().fg(fg));
+        paint(area, |t| {
+            let edge = if self.invalid {
+                t.danger.base
+            } else if self.focused {
+                t.accent.base
+            } else {
+                t.border.default
+            };
+            let block = Block::bordered().border_style(Style::new().fg(edge));
+            let inner = block.inner(area);
+            block.render(area, buf);
+            if inner.is_empty() {
+                return;
             }
-        }
+            state.view = (inner.width, inner.height);
+            state.area = inner;
 
-        if self.focused && !self.disabled {
-            let cy = inner.y + (state.row - state.scroll_row) as u16;
-            let cx = inner.x + (cursor_cells - state.scroll_col) as u16;
-            if cx < inner.x + inner.width && cy < inner.y + inner.height {
-                buf.set_style(
-                    Rect::new(cx, cy, 1, 1),
-                    Style::new().add_modifier(Modifier::REVERSED),
+            // Follow the cursor.
+            let cursor_cells = cells_at(&state.lines[state.row], state.col);
+            if state.row < state.scroll_row {
+                state.scroll_row = state.row;
+            } else if state.row >= state.scroll_row + inner.height as usize {
+                state.scroll_row = state.row + 1 - inner.height as usize;
+            }
+            if cursor_cells < state.scroll_col {
+                state.scroll_col = cursor_cells;
+            } else if cursor_cells >= state.scroll_col + inner.width as usize {
+                state.scroll_col = cursor_cells + 1 - inner.width as usize;
+            }
+
+            let fg = if self.disabled { t.fg[3] } else { t.fg[0] };
+            let empty = state.lines.len() == 1 && state.lines[0].is_empty();
+            if empty && !self.placeholder.is_empty() {
+                buf.set_string(
+                    inner.x,
+                    inner.y,
+                    text::truncate(self.placeholder, inner.width as usize),
+                    Style::new().fg(t.fg[3]),
                 );
+            } else {
+                for vis in 0..inner.height as usize {
+                    let li = state.scroll_row + vis;
+                    let Some(line) = state.lines.get(li) else {
+                        break;
+                    };
+                    let start = byte_at_cells(line, state.scroll_col);
+                    let visible = text::truncate(&line[start..], inner.width as usize);
+                    buf.set_string(inner.x, inner.y + vis as u16, visible, Style::new().fg(fg));
+                }
             }
-        }
+
+            if self.focused && !self.disabled {
+                let cy = inner.y + (state.row - state.scroll_row) as u16;
+                let cx = inner.x + (cursor_cells - state.scroll_col) as u16;
+                if cx < inner.x + inner.width && cy < inner.y + inner.height {
+                    buf.set_style(
+                        Rect::new(cx, cy, 1, 1),
+                        Style::new().add_modifier(Modifier::REVERSED),
+                    );
+                }
+            }
+        });
     }
 }

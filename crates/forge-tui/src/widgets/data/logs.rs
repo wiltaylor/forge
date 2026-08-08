@@ -1,6 +1,7 @@
 use crate::event::{in_area, is_press, scroll_delta, Outcome};
 use crate::text;
-use crate::theme::{resolve_theme, Theme};
+use crate::theme::Theme;
+use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
 use ratatui::layout::Rect;
@@ -149,7 +150,6 @@ impl LogsState {
 pub struct Logs<'a> {
     lines: &'a [LogLine],
     focused: bool,
-    theme: Option<&'a Theme>,
 }
 
 impl<'a> Logs<'a> {
@@ -157,17 +157,11 @@ impl<'a> Logs<'a> {
         Logs {
             lines,
             focused: false,
-            theme: None,
         }
     }
 
     pub fn focused(mut self, focused: bool) -> Self {
         self.focused = focused;
-        self
-    }
-
-    pub fn theme(mut self, theme: &'a Theme) -> Self {
-        self.theme = Some(theme);
         self
     }
 }
@@ -179,79 +173,77 @@ impl<'a> StatefulWidget for Logs<'a> {
         state.len = self.lines.len();
         state.view_h = area.height as usize;
         state.area = area;
-        if area.is_empty() {
-            return;
-        }
-        let t = &*resolve_theme(self.theme);
-        buf.set_style(area, Style::new().bg(t.bg[1]));
-        let max_offset = state.len.saturating_sub(state.view_h);
-        if state.follow {
-            state.offset = max_offset;
-        } else {
-            state.offset = state.offset.min(max_offset);
-        }
-        for vis in 0..state.view_h {
-            let li = state.offset + vis;
-            let Some(line) = self.lines.get(li) else {
-                break;
-            };
-            let y = area.y + vis as u16;
-            let mut x = area.x;
-            if let Some(ts) = &line.ts {
-                let tw = text::width(ts) as u16;
-                if area.width > tw + 6 {
-                    buf.set_string(x, y, ts, Style::new().fg(t.fg[3]).bg(t.bg[1]));
-                    x += tw + 1;
+        paint(area, |t| {
+            buf.set_style(area, Style::new().bg(t.bg[1]));
+            let max_offset = state.len.saturating_sub(state.view_h);
+            if state.follow {
+                state.offset = max_offset;
+            } else {
+                state.offset = state.offset.min(max_offset);
+            }
+            for vis in 0..state.view_h {
+                let li = state.offset + vis;
+                let Some(line) = self.lines.get(li) else {
+                    break;
+                };
+                let y = area.y + vis as u16;
+                let mut x = area.x;
+                if let Some(ts) = &line.ts {
+                    let tw = text::width(ts) as u16;
+                    if area.width > tw + 6 {
+                        buf.set_string(x, y, ts, Style::new().fg(t.fg[3]).bg(t.bg[1]));
+                        x += tw + 1;
+                    }
+                }
+                buf.set_string(
+                    x,
+                    y,
+                    line.level.label(),
+                    Style::new()
+                        .fg(line.level.color(t))
+                        .bg(t.bg[1])
+                        .add_modifier(Modifier::BOLD),
+                );
+                x += 4;
+                let avail = (area.x + area.width).saturating_sub(x) as usize;
+                let shown = text::truncate(&line.text, avail);
+                buf.set_string(x, y, &shown, Style::new().fg(t.fg[1]).bg(t.bg[1]));
+                // Search highlight (case-insensitive substring on the visible slice).
+                if let Some(needle) = state.search.as_deref().filter(|n| !n.is_empty()) {
+                    let hay = shown.to_lowercase();
+                    let needle_l = needle.to_lowercase();
+                    // NB: indices come from the lowercased haystack; Unicode
+                    // lowercasing can shift byte offsets, so use checked slicing
+                    // and skip highlights that land off a char boundary.
+                    let mut start = 0;
+                    while let Some(pos) = hay.get(start..).and_then(|h| h.find(&needle_l)) {
+                        let at = start + pos;
+                        start = at + needle_l.len().max(1);
+                        let (Some(prefix), Some(matched)) =
+                            (shown.get(..at), shown.get(at..at + needle_l.len()))
+                        else {
+                            continue;
+                        };
+                        let prefix_cells = text::width(prefix) as u16;
+                        let match_cells = text::width(matched) as u16;
+                        buf.set_style(
+                            Rect::new(x + prefix_cells, y, match_cells, 1),
+                            Style::new().fg(t.accent.fg).bg(t.accent.bg),
+                        );
+                    }
                 }
             }
-            buf.set_string(
-                x,
-                y,
-                line.level.label(),
-                Style::new()
-                    .fg(line.level.color(t))
-                    .bg(t.bg[1])
-                    .add_modifier(Modifier::BOLD),
-            );
-            x += 4;
-            let avail = (area.x + area.width).saturating_sub(x) as usize;
-            let shown = text::truncate(&line.text, avail);
-            buf.set_string(x, y, &shown, Style::new().fg(t.fg[1]).bg(t.bg[1]));
-            // Search highlight (case-insensitive substring on the visible slice).
-            if let Some(needle) = state.search.as_deref().filter(|n| !n.is_empty()) {
-                let hay = shown.to_lowercase();
-                let needle_l = needle.to_lowercase();
-                // NB: indices come from the lowercased haystack; Unicode
-                // lowercasing can shift byte offsets, so use checked slicing
-                // and skip highlights that land off a char boundary.
-                let mut start = 0;
-                while let Some(pos) = hay.get(start..).and_then(|h| h.find(&needle_l)) {
-                    let at = start + pos;
-                    start = at + needle_l.len().max(1);
-                    let (Some(prefix), Some(matched)) =
-                        (shown.get(..at), shown.get(at..at + needle_l.len()))
-                    else {
-                        continue;
-                    };
-                    let prefix_cells = text::width(prefix) as u16;
-                    let match_cells = text::width(matched) as u16;
-                    buf.set_style(
-                        Rect::new(x + prefix_cells, y, match_cells, 1),
-                        Style::new().fg(t.accent.fg).bg(t.accent.bg),
-                    );
-                }
+            // Follow indicator.
+            if state.follow && self.focused && area.height > 0 {
+                let tag = " follow ";
+                let wx = area.x + area.width.saturating_sub(tag.len() as u16 + 1);
+                buf.set_string(
+                    wx,
+                    area.y,
+                    tag,
+                    Style::new().fg(t.accent.fg).bg(t.accent.bg),
+                );
             }
-        }
-        // Follow indicator.
-        if state.follow && self.focused && area.height > 0 {
-            let tag = " follow ";
-            let wx = area.x + area.width.saturating_sub(tag.len() as u16 + 1);
-            buf.set_string(
-                wx,
-                area.y,
-                tag,
-                Style::new().fg(t.accent.fg).bg(t.accent.bg),
-            );
-        }
+        });
     }
 }

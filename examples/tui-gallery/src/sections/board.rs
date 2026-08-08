@@ -88,13 +88,13 @@ impl BoardState {
     }
 }
 
-pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut BoardState) {
+pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, state: &mut BoardState) {
     let focused = ctx.focus.register(BOARD);
     if area.height < 5 {
         return;
     }
     frame.render_widget(
-        Eyebrow::new("Kanban — arrows move cursor · Shift+arrows move card").theme(t),
+        Eyebrow::new("Kanban — arrows move cursor · Shift+arrows move card"),
         Rect::new(area.x, area.y, area.width, 1),
     );
     let card_refs: Vec<Vec<&str>> = state
@@ -117,7 +117,7 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
         })
         .collect();
     frame.render_stateful_widget(
-        Kanban::new(&columns).focused(focused).theme(t),
+        Kanban::new(&columns).focused(focused),
         Rect::new(area.x, area.y + 1, area.width, area.height - 1),
         &mut state.kanban,
     );

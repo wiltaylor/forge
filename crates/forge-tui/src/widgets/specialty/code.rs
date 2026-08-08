@@ -9,7 +9,8 @@
 
 use crate::event::{in_area, is_press, scroll_delta, Outcome};
 use crate::text;
-use crate::theme::{resolve_theme, Theme};
+use crate::theme::Theme;
+use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
 use ratatui::layout::Rect;
@@ -136,7 +137,6 @@ pub struct CodeView<'a> {
     line_numbers: bool,
     marks: &'a [(usize, crate::theme::Severity)],
     focused: bool,
-    theme: Option<&'a Theme>,
 }
 
 impl<'a> CodeView<'a> {
@@ -147,7 +147,6 @@ impl<'a> CodeView<'a> {
             line_numbers: true,
             marks: &[],
             focused: false,
-            theme: None,
         }
     }
 
@@ -166,116 +165,111 @@ impl<'a> CodeView<'a> {
         self.focused = focused;
         self
     }
-
-    pub fn theme(mut self, theme: &'a Theme) -> Self {
-        self.theme = Some(theme);
-        self
-    }
 }
 
 impl<'a> StatefulWidget for CodeView<'a> {
     type State = CodeViewState;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut CodeViewState) {
-        if area.is_empty() {
-            return;
-        }
-        let t = &*resolve_theme(self.theme);
-        buf.set_style(area, Style::new().bg(t.bg[1]));
-        let lines: Vec<&str> = self.source.lines().collect();
-        state.total = lines.len();
-        state.view_h = area.height as usize;
-        state.area = area;
-        let max = state.total.saturating_sub(state.view_h);
-        state.row = state.row.min(max);
+        paint(area, |t| {
+            buf.set_style(area, Style::new().bg(t.bg[1]));
+            let lines: Vec<&str> = self.source.lines().collect();
+            state.total = lines.len();
+            state.view_h = area.height as usize;
+            state.area = area;
+            let max = state.total.saturating_sub(state.view_h);
+            state.row = state.row.min(max);
 
-        let gutter_w = if self.line_numbers {
-            (state.total.max(1).ilog10() as u16 + 1).max(2) + 2
-        } else {
-            0
-        };
-        let code_x = area.x + gutter_w + 1;
-        let code_w = area.width.saturating_sub(gutter_w + 1) as usize;
+            let gutter_w = if self.line_numbers {
+                (state.total.max(1).ilog10() as u16 + 1).max(2) + 2
+            } else {
+                0
+            };
+            let code_x = area.x + gutter_w + 1;
+            let code_w = area.width.saturating_sub(gutter_w + 1) as usize;
 
-        // Highlight the whole file (correct state needs a top-down pass; fine
-        // for viewer-sized sources).
-        let ss = syntax_set();
-        let syntax = ss
-            .find_syntax_by_token(self.language)
-            .unwrap_or_else(|| ss.find_syntax_plain_text());
-        let syn_theme = forge_syn_theme(t);
-        let mut highlighter = syn_theme.as_ref().map(|th| HighlightLines::new(syntax, th));
+            // Highlight the whole file (correct state needs a top-down pass; fine
+            // for viewer-sized sources).
+            let ss = syntax_set();
+            let syntax = ss
+                .find_syntax_by_token(self.language)
+                .unwrap_or_else(|| ss.find_syntax_plain_text());
+            let syn_theme = forge_syn_theme(t);
+            let mut highlighter = syn_theme.as_ref().map(|th| HighlightLines::new(syntax, th));
 
-        let mut styled: Vec<Vec<(Style, String)>> = Vec::with_capacity(lines.len());
-        for line in &lines {
-            match &mut highlighter {
-                Some(h) => {
-                    let spans = h
-                        .highlight_line(line, ss)
-                        .unwrap_or_default()
-                        .into_iter()
-                        .map(|(s, txt)| {
-                            let mut style = Style::new().fg(Color::Rgb(
-                                s.foreground.r,
-                                s.foreground.g,
-                                s.foreground.b,
-                            ));
-                            if s.font_style.contains(FontStyle::BOLD) {
-                                style = style.add_modifier(ratatui::style::Modifier::BOLD);
-                            }
-                            (style.bg(t.bg[1]), txt.to_owned())
-                        })
-                        .collect();
-                    styled.push(spans);
-                }
-                None => styled.push(vec![(
-                    Style::new().fg(t.fg[1]).bg(t.bg[1]),
-                    (*line).to_owned(),
-                )]),
-            }
-        }
-
-        for vis in 0..state.view_h {
-            let li = state.row + vis;
-            if li >= styled.len() {
-                break;
-            }
-            let y = area.y + vis as u16;
-            // Gutter.
-            if self.line_numbers {
-                buf.set_string(
-                    area.x,
-                    y,
-                    format!("{:>w$} ", li + 1, w = gutter_w as usize - 2),
-                    Style::new().fg(t.fg[3]).bg(t.bg[1]),
-                );
-            }
-            if let Some((_, sev)) = self.marks.iter().find(|(l, _)| *l == li) {
-                buf.set_string(
-                    area.x + gutter_w.saturating_sub(1),
-                    y,
-                    "▎",
-                    Style::new().fg(t.severity(*sev).base).bg(t.bg[1]),
-                );
-            }
-            // Code with horizontal scroll.
-            let mut cell = 0usize;
-            let mut x = code_x;
-            for (style, txt) in &styled[li] {
-                for g in unicode_segmentation::UnicodeSegmentation::graphemes(txt.as_str(), true) {
-                    let gw = text::width(g);
-                    if cell + gw > state.col + code_w {
-                        break;
+            let mut styled: Vec<Vec<(Style, String)>> = Vec::with_capacity(lines.len());
+            for line in &lines {
+                match &mut highlighter {
+                    Some(h) => {
+                        let spans = h
+                            .highlight_line(line, ss)
+                            .unwrap_or_default()
+                            .into_iter()
+                            .map(|(s, txt)| {
+                                let mut style = Style::new().fg(Color::Rgb(
+                                    s.foreground.r,
+                                    s.foreground.g,
+                                    s.foreground.b,
+                                ));
+                                if s.font_style.contains(FontStyle::BOLD) {
+                                    style = style.add_modifier(ratatui::style::Modifier::BOLD);
+                                }
+                                (style.bg(t.bg[1]), txt.to_owned())
+                            })
+                            .collect();
+                        styled.push(spans);
                     }
-                    if cell >= state.col {
-                        buf.set_string(x, y, g, *style);
-                        x += gw as u16;
-                    }
-                    cell += gw;
+                    None => styled.push(vec![(
+                        Style::new().fg(t.fg[1]).bg(t.bg[1]),
+                        (*line).to_owned(),
+                    )]),
                 }
             }
-        }
-        let _ = self.focused;
+
+            for vis in 0..state.view_h {
+                let li = state.row + vis;
+                if li >= styled.len() {
+                    break;
+                }
+                let y = area.y + vis as u16;
+                // Gutter.
+                if self.line_numbers {
+                    buf.set_string(
+                        area.x,
+                        y,
+                        format!("{:>w$} ", li + 1, w = gutter_w as usize - 2),
+                        Style::new().fg(t.fg[3]).bg(t.bg[1]),
+                    );
+                }
+                if let Some((_, sev)) = self.marks.iter().find(|(l, _)| *l == li) {
+                    buf.set_string(
+                        area.x + gutter_w.saturating_sub(1),
+                        y,
+                        "▎",
+                        Style::new().fg(t.severity(*sev).base).bg(t.bg[1]),
+                    );
+                }
+                // Code with horizontal scroll.
+                let mut cell = 0usize;
+                let mut x = code_x;
+                for (style, txt) in &styled[li] {
+                    for g in
+                        unicode_segmentation::UnicodeSegmentation::graphemes(txt.as_str(), true)
+                    {
+                        let gw = text::width(g);
+                        if cell + gw > state.col + code_w {
+                            break;
+                        }
+                        if cell >= state.col {
+                            buf.set_string(x, y, g, *style);
+                            x += gw as u16;
+                        }
+                        cell += gw;
+                    }
+                }
+            }
+            let _ = self.focused;
+        });
     }
 }
 
@@ -332,21 +326,11 @@ fn diff_lines<'a>(old: &'a str, new: &'a str) -> Vec<DiffRow<'a>> {
 pub struct DiffView<'a> {
     old: &'a str,
     new: &'a str,
-    theme: Option<&'a Theme>,
 }
 
 impl<'a> DiffView<'a> {
     pub fn new(old: &'a str, new: &'a str) -> DiffView<'a> {
-        DiffView {
-            old,
-            new,
-            theme: None,
-        }
-    }
-
-    pub fn theme(mut self, theme: &'a Theme) -> Self {
-        self.theme = Some(theme);
-        self
+        DiffView { old, new }
     }
 }
 
@@ -354,35 +338,33 @@ impl<'a> StatefulWidget for DiffView<'a> {
     type State = CodeViewState;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut CodeViewState) {
-        if area.is_empty() {
-            return;
-        }
-        let t = &*resolve_theme(self.theme);
-        buf.set_style(area, Style::new().bg(t.bg[1]));
-        let rows = diff_lines(self.old, self.new);
-        state.total = rows.len();
-        state.view_h = area.height as usize;
-        state.area = area;
-        state.row = state.row.min(state.total.saturating_sub(state.view_h));
-        for vis in 0..state.view_h {
-            let ri = state.row + vis;
-            let Some(row) = rows.get(ri) else { break };
-            let y = area.y + vis as u16;
-            let (marker, line, style) = match row {
-                DiffRow::Same(l) => (" ", l, Style::new().fg(t.fg[2]).bg(t.bg[1])),
-                DiffRow::Del(l) => ("-", l, Style::new().fg(t.danger.fg).bg(t.danger.bg)),
-                DiffRow::Add(l) => ("+", l, Style::new().fg(t.success.fg).bg(t.success.bg)),
-            };
-            if !matches!(row, DiffRow::Same(_)) {
-                buf.set_style(Rect::new(area.x, y, area.width, 1), style);
+        paint(area, |t| {
+            buf.set_style(area, Style::new().bg(t.bg[1]));
+            let rows = diff_lines(self.old, self.new);
+            state.total = rows.len();
+            state.view_h = area.height as usize;
+            state.area = area;
+            state.row = state.row.min(state.total.saturating_sub(state.view_h));
+            for vis in 0..state.view_h {
+                let ri = state.row + vis;
+                let Some(row) = rows.get(ri) else { break };
+                let y = area.y + vis as u16;
+                let (marker, line, style) = match row {
+                    DiffRow::Same(l) => (" ", l, Style::new().fg(t.fg[2]).bg(t.bg[1])),
+                    DiffRow::Del(l) => ("-", l, Style::new().fg(t.danger.fg).bg(t.danger.bg)),
+                    DiffRow::Add(l) => ("+", l, Style::new().fg(t.success.fg).bg(t.success.bg)),
+                };
+                if !matches!(row, DiffRow::Same(_)) {
+                    buf.set_style(Rect::new(area.x, y, area.width, 1), style);
+                }
+                buf.set_string(area.x, y, marker, style);
+                buf.set_string(
+                    area.x + 2,
+                    y,
+                    text::truncate(line, area.width.saturating_sub(2) as usize),
+                    style,
+                );
             }
-            buf.set_string(area.x, y, marker, style);
-            buf.set_string(
-                area.x + 2,
-                y,
-                text::truncate(line, area.width.saturating_sub(2) as usize),
-                style,
-            );
-        }
+        });
     }
 }

@@ -1,5 +1,6 @@
 use crate::text;
-use crate::theme::{resolve_theme, Theme};
+use crate::theme::Theme;
+use crate::widgets::paint;
 use crate::widgets::primitives::Glyph;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
@@ -24,7 +25,6 @@ pub struct Button<'a> {
     variant: Variant,
     focused: bool,
     disabled: bool,
-    theme: Option<&'a Theme>,
 }
 
 impl<'a> Button<'a> {
@@ -34,7 +34,6 @@ impl<'a> Button<'a> {
             variant: Variant::Default,
             focused: false,
             disabled: false,
-            theme: None,
         }
     }
 
@@ -50,11 +49,6 @@ impl<'a> Button<'a> {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
-        self
-    }
-
-    pub fn theme(mut self, theme: &'a Theme) -> Self {
-        self.theme = Some(theme);
         self
     }
 
@@ -92,54 +86,50 @@ impl<'a> Button<'a> {
 
 impl Widget for Button<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        if area.is_empty() {
-            return;
-        }
-        let t = &*resolve_theme(self.theme);
-        let style = self.style(t);
-        if area.height >= 3 {
-            let border = if self.disabled {
-                t.border.subtle
-            } else if self.focused {
-                t.accent.base
+        paint(area, |t| {
+            let style = self.style(t);
+            if area.height >= 3 {
+                let border = if self.disabled {
+                    t.border.subtle
+                } else if self.focused {
+                    t.accent.base
+                } else {
+                    t.border.strong
+                };
+                let block = Block::bordered().border_style(Style::new().fg(border));
+                let inner = block.inner(area);
+                block.render(area, buf);
+                let label = text::truncate(self.label, inner.width as usize);
+                let row = inner.y + inner.height / 2;
+                let x = inner.x + (inner.width.saturating_sub(text::width(&label) as u16)) / 2;
+                buf.set_style(Rect::new(inner.x, row, inner.width, 1), style);
+                buf.set_string(x, row, label, style);
             } else {
-                t.border.strong
-            };
-            let block = Block::bordered().border_style(Style::new().fg(border));
-            let inner = block.inner(area);
-            block.render(area, buf);
-            let label = text::truncate(self.label, inner.width as usize);
-            let row = inner.y + inner.height / 2;
-            let x = inner.x + (inner.width.saturating_sub(text::width(&label) as u16)) / 2;
-            buf.set_style(Rect::new(inner.x, row, inner.width, 1), style);
-            buf.set_string(x, row, label, style);
-        } else {
-            let label = text::truncate(self.label, area.width.saturating_sub(2) as usize);
-            buf.set_style(Rect::new(area.x, area.y, area.width, 1), style);
-            let x = area.x + (area.width.saturating_sub(text::width(&label) as u16)) / 2;
-            buf.set_string(x, area.y, label, style);
-        }
+                let label = text::truncate(self.label, area.width.saturating_sub(2) as usize);
+                buf.set_style(Rect::new(area.x, area.y, area.width, 1), style);
+                let x = area.x + (area.width.saturating_sub(text::width(&label) as u16)) / 2;
+                buf.set_string(x, area.y, label, style);
+            }
+        });
     }
 }
 
 /// A square single-glyph button.
 #[derive(Clone, Debug)]
-pub struct IconButton<'a> {
+pub struct IconButton {
     glyph: Glyph,
     variant: Variant,
     focused: bool,
     disabled: bool,
-    theme: Option<&'a Theme>,
 }
 
-impl<'a> IconButton<'a> {
-    pub fn new(glyph: Glyph) -> IconButton<'a> {
+impl IconButton {
+    pub fn new(glyph: Glyph) -> IconButton {
         IconButton {
             glyph,
             variant: Variant::Default,
             focused: false,
             disabled: false,
-            theme: None,
         }
     }
 
@@ -157,25 +147,16 @@ impl<'a> IconButton<'a> {
         self.disabled = disabled;
         self
     }
-
-    pub fn theme(mut self, theme: &'a Theme) -> Self {
-        self.theme = Some(theme);
-        self
-    }
 }
 
-impl Widget for IconButton<'_> {
+impl Widget for IconButton {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        if area.is_empty() {
-            return;
-        }
         let glyph = self.glyph.as_str();
         let button = Button {
             label: glyph,
             variant: self.variant,
             focused: self.focused,
             disabled: self.disabled,
-            theme: self.theme,
         };
         // Constrain to a 3-cell chip so it stays square-ish.
         let w = area.width.min(3);

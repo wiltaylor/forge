@@ -27,10 +27,8 @@ fn buffer_text(buf: &Buffer) -> String {
 }
 
 fn render(state: &mut BlockEditorState, w: u16, h: u16, read_only: bool) -> Buffer {
-    let t = Theme::dark();
     let mut buf = Buffer::empty(Rect::new(0, 0, w, h));
     BlockEditor::new()
-        .theme(&t)
         .read_only(read_only)
         .focused(true)
         .render(Rect::new(0, 0, w, h), &mut buf, state);

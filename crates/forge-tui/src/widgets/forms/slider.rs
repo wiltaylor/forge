@@ -1,6 +1,7 @@
 use crate::event::{in_area, is_press, left_down, Outcome};
 use crate::text;
-use crate::theme::{resolve_theme, Severity, Theme};
+use crate::theme::Severity;
+use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent, MouseEventKind};
 use ratatui::layout::Rect;
@@ -93,7 +94,6 @@ pub struct Slider<'a> {
     focused: bool,
     disabled: bool,
     show_value: bool,
-    theme: Option<&'a Theme>,
 }
 
 impl<'a> Slider<'a> {
@@ -128,60 +128,53 @@ impl<'a> Slider<'a> {
         self.show_value = show;
         self
     }
-
-    pub fn theme(mut self, theme: &'a Theme) -> Self {
-        self.theme = Some(theme);
-        self
-    }
 }
 
 impl<'a> StatefulWidget for Slider<'a> {
     type State = SliderState;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut SliderState) {
-        if area.is_empty() {
-            return;
-        }
-        let t = &*resolve_theme(self.theme);
-        let fill = if self.disabled {
-            t.fg[3]
-        } else {
-            match self.severity {
-                Some(s) => t.severity(s).base,
-                None => t.accent.base,
+        paint(area, |t| {
+            let fill = if self.disabled {
+                t.fg[3]
+            } else {
+                match self.severity {
+                    Some(s) => t.severity(s).base,
+                    None => t.accent.base,
+                }
+            };
+            let mut x = area.x;
+            let mut w = area.width;
+            if let Some(label) = self.label {
+                let label = text::truncate(label, (w / 3) as usize);
+                let lw = text::width(&label) as u16 + 1;
+                buf.set_string(x, area.y, label, Style::new().fg(t.fg[1]));
+                x += lw;
+                w = w.saturating_sub(lw);
             }
-        };
-        let mut x = area.x;
-        let mut w = area.width;
-        if let Some(label) = self.label {
-            let label = text::truncate(label, (w / 3) as usize);
-            let lw = text::width(&label) as u16 + 1;
-            buf.set_string(x, area.y, label, Style::new().fg(t.fg[1]));
-            x += lw;
-            w = w.saturating_sub(lw);
-        }
-        let mut val_w = 0;
-        let val = format!("{:.0}", state.value);
-        if self.show_value {
-            val_w = val.len() as u16 + 2;
-            w = w.saturating_sub(val_w);
-        }
-        state.track = Rect::new(x, area.y, w, 1);
-        if w >= 3 {
-            let knob = ((w - 1) as f64 * state.ratio()).round() as u16;
-            for dx in 0..w {
-                let (ch, color) = if dx == knob {
-                    ("●", if self.focused { t.accent.hover } else { fill })
-                } else if dx < knob {
-                    ("─", fill)
-                } else {
-                    ("─", t.border.strong)
-                };
-                buf.set_string(x + dx, area.y, ch, Style::new().fg(color));
+            let mut val_w = 0;
+            let val = format!("{:.0}", state.value);
+            if self.show_value {
+                val_w = val.len() as u16 + 2;
+                w = w.saturating_sub(val_w);
             }
-        }
-        if self.show_value && val_w > 0 {
-            buf.set_string(x + w + 2, area.y, val, Style::new().fg(t.fg[1]));
-        }
+            state.track = Rect::new(x, area.y, w, 1);
+            if w >= 3 {
+                let knob = ((w - 1) as f64 * state.ratio()).round() as u16;
+                for dx in 0..w {
+                    let (ch, color) = if dx == knob {
+                        ("●", if self.focused { t.accent.hover } else { fill })
+                    } else if dx < knob {
+                        ("─", fill)
+                    } else {
+                        ("─", t.border.strong)
+                    };
+                    buf.set_string(x + dx, area.y, ch, Style::new().fg(color));
+                }
+            }
+            if self.show_value && val_w > 0 {
+                buf.set_string(x + w + 2, area.y, val, Style::new().fg(t.fg[1]));
+            }
+        });
     }
 }

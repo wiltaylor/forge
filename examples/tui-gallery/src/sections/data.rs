@@ -192,7 +192,7 @@ impl DataState {
     }
 }
 
-pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut DataState) {
+pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, state: &mut DataState) {
     let f_table = ctx.focus.register(TABLE);
     let f_logs = ctx.focus.register(LOGS);
     let f_tree = ctx.focus.register(TREE);
@@ -207,7 +207,7 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
     let cols = Grid::new(2).gap(2).cells(top, 2, top.height);
     if top.height > 2 {
         frame.render_widget(
-            Eyebrow::new("Table — s sort · Space select").theme(t),
+            Eyebrow::new("Table — s sort · Space select"),
             Rect::new(cols[0].x, cols[0].y, cols[0].width, 1),
         );
         let columns = [
@@ -222,18 +222,18 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
             .map(|r| r.iter().map(String::as_str).collect())
             .collect();
         frame.render_stateful_widget(
-            Table::new(&columns, &rows).focused(f_table).theme(t),
+            Table::new(&columns, &rows).focused(f_table),
             Rect::new(cols[0].x, cols[0].y + 1, cols[0].width, cols[0].height - 1),
             &mut state.table,
         );
 
         frame.render_widget(
-            Eyebrow::new("Logs — f follow · ↑ scroll").theme(t),
+            Eyebrow::new("Logs — f follow · ↑ scroll"),
             Rect::new(cols[1].x, cols[1].y, cols[1].width, 1),
         );
         state.logs.search = Some("node-3".into());
         frame.render_stateful_widget(
-            Logs::new(&state.log_lines).focused(f_logs).theme(t),
+            Logs::new(&state.log_lines).focused(f_logs),
             Rect::new(cols[1].x, cols[1].y + 1, cols[1].width, cols[1].height - 1),
             &mut state.logs,
         );
@@ -243,21 +243,21 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
     let cols = Grid::new(3).gap(2).cells(bottom, 3, bottom.height);
     if bottom.height > 2 {
         frame.render_widget(
-            Eyebrow::new("Tree").theme(t),
+            Eyebrow::new("Tree"),
             Rect::new(cols[0].x, cols[0].y, cols[0].width, 1),
         );
         frame.render_stateful_widget(
-            Tree::new(&TREE_ROOTS()).focused(f_tree).theme(t),
+            Tree::new(&TREE_ROOTS()).focused(f_tree),
             Rect::new(cols[0].x, cols[0].y + 1, cols[0].width, cols[0].height - 1),
             &mut state.tree,
         );
 
         frame.render_widget(
-            Eyebrow::new("JsonViewer").theme(t),
+            Eyebrow::new("JsonViewer"),
             Rect::new(cols[1].x, cols[1].y, cols[1].width, 1),
         );
         let value = state.json_value.clone();
-        JsonViewer::new().focused(f_json).theme(t).render_value(
+        JsonViewer::new().focused(f_json).render_value(
             &value,
             Rect::new(cols[1].x, cols[1].y + 1, cols[1].width, cols[1].height - 1),
             frame.buffer_mut(),
@@ -265,7 +265,7 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
         );
 
         frame.render_widget(
-            Eyebrow::new("KeyValue · Accordion").theme(t),
+            Eyebrow::new("KeyValue · Accordion"),
             Rect::new(cols[2].x, cols[2].y, cols[2].width, 1),
         );
         frame.render_widget(
@@ -273,8 +273,7 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
                 ("cluster", "forge-prod"),
                 ("region", "eu-west-1"),
                 ("uptime", "42d"),
-            ])
-            .theme(t),
+            ]),
             Rect::new(cols[2].x, cols[2].y + 1, cols[2].width, 3),
         );
         frame.render_stateful_widget(
@@ -282,8 +281,7 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
                 ("Rollout policy", "Canary 10% for 15 minutes, then full."),
                 ("Alerting", "Page on-call when error rate exceeds 1%."),
             ])
-            .focused(f_acc)
-            .theme(t),
+            .focused(f_acc),
             Rect::new(
                 cols[2].x,
                 cols[2].y + 5,

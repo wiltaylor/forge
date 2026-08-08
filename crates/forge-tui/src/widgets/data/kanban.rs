@@ -1,6 +1,6 @@
 use crate::event::{clicked, is_press, Outcome};
 use crate::text;
-use crate::theme::{resolve_theme, Theme};
+use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent};
 use ratatui::layout::Rect;
@@ -168,7 +168,6 @@ impl KanbanState {
 pub struct Kanban<'a> {
     columns: &'a [KanbanColumn<'a>],
     focused: bool,
-    theme: Option<&'a Theme>,
 }
 
 impl<'a> Kanban<'a> {
@@ -176,17 +175,11 @@ impl<'a> Kanban<'a> {
         Kanban {
             columns,
             focused: false,
-            theme: None,
         }
     }
 
     pub fn focused(mut self, focused: bool) -> Self {
         self.focused = focused;
-        self
-    }
-
-    pub fn theme(mut self, theme: &'a Theme) -> Self {
-        self.theme = Some(theme);
         self
     }
 }
@@ -198,80 +191,81 @@ impl<'a> StatefulWidget for Kanban<'a> {
         state.lens = self.columns.iter().map(|c| c.cards.len()).collect();
         state.card_rects.clear();
         state.clamp();
-        if area.is_empty() || self.columns.is_empty() {
-            return;
-        }
-        let t = &*resolve_theme(self.theme);
-        let n = self.columns.len() as u16;
-        let gap = 1u16;
-        let col_w = (area.width.saturating_sub(gap * (n - 1))) / n;
-        if col_w < 6 {
-            return;
-        }
-        for (ci, column) in self.columns.iter().enumerate() {
-            let x = area.x + ci as u16 * (col_w + gap);
-            let col_area = Rect::new(x, area.y, col_w, area.height);
-            buf.set_style(col_area, Style::new().bg(t.bg[1]));
-            // Header: title + count (+ WIP badge when over).
-            let over = column.wip_limit.is_some_and(|l| column.cards.len() > l);
-            let count = match column.wip_limit {
-                Some(l) => format!("{}/{}", column.cards.len(), l),
-                None => column.cards.len().to_string(),
-            };
-            let active_col = ci == state.col;
-            buf.set_string(
-                x + 1,
-                area.y,
-                text::truncate(column.title, col_w.saturating_sub(2) as usize),
-                Style::new()
-                    .fg(if active_col { t.fg[0] } else { t.fg[1] })
-                    .bg(t.bg[1])
-                    .add_modifier(Modifier::BOLD),
-            );
-            let cw = text::width(&count) as u16;
-            if col_w > cw + 2 {
-                buf.set_string(
-                    x + col_w - cw - 1,
-                    area.y,
-                    &count,
-                    Style::new()
-                        .fg(if over { t.danger.fg } else { t.fg[2] })
-                        .bg(t.bg[1]),
-                );
+        paint(area, |t| {
+            if self.columns.is_empty() {
+                return;
             }
-            // Cards.
-            let mut y = area.y + 1;
-            for (idx, card) in column.cards.iter().enumerate() {
-                if y + 3 > area.y + area.height {
-                    break;
-                }
-                let card_area = Rect::new(x, y, col_w, 3);
-                state.card_rects.push((card_area, ci, idx));
-                let is_cursor = active_col && idx == state.card;
-                let border = if is_cursor {
-                    if self.focused {
-                        t.accent.base
-                    } else {
-                        t.border.strong
-                    }
-                } else {
-                    t.border.default
+            let n = self.columns.len() as u16;
+            let gap = 1u16;
+            let col_w = (area.width.saturating_sub(gap * (n - 1))) / n;
+            if col_w < 6 {
+                return;
+            }
+            for (ci, column) in self.columns.iter().enumerate() {
+                let x = area.x + ci as u16 * (col_w + gap);
+                let col_area = Rect::new(x, area.y, col_w, area.height);
+                buf.set_style(col_area, Style::new().bg(t.bg[1]));
+                // Header: title + count (+ WIP badge when over).
+                let over = column.wip_limit.is_some_and(|l| column.cards.len() > l);
+                let count = match column.wip_limit {
+                    Some(l) => format!("{}/{}", column.cards.len(), l),
+                    None => column.cards.len().to_string(),
                 };
-                let block = Block::bordered()
-                    .border_style(Style::new().fg(border).bg(t.bg[2]))
-                    .style(Style::new().bg(t.bg[2]));
-                let inner = block.inner(card_area);
-                block.render(card_area, buf);
+                let active_col = ci == state.col;
                 buf.set_string(
-                    inner.x + 1,
-                    inner.y,
-                    text::truncate(card, inner.width.saturating_sub(2) as usize),
+                    x + 1,
+                    area.y,
+                    text::truncate(column.title, col_w.saturating_sub(2) as usize),
                     Style::new()
-                        .fg(if is_cursor { t.fg[0] } else { t.fg[1] })
-                        .bg(t.bg[2]),
+                        .fg(if active_col { t.fg[0] } else { t.fg[1] })
+                        .bg(t.bg[1])
+                        .add_modifier(Modifier::BOLD),
                 );
-                y += 3;
+                let cw = text::width(&count) as u16;
+                if col_w > cw + 2 {
+                    buf.set_string(
+                        x + col_w - cw - 1,
+                        area.y,
+                        &count,
+                        Style::new()
+                            .fg(if over { t.danger.fg } else { t.fg[2] })
+                            .bg(t.bg[1]),
+                    );
+                }
+                // Cards.
+                let mut y = area.y + 1;
+                for (idx, card) in column.cards.iter().enumerate() {
+                    if y + 3 > area.y + area.height {
+                        break;
+                    }
+                    let card_area = Rect::new(x, y, col_w, 3);
+                    state.card_rects.push((card_area, ci, idx));
+                    let is_cursor = active_col && idx == state.card;
+                    let border = if is_cursor {
+                        if self.focused {
+                            t.accent.base
+                        } else {
+                            t.border.strong
+                        }
+                    } else {
+                        t.border.default
+                    };
+                    let block = Block::bordered()
+                        .border_style(Style::new().fg(border).bg(t.bg[2]))
+                        .style(Style::new().bg(t.bg[2]));
+                    let inner = block.inner(card_area);
+                    block.render(card_area, buf);
+                    buf.set_string(
+                        inner.x + 1,
+                        inner.y,
+                        text::truncate(card, inner.width.saturating_sub(2) as usize),
+                        Style::new()
+                            .fg(if is_cursor { t.fg[0] } else { t.fg[1] })
+                            .bg(t.bg[2]),
+                    );
+                    y += 3;
+                }
             }
-        }
+        });
     }
 }

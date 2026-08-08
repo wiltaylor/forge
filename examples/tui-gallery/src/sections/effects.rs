@@ -56,7 +56,8 @@ impl EffectsState {
     }
 }
 
-pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut EffectsState) {
+pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, state: &mut EffectsState) {
+    let t = &ambient_theme();
     state.btn_rects.clear();
     let mut y = area.y;
     let x = area.x;
@@ -72,14 +73,14 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
     };
 
     if let Some(r) = row(1, 1, &mut y) {
-        frame.render_widget(Eyebrow::new("Particle FX").theme(t), r);
+        frame.render_widget(Eyebrow::new("Particle FX"), r);
     }
 
     // The demo card — effects sample and overdraw exactly this rect. The card
     // keeps rendering every frame; fx hides it visually while an effect runs.
     if let Some(r) = row(7, 1, &mut y) {
         state.card = r;
-        let card = Card::new().title(" prod-worker-04 ").theme(t);
+        let card = Card::new().title(" prod-worker-04 ");
         let inner = card.inner(r);
         frame.render_widget(card, r);
         let lines = vec![
@@ -101,10 +102,7 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
             } else {
                 Variant::Default
             };
-            let b = Button::new(label)
-                .variant(variant)
-                .focused(focused)
-                .theme(t);
+            let b = Button::new(label).variant(variant).focused(focused);
             let bw = b.width();
             if bx + bw > r.x + r.width {
                 break;

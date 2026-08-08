@@ -1,5 +1,5 @@
 use crate::text;
-use crate::theme::{resolve_theme, Theme};
+use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::Style;
@@ -9,44 +9,33 @@ use ratatui::widgets::Widget;
 #[derive(Clone, Debug)]
 pub struct Crumbs<'a> {
     segments: &'a [&'a str],
-    theme: Option<&'a Theme>,
 }
 
 impl<'a> Crumbs<'a> {
     pub fn new(segments: &'a [&'a str]) -> Crumbs<'a> {
-        Crumbs {
-            segments,
-            theme: None,
-        }
-    }
-
-    pub fn theme(mut self, theme: &'a Theme) -> Self {
-        self.theme = Some(theme);
-        self
+        Crumbs { segments }
     }
 }
 
 impl Widget for Crumbs<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        if area.is_empty() {
-            return;
-        }
-        let t = &*resolve_theme(self.theme);
-        let right = area.x + area.width;
-        let mut x = area.x;
-        for (i, seg) in self.segments.iter().enumerate() {
-            if x >= right {
-                break;
+        paint(area, |t| {
+            let right = area.x + area.width;
+            let mut x = area.x;
+            for (i, seg) in self.segments.iter().enumerate() {
+                if x >= right {
+                    break;
+                }
+                let last = i + 1 == self.segments.len();
+                let style = Style::new().fg(if last { t.fg[0] } else { t.fg[2] });
+                let seg = text::truncate(seg, (right - x) as usize);
+                buf.set_string(x, area.y, &seg, style);
+                x += text::width(&seg) as u16;
+                if !last && x + 3 <= right {
+                    buf.set_string(x, area.y, " › ", Style::new().fg(t.fg[3]));
+                    x += 3;
+                }
             }
-            let last = i + 1 == self.segments.len();
-            let style = Style::new().fg(if last { t.fg[0] } else { t.fg[2] });
-            let seg = text::truncate(seg, (right - x) as usize);
-            buf.set_string(x, area.y, &seg, style);
-            x += text::width(&seg) as u16;
-            if !last && x + 3 <= right {
-                buf.set_string(x, area.y, " › ", Style::new().fg(t.fg[3]));
-                x += 3;
-            }
-        }
+        });
     }
 }

@@ -59,7 +59,7 @@ impl TermState {
     }
 }
 
-pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut TermState) {
+pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, state: &mut TermState) {
     let focused = ctx.focus.register(TERM);
     if area.height < 4 {
         return;
@@ -67,24 +67,21 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, t: &Theme, state: &mut
     frame.render_widget(
         Eyebrow::new(
             "Terminal — Enter starts $SHELL · mouse works in TUI apps · Tab leaves the pane",
-        )
-        .theme(t),
+        ),
         Rect::new(area.x, area.y, area.width, 1),
     );
     let pane = Rect::new(area.x, area.y + 1, area.width, area.height - 1);
     match &mut state.session {
         Some(session) if !session.exited() => {
-            frame.render_stateful_widget(Terminal::new().focused(focused).theme(t), pane, session);
+            frame.render_stateful_widget(Terminal::new().focused(focused), pane, session);
         }
         _ => {
             frame.render_widget(
-                Empty::new("No session")
-                    .hint(if focused {
-                        "Press Enter to start a shell"
-                    } else {
-                        "Tab here, then Enter"
-                    })
-                    .theme(t),
+                Empty::new("No session").hint(if focused {
+                    "Press Enter to start a shell"
+                } else {
+                    "Tab here, then Enter"
+                }),
                 pane,
             );
         }

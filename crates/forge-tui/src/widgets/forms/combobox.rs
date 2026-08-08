@@ -1,7 +1,7 @@
 use crate::event::{in_area, is_press, left_down, scroll_delta, Outcome};
 use crate::text;
-use crate::theme::{resolve_theme, Theme};
 use crate::widgets::forms::{Input, InputState};
+use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
 use ratatui::layout::Rect;
@@ -146,7 +146,6 @@ pub struct Combobox<'a> {
     focused: bool,
     disabled: bool,
     max_popup: u16,
-    theme: Option<&'a Theme>,
 }
 
 impl<'a> Combobox<'a> {
@@ -157,7 +156,6 @@ impl<'a> Combobox<'a> {
             focused: false,
             disabled: false,
             max_popup: 8,
-            theme: None,
         }
     }
 
@@ -180,74 +178,66 @@ impl<'a> Combobox<'a> {
         self.max_popup = rows;
         self
     }
-
-    pub fn theme(mut self, theme: &'a Theme) -> Self {
-        self.theme = Some(theme);
-        self
-    }
 }
 
 impl<'a> StatefulWidget for Combobox<'a> {
     type State = ComboboxState;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut ComboboxState) {
-        if area.is_empty() {
-            return;
-        }
-        let t = &*resolve_theme(self.theme);
-        let field = Rect::new(area.x, area.y, area.width, 1);
-        Input::new()
-            .placeholder(self.placeholder)
-            .focused(self.focused)
-            .disabled(self.disabled)
-            .theme(t)
-            .render(field, buf, &mut state.input);
+        paint(area, |t| {
+            let field = Rect::new(area.x, area.y, area.width, 1);
+            Input::new()
+                .placeholder(self.placeholder)
+                .focused(self.focused)
+                .disabled(self.disabled)
+                .render(field, buf, &mut state.input);
 
-        if !state.open || self.disabled {
-            return;
-        }
-        let rows = (state.filtered.len() as u16).min(self.max_popup);
-        if rows == 0 {
-            return;
-        }
-        let popup = Rect::new(area.x, area.y + 1, area.width, rows + 2).intersection(buf.area);
-        if popup.height < 3 {
-            return;
-        }
-        Clear.render(popup, buf);
-        let block = Block::bordered()
-            .border_style(Style::new().fg(t.border.strong).bg(t.bg[4]))
-            .style(Style::new().bg(t.bg[4]));
-        let inner = block.inner(popup);
-        block.render(popup, buf);
-        state.view_h = inner.height as usize;
-        state.list_area = inner;
-        if state.highlight < state.offset {
-            state.offset = state.highlight;
-        } else if state.highlight >= state.offset + state.view_h {
-            state.offset = state.highlight + 1 - state.view_h;
-        }
-        for vis in 0..state.view_h {
-            let fi = state.offset + vis;
-            let Some(&item_idx) = state.filtered.get(fi) else {
-                break;
-            };
-            let y = inner.y + vis as u16;
-            let is_cursor = fi == state.highlight;
-            let mut style = Style::new().fg(t.fg[1]).bg(t.bg[4]);
-            if is_cursor {
-                style = Style::new()
-                    .fg(t.fg[0])
-                    .bg(t.bg[3])
-                    .add_modifier(Modifier::BOLD);
-                buf.set_style(Rect::new(inner.x, y, inner.width, 1), style);
+            if !state.open || self.disabled {
+                return;
             }
-            buf.set_string(
-                inner.x + 1,
-                y,
-                text::truncate(self.items[item_idx], inner.width.saturating_sub(2) as usize),
-                style,
-            );
-        }
+            let rows = (state.filtered.len() as u16).min(self.max_popup);
+            if rows == 0 {
+                return;
+            }
+            let popup = Rect::new(area.x, area.y + 1, area.width, rows + 2).intersection(buf.area);
+            if popup.height < 3 {
+                return;
+            }
+            Clear.render(popup, buf);
+            let block = Block::bordered()
+                .border_style(Style::new().fg(t.border.strong).bg(t.bg[4]))
+                .style(Style::new().bg(t.bg[4]));
+            let inner = block.inner(popup);
+            block.render(popup, buf);
+            state.view_h = inner.height as usize;
+            state.list_area = inner;
+            if state.highlight < state.offset {
+                state.offset = state.highlight;
+            } else if state.highlight >= state.offset + state.view_h {
+                state.offset = state.highlight + 1 - state.view_h;
+            }
+            for vis in 0..state.view_h {
+                let fi = state.offset + vis;
+                let Some(&item_idx) = state.filtered.get(fi) else {
+                    break;
+                };
+                let y = inner.y + vis as u16;
+                let is_cursor = fi == state.highlight;
+                let mut style = Style::new().fg(t.fg[1]).bg(t.bg[4]);
+                if is_cursor {
+                    style = Style::new()
+                        .fg(t.fg[0])
+                        .bg(t.bg[3])
+                        .add_modifier(Modifier::BOLD);
+                    buf.set_style(Rect::new(inner.x, y, inner.width, 1), style);
+                }
+                buf.set_string(
+                    inner.x + 1,
+                    y,
+                    text::truncate(self.items[item_idx], inner.width.saturating_sub(2) as usize),
+                    style,
+                );
+            }
+        });
     }
 }

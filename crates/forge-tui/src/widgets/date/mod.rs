@@ -1,7 +1,7 @@
 //! Calendar + DatePicker (cargo feature `calendar`, uses the `time` crate).
 
 use crate::event::{clicked, in_area, is_press, left_down, scroll_delta, Outcome};
-use crate::theme::{resolve_theme, Theme};
+use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
 use ratatui::layout::Rect;
@@ -147,13 +147,12 @@ impl CalendarState {
 /// Month grid (Monday-first): dim adjacent-month blanks, today in accent
 /// text, the selection on an accent chip. Wants 10 rows × 22 columns.
 #[derive(Clone, Debug, Default)]
-pub struct Calendar<'a> {
+pub struct Calendar {
     focused: bool,
-    theme: Option<&'a Theme>,
 }
 
-impl<'a> Calendar<'a> {
-    pub fn new() -> Calendar<'a> {
+impl Calendar {
+    pub fn new() -> Calendar {
         Calendar::default()
     }
 
@@ -162,16 +161,11 @@ impl<'a> Calendar<'a> {
         self
     }
 
-    pub fn theme(mut self, theme: &'a Theme) -> Self {
-        self.theme = Some(theme);
-        self
-    }
-
     pub const WIDTH: u16 = 22;
     pub const HEIGHT: u16 = 9;
 }
 
-impl<'a> StatefulWidget for Calendar<'a> {
+impl StatefulWidget for Calendar {
     type State = CalendarState;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut CalendarState) {
@@ -181,64 +175,66 @@ impl<'a> StatefulWidget for Calendar<'a> {
             area.width.min(21),
             area.height.min(Calendar::HEIGHT),
         );
-        if area.width < 21 || area.height < 3 {
-            return;
-        }
-        let t = &*resolve_theme(self.theme);
-        let (year, month) = state.view;
-        // Header.
-        let header = format!("{} {}", month_name(month), year);
-        let hx = area.x + (21u16.saturating_sub(header.len() as u16)) / 2;
-        buf.set_string(
-            hx,
-            area.y,
-            &header,
-            Style::new().fg(t.fg[0]).add_modifier(if self.focused {
-                Modifier::BOLD | Modifier::UNDERLINED
-            } else {
-                Modifier::BOLD
-            }),
-        );
-        // Weekday row.
-        buf.set_string(
-            area.x,
-            area.y + 1,
-            "Mo Tu We Th Fr Sa Su",
-            Style::new().fg(t.fg[3]),
-        );
-        // Day grid.
-        let first = match Date::from_calendar_date(year, month, 1) {
-            Ok(d) => d,
-            Err(_) => return,
-        };
-        let lead = first.weekday().number_days_from_monday() as u16; // 0 = Monday
-        let days = month.length(year);
-        let now = today();
-        for day in 1..=days {
-            let idx = lead + day as u16 - 1;
-            let row = idx / 7;
-            let col = idx % 7;
-            let y = area.y + 2 + row;
-            if y >= area.y + area.height {
-                break;
+        paint(area, |t| {
+            // Below this the grid cannot be laid out at all.
+            if area.width < 21 || area.height < 3 {
+                return;
             }
-            let x = area.x + col * 3;
-            let date = Date::from_calendar_date(year, month, day).unwrap();
-            let is_selected = date == state.selected;
-            let is_today = date == now;
-            let label = format!("{day:>2}");
-            let style = if is_selected {
-                Style::new()
-                    .fg(t.accent.contrast)
-                    .bg(t.accent.base)
-                    .add_modifier(Modifier::BOLD)
-            } else if is_today {
-                Style::new().fg(t.accent.fg).add_modifier(Modifier::BOLD)
-            } else {
-                Style::new().fg(t.fg[1])
+            let (year, month) = state.view;
+            // Header.
+            let header = format!("{} {}", month_name(month), year);
+            let hx = area.x + (21u16.saturating_sub(header.len() as u16)) / 2;
+            buf.set_string(
+                hx,
+                area.y,
+                &header,
+                Style::new().fg(t.fg[0]).add_modifier(if self.focused {
+                    Modifier::BOLD | Modifier::UNDERLINED
+                } else {
+                    Modifier::BOLD
+                }),
+            );
+            // Weekday row.
+            buf.set_string(
+                area.x,
+                area.y + 1,
+                "Mo Tu We Th Fr Sa Su",
+                Style::new().fg(t.fg[3]),
+            );
+            // Day grid.
+            let first = match Date::from_calendar_date(year, month, 1) {
+                Ok(d) => d,
+                Err(_) => return,
             };
-            buf.set_string(x, y, label, style);
-        }
+            let lead = first.weekday().number_days_from_monday() as u16; // 0 = Monday
+            let days = month.length(year);
+            let now = today();
+            for day in 1..=days {
+                let idx = lead + day as u16 - 1;
+                let row = idx / 7;
+                let col = idx % 7;
+                let y = area.y + 2 + row;
+                if y >= area.y + area.height {
+                    break;
+                }
+                let x = area.x + col * 3;
+                let date = Date::from_calendar_date(year, month, day).unwrap();
+                let is_selected = date == state.selected;
+                let is_today = date == now;
+                let label = format!("{day:>2}");
+                let style = if is_selected {
+                    Style::new()
+                        .fg(t.accent.contrast)
+                        .bg(t.accent.base)
+                        .add_modifier(Modifier::BOLD)
+                } else if is_today {
+                    Style::new().fg(t.accent.fg).add_modifier(Modifier::BOLD)
+                } else {
+                    Style::new().fg(t.fg[1])
+                };
+                buf.set_string(x, y, label, style);
+            }
+        });
     }
 }
 
@@ -316,14 +312,13 @@ impl DatePickerState {
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct DatePicker<'a> {
+pub struct DatePicker {
     focused: bool,
     disabled: bool,
-    theme: Option<&'a Theme>,
 }
 
-impl<'a> DatePicker<'a> {
-    pub fn new() -> DatePicker<'a> {
+impl DatePicker {
+    pub fn new() -> DatePicker {
         DatePicker::default()
     }
 
@@ -336,71 +331,63 @@ impl<'a> DatePicker<'a> {
         self.disabled = disabled;
         self
     }
-
-    pub fn theme(mut self, theme: &'a Theme) -> Self {
-        self.theme = Some(theme);
-        self
-    }
 }
 
-impl<'a> StatefulWidget for DatePicker<'a> {
+impl StatefulWidget for DatePicker {
     type State = DatePickerState;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut DatePickerState) {
-        if area.is_empty() {
-            return;
-        }
-        let t = &*resolve_theme(self.theme);
-        let edge = if self.focused && !self.disabled {
-            t.accent.base
-        } else {
-            t.border.default
-        };
-        state.field = Rect::new(area.x, area.y, area.width, 1);
-        buf.set_style(
-            Rect::new(area.x, area.y, area.width, 1),
-            Style::new().bg(t.bg[2]),
-        );
-        buf.set_string(area.x, area.y, "▎", Style::new().fg(edge).bg(t.bg[2]));
-        let d = state.cal.selected;
-        let label = format!("{:04}-{:02}-{:02}", d.year(), u8::from(d.month()), d.day());
-        buf.set_string(
-            area.x + 1,
-            area.y,
-            &label,
-            Style::new()
-                .fg(if self.disabled { t.fg[3] } else { t.fg[0] })
-                .bg(t.bg[2]),
-        );
-        if area.width >= 3 {
-            buf.set_string(
-                area.x + area.width - 2,
-                area.y,
-                if state.open { "▴" } else { "▾" },
-                Style::new().fg(t.fg[2]).bg(t.bg[2]),
+        paint(area, |t| {
+            let edge = if self.focused && !self.disabled {
+                t.accent.base
+            } else {
+                t.border.default
+            };
+            state.field = Rect::new(area.x, area.y, area.width, 1);
+            buf.set_style(
+                Rect::new(area.x, area.y, area.width, 1),
+                Style::new().bg(t.bg[2]),
             );
-        }
-        if state.open && !self.disabled {
-            let popup = Rect::new(
-                area.x,
-                area.y + 1,
-                (Calendar::WIDTH + 2).max(area.width.min(Calendar::WIDTH + 2)),
-                Calendar::HEIGHT + 2,
-            )
-            .intersection(buf.area);
-            if popup.height >= 5 {
-                Clear.render(popup, buf);
-                let block = Block::bordered()
-                    .border_style(Style::new().fg(t.border.strong).bg(t.bg[4]))
-                    .style(Style::new().bg(t.bg[4]));
-                let inner = block.inner(popup);
-                block.render(popup, buf);
-                Calendar::new()
-                    .focused(self.focused)
-                    .theme(t)
-                    .render(inner, buf, &mut state.cal);
+            buf.set_string(area.x, area.y, "▎", Style::new().fg(edge).bg(t.bg[2]));
+            let d = state.cal.selected;
+            let label = format!("{:04}-{:02}-{:02}", d.year(), u8::from(d.month()), d.day());
+            buf.set_string(
+                area.x + 1,
+                area.y,
+                &label,
+                Style::new()
+                    .fg(if self.disabled { t.fg[3] } else { t.fg[0] })
+                    .bg(t.bg[2]),
+            );
+            if area.width >= 3 {
+                buf.set_string(
+                    area.x + area.width - 2,
+                    area.y,
+                    if state.open { "▴" } else { "▾" },
+                    Style::new().fg(t.fg[2]).bg(t.bg[2]),
+                );
             }
-        }
+            if state.open && !self.disabled {
+                let popup = Rect::new(
+                    area.x,
+                    area.y + 1,
+                    (Calendar::WIDTH + 2).max(area.width.min(Calendar::WIDTH + 2)),
+                    Calendar::HEIGHT + 2,
+                )
+                .intersection(buf.area);
+                if popup.height >= 5 {
+                    Clear.render(popup, buf);
+                    let block = Block::bordered()
+                        .border_style(Style::new().fg(t.border.strong).bg(t.bg[4]))
+                        .style(Style::new().bg(t.bg[4]));
+                    let inner = block.inner(popup);
+                    block.render(popup, buf);
+                    Calendar::new()
+                        .focused(self.focused)
+                        .render(inner, buf, &mut state.cal);
+                }
+            }
+        });
     }
 }
 

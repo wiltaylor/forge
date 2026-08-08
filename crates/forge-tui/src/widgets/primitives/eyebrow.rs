@@ -1,5 +1,5 @@
 use crate::text;
-use crate::theme::{resolve_theme, Theme};
+use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::Style;
@@ -9,32 +9,24 @@ use ratatui::widgets::Widget;
 #[derive(Clone, Debug)]
 pub struct Eyebrow<'a> {
     label: &'a str,
-    theme: Option<&'a Theme>,
 }
 
 impl<'a> Eyebrow<'a> {
     pub fn new(label: &'a str) -> Eyebrow<'a> {
-        Eyebrow { label, theme: None }
-    }
-
-    pub fn theme(mut self, theme: &'a Theme) -> Self {
-        self.theme = Some(theme);
-        self
+        Eyebrow { label }
     }
 }
 
 impl Widget for Eyebrow<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        if area.is_empty() {
-            return;
-        }
-        let t = &*resolve_theme(self.theme);
-        let label = self.label.to_uppercase();
-        buf.set_string(
-            area.x,
-            area.y,
-            text::truncate(&label, area.width as usize),
-            Style::new().fg(t.fg[2]),
-        );
+        paint(area, |t| {
+            let label = self.label.to_uppercase();
+            buf.set_string(
+                area.x,
+                area.y,
+                text::truncate(&label, area.width as usize),
+                Style::new().fg(t.fg[2]),
+            );
+        });
     }
 }

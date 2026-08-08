@@ -1,5 +1,4 @@
-//! The ambient theme — the theme a widget paints with when the caller gave it
-//! none.
+//! The ambient theme — the only theme a widget paints with.
 //!
 //! The ambient theme is one process-wide slot, so every test here writes shared
 //! state. Two rules keep that safe. First, each test takes `AMBIENT_LOCK` and
@@ -7,13 +6,12 @@
 //! Second, no other test binary swaps the ambient theme — `tests/*.rs` is one
 //! binary per file, so these swaps cannot reach them.
 
-use forge_tui::theme::{ambient_theme, resolve_theme, set_ambient_theme, Theme};
-use forge_tui::widgets::Spinner;
+use forge_tui::theme::{ambient_theme, set_ambient_theme, Theme};
+use forge_tui::widgets::{paint, Spinner};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::Color;
 use ratatui::widgets::Widget;
-use std::borrow::Cow;
 use std::sync::{Mutex, MutexGuard, PoisonError};
 
 static AMBIENT_LOCK: Mutex<()> = Mutex::new(());
@@ -33,14 +31,14 @@ fn glyph_color(spinner: Spinner<'_>) -> Color {
     buf[(0, 0)].fg
 }
 
-/// The bug this whole change exists to fix: a widget built without a theme must
-/// follow a theme switch, not keep the scheme it booted with.
+/// The bug this whole change exists to fix: a widget must follow a theme
+/// switch, not keep the scheme it booted with.
 ///
 /// The spinner is built once, before either swap, and painted twice. Building a
 /// fresh one after each swap would pass even if the theme were captured at
 /// build time — which is the bug.
 #[test]
-fn switching_the_ambient_theme_repaints_a_widget_that_carries_none() {
+fn switching_the_ambient_theme_repaints_a_widget() {
     let _guard = lock_ambient();
     let spinner = Spinner::new();
 
@@ -52,15 +50,6 @@ fn switching_the_ambient_theme_repaints_a_widget_that_carries_none() {
 }
 
 #[test]
-fn an_explicit_theme_still_wins_over_the_ambient_one() {
-    let _guard = lock_ambient();
-    set_ambient_theme(Theme::light());
-
-    let dark = Theme::dark();
-    assert_eq!(glyph_color(Spinner::new().theme(&dark)), dark.accent.base);
-}
-
-#[test]
 fn set_ambient_theme_returns_the_theme_it_replaced() {
     let _guard = lock_ambient();
     set_ambient_theme(Theme::light());
@@ -69,15 +58,22 @@ fn set_ambient_theme_returns_the_theme_it_replaced() {
     assert_eq!(ambient_theme(), Theme::dark());
 }
 
-/// An explicit theme is borrowed, so resolving one costs nothing; the ambient
-/// theme is snapshotted, so a swap mid-frame cannot change it under the paint.
+/// `paint` is the whole widget-side protocol, so the empty-area guard it holds
+/// is the one every widget relies on. An empty area must paint nothing — and
+/// must not read the theme, since there is nothing to paint it with.
 #[test]
-fn resolve_theme_borrows_an_explicit_theme_and_snapshots_the_ambient_one() {
+fn paint_skips_an_area_with_no_cells() {
     let _guard = lock_ambient();
     set_ambient_theme(Theme::light());
 
-    let dark = Theme::dark();
-    assert!(matches!(resolve_theme(Some(&dark)), Cow::Borrowed(_)));
-    assert!(matches!(resolve_theme(None), Cow::Owned(_)));
-    assert_eq!(*resolve_theme(None), Theme::light());
+    let mut painted = false;
+    paint(Rect::new(0, 0, 0, 4), |_| painted = true);
+    paint(Rect::new(0, 0, 4, 0), |_| painted = true);
+    assert!(!painted);
+
+    paint(Rect::new(0, 0, 4, 1), |t| {
+        painted = true;
+        assert_eq!(*t, Theme::light());
+    });
+    assert!(painted);
 }

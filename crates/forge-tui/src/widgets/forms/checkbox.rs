@@ -1,6 +1,6 @@
 use crate::event::{clicked, is_press, Outcome};
 use crate::text;
-use crate::theme::{resolve_theme, Theme};
+use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
 use ratatui::layout::Rect;
@@ -51,7 +51,6 @@ pub struct Checkbox<'a> {
     label: &'a str,
     focused: bool,
     disabled: bool,
-    theme: Option<&'a Theme>,
 }
 
 impl<'a> Checkbox<'a> {
@@ -60,7 +59,6 @@ impl<'a> Checkbox<'a> {
             label,
             focused: false,
             disabled: false,
-            theme: None,
         }
     }
 
@@ -73,11 +71,6 @@ impl<'a> Checkbox<'a> {
         self.disabled = disabled;
         self
     }
-
-    pub fn theme(mut self, theme: &'a Theme) -> Self {
-        self.theme = Some(theme);
-        self
-    }
 }
 
 impl<'a> StatefulWidget for Checkbox<'a> {
@@ -85,41 +78,39 @@ impl<'a> StatefulWidget for Checkbox<'a> {
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut CheckboxState) {
         state.area = Rect::new(area.x, area.y, area.width, 1);
-        if area.is_empty() {
-            return;
-        }
-        let t = &*resolve_theme(self.theme);
-        let bracket = Style::new().fg(if self.disabled {
-            t.fg[3]
-        } else if self.focused {
-            t.accent.base
-        } else {
-            t.fg[2]
-        });
-        let mark_color = if self.disabled {
-            t.fg[3]
-        } else {
-            t.accent.base
-        };
-        buf.set_string(area.x, area.y, "[", bracket);
-        buf.set_string(
-            area.x + 1,
-            area.y,
-            if state.checked { "✓" } else { " " },
-            Style::new().fg(mark_color),
-        );
-        buf.set_string(area.x + 2, area.y, "]", bracket);
-        if area.width > 4 {
-            let mut style = Style::new().fg(if self.disabled { t.fg[3] } else { t.fg[0] });
-            if self.focused {
-                style = style.add_modifier(Modifier::UNDERLINED);
-            }
+        paint(area, |t| {
+            let bracket = Style::new().fg(if self.disabled {
+                t.fg[3]
+            } else if self.focused {
+                t.accent.base
+            } else {
+                t.fg[2]
+            });
+            let mark_color = if self.disabled {
+                t.fg[3]
+            } else {
+                t.accent.base
+            };
+            buf.set_string(area.x, area.y, "[", bracket);
             buf.set_string(
-                area.x + 4,
+                area.x + 1,
                 area.y,
-                text::truncate(self.label, area.width as usize - 4),
-                style,
+                if state.checked { "✓" } else { " " },
+                Style::new().fg(mark_color),
             );
-        }
+            buf.set_string(area.x + 2, area.y, "]", bracket);
+            if area.width > 4 {
+                let mut style = Style::new().fg(if self.disabled { t.fg[3] } else { t.fg[0] });
+                if self.focused {
+                    style = style.add_modifier(Modifier::UNDERLINED);
+                }
+                buf.set_string(
+                    area.x + 4,
+                    area.y,
+                    text::truncate(self.label, area.width as usize - 4),
+                    style,
+                );
+            }
+        });
     }
 }

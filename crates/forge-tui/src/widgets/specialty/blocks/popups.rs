@@ -157,7 +157,7 @@ pub(super) fn render_slash(
     let rows = sl.palette.matches().len().clamp(1, 8) as u16;
     let w = 34.min(bounds.width).max(20);
     let h = (rows + 3).min(bounds.height);
-    let pop = Popover::new(anchor).size(w, h).theme(t);
+    let pop = Popover::new(anchor).size(w, h);
     let inner = pop.inner(bounds);
     pop.render(bounds, buf);
     if inner.height < 2 {
@@ -166,7 +166,6 @@ pub(super) fn render_slash(
     Input::new()
         .placeholder("Filter blocks…")
         .focused(true)
-        .theme(t)
         .render(
             Rect::new(inner.x, inner.y, inner.width, 1),
             buf,
@@ -232,7 +231,7 @@ pub(super) fn render_emoji(
         .unwrap_or(12);
     let w = ((label_w as u16) + 2).clamp(14, bounds.width);
     let h = (rows + 2).min(bounds.height);
-    let pop = Popover::new(anchor).size(w, h).theme(t);
+    let pop = Popover::new(anchor).size(w, h);
     let inner = pop.inner(bounds);
     pop.render(bounds, buf);
     for (i, (code, emoji)) in em.items.iter().enumerate() {

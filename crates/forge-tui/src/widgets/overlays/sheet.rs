@@ -1,4 +1,5 @@
-use crate::theme::{resolve_theme, Theme};
+use crate::theme::{ambient_theme, Theme};
+use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
@@ -18,7 +19,6 @@ pub struct Sheet<'a> {
     side: Side,
     size: u16,
     title: Option<&'a str>,
-    theme: Option<&'a Theme>,
 }
 
 impl<'a> Sheet<'a> {
@@ -27,7 +27,6 @@ impl<'a> Sheet<'a> {
             side,
             size: 36,
             title: None,
-            theme: None,
         }
     }
 
@@ -39,11 +38,6 @@ impl<'a> Sheet<'a> {
 
     pub fn title(mut self, title: &'a str) -> Self {
         self.title = Some(title);
-        self
-    }
-
-    pub fn theme(mut self, theme: &'a Theme) -> Self {
-        self.theme = Some(theme);
         self
     }
 
@@ -75,19 +69,17 @@ impl<'a> Sheet<'a> {
     }
 
     pub fn inner(&self, area: Rect) -> Rect {
-        let t = &*resolve_theme(self.theme);
+        let t = &ambient_theme();
         self.block(t).inner(self.panel(area))
     }
 }
 
 impl Widget for Sheet<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        if area.is_empty() {
-            return;
-        }
-        let t = &*resolve_theme(self.theme);
-        let panel = self.panel(area);
-        Clear.render(panel, buf);
-        self.block(t).render(panel, buf);
+        paint(area, |t| {
+            let panel = self.panel(area);
+            Clear.render(panel, buf);
+            self.block(t).render(panel, buf);
+        });
     }
 }

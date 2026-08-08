@@ -1,5 +1,5 @@
 use crate::text;
-use crate::theme::{resolve_theme, Theme};
+use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::{Color, Style};
@@ -13,7 +13,6 @@ pub struct Spinner<'a> {
     frame: u64,
     label: Option<&'a str>,
     color: Option<Color>,
-    theme: Option<&'a Theme>,
 }
 
 impl<'a> Spinner<'a> {
@@ -36,31 +35,24 @@ impl<'a> Spinner<'a> {
         self.color = Some(color);
         self
     }
-
-    pub fn theme(mut self, theme: &'a Theme) -> Self {
-        self.theme = Some(theme);
-        self
-    }
 }
 
 impl Widget for Spinner<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        if area.is_empty() {
-            return;
-        }
-        let t = &*resolve_theme(self.theme);
-        let color = self.color.unwrap_or(t.accent.base);
-        let glyph = FRAMES[(self.frame as usize) % FRAMES.len()];
-        buf.set_string(area.x, area.y, glyph, Style::new().fg(color));
-        if let Some(label) = self.label {
-            if area.width > 2 {
-                buf.set_string(
-                    area.x + 2,
-                    area.y,
-                    text::truncate(label, area.width as usize - 2),
-                    Style::new().fg(t.fg[1]),
-                );
+        paint(area, |t| {
+            let color = self.color.unwrap_or(t.accent.base);
+            let glyph = FRAMES[(self.frame as usize) % FRAMES.len()];
+            buf.set_string(area.x, area.y, glyph, Style::new().fg(color));
+            if let Some(label) = self.label {
+                if area.width > 2 {
+                    buf.set_string(
+                        area.x + 2,
+                        area.y,
+                        text::truncate(label, area.width as usize - 2),
+                        Style::new().fg(t.fg[1]),
+                    );
+                }
             }
-        }
+        });
     }
 }

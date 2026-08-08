@@ -247,7 +247,7 @@ struct Hello { name: InputState }
 impl App for Hello {
     fn draw(&mut self, frame: &mut ratatui::Frame, ctx: &mut Ctx) {
         let focused = ctx.focus.register(FocusId::new("name"));
-        let input = Input::new().placeholder("Who?").focused(focused).theme(&ctx.theme);
+        let input = Input::new().placeholder("Who?").focused(focused);
         frame.render_stateful_widget(input, frame.area(), &mut self.name);
     }
     fn on_event(&mut self, event: Event, ctx: &mut Ctx) {

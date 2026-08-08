@@ -1,6 +1,6 @@
 use crate::event::KeyCombo;
 use crate::text;
-use crate::theme::{resolve_theme, Theme};
+use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::Style;
@@ -11,27 +11,19 @@ use std::borrow::Cow;
 #[derive(Clone, Debug)]
 pub struct Kbd<'a> {
     keys: Cow<'a, str>,
-    theme: Option<&'a Theme>,
 }
 
 impl<'a> Kbd<'a> {
     pub fn new(keys: &'a str) -> Kbd<'a> {
         Kbd {
             keys: Cow::Borrowed(keys),
-            theme: None,
         }
     }
 
     pub fn combo(combo: KeyCombo) -> Kbd<'a> {
         Kbd {
             keys: Cow::Owned(combo.to_string()),
-            theme: None,
         }
-    }
-
-    pub fn theme(mut self, theme: &'a Theme) -> Self {
-        self.theme = Some(theme);
-        self
     }
 
     /// Natural width in cells, for layout math.
@@ -42,14 +34,12 @@ impl<'a> Kbd<'a> {
 
 impl Widget for Kbd<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        if area.is_empty() {
-            return;
-        }
-        let t = &*resolve_theme(self.theme);
-        let style = Style::new().fg(t.fg[1]).bg(t.bg[3]);
-        let label = text::truncate(&self.keys, area.width.saturating_sub(2) as usize);
-        let w = (text::width(&label) as u16 + 2).min(area.width);
-        buf.set_style(Rect::new(area.x, area.y, w, 1), style);
-        buf.set_string(area.x + 1, area.y, label, style);
+        paint(area, |t| {
+            let style = Style::new().fg(t.fg[1]).bg(t.bg[3]);
+            let label = text::truncate(&self.keys, area.width.saturating_sub(2) as usize);
+            let w = (text::width(&label) as u16 + 2).min(area.width);
+            buf.set_style(Rect::new(area.x, area.y, w, 1), style);
+            buf.set_string(area.x + 1, area.y, label, style);
+        });
     }
 }
