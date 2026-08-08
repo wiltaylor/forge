@@ -95,7 +95,7 @@ async fn expired_token_401() {
         sub: "admin".into(),
         roles: vec![],
         iat: now - 7200,
-        exp: now - 3600,
+        exp: Some(now - 3600),
         iss: None,
     };
     let token = encode_token(&claims, SECRET).unwrap();

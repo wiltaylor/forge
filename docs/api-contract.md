@@ -29,8 +29,10 @@ Wire format is `snake_case` (`expires_at`, `uptime_s`).
   into access logs — keep TTLs short on exposed deployments.
 - **Auth-disabled mode is first-class**: when no `FORGE_JWT_SECRET` is
   configured, every endpoint below is open and handlers see an anonymous
-  identity (`sub = "anonymous"`, `roles = []`). A server with a doc store and
-  no env vars must run.
+  identity (`sub = "anonymous"`, `roles = []`). On `/api/auth/me` this
+  identity is `{sub: "anonymous", roles: [], iss: null, exp: null}` — `exp`
+  is null because there was no token, so there is nothing to expire
+  (issue #115). A server with a doc store and no env vars must run.
 - External issuer mode: don't call `/api/auth/login`; share the HS256 secret
   with the issuing service. RS256/JWKS is an extension point
   (`TokenValidator` trait in Rust, validator callable in Python), not v1.

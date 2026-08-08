@@ -214,7 +214,7 @@ pub fn sign_legacy_hs256(
         sub: username.to_string(),
         roles: roles.to_vec(),
         iat: ts,
-        exp: ts + ttl,
+        exp: Some(ts + ttl),
         iss: Some(issuer.to_string()),
     };
     forge_core::auth::encode_token(&claims, secret).map_err(AppError::internal)
@@ -277,7 +277,7 @@ mod tests {
         assert_eq!(claims.sub, "alice");
         assert_eq!(claims.roles, vec!["ops".to_string()]);
         assert_eq!(claims.iss.as_deref(), Some("idp"));
-        assert_eq!(claims.exp - claims.iat, 3600);
+        assert_eq!(claims.exp.unwrap() - claims.iat, 3600);
     }
 
     #[test]

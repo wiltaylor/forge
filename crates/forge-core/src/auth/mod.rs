@@ -188,8 +188,9 @@ pub struct MeResponse {
     pub roles: Vec<String>,
     /// Issuer, `null` when the identity carries none.
     pub iss: Option<String>,
-    /// Expiry (unix seconds).
-    pub exp: i64,
+    /// Expiry (unix seconds), `null` for the anonymous identity — there is
+    /// no expiry because there was no token (issue #115).
+    pub exp: Option<i64>,
 }
 
 impl From<&Claims> for MeResponse {
@@ -264,9 +265,14 @@ impl Auth {
             config.ttl_secs,
             Some(config.iss.clone()),
         );
+        // `Claims::new` always mints an expiry; only `Claims::anonymous`
+        // carries none, and it never reaches login.
+        let expires_at = claims.exp.ok_or_else(|| {
+            ForgeError::Internal("minted claims must carry an expiry".into())
+        })?;
         Ok(LoginResponse {
             token: encode_token(&claims, &config.secret)?,
-            expires_at: claims.exp,
+            expires_at,
             user: LoginUser {
                 name: user.name.clone(),
                 roles: user.roles.clone(),
@@ -299,7 +305,7 @@ mod tests {
         assert!((response.expires_at - (unix_now() + 86_400)).abs() < 10);
         let claims = auth.validate(&response.token).unwrap();
         assert_eq!(claims.sub, "admin");
-        assert_eq!(claims.exp, response.expires_at);
+        assert_eq!(claims.exp, Some(response.expires_at));
         assert_eq!(claims.iss.as_deref(), Some(DEFAULT_ISS));
     }
 
@@ -374,13 +380,23 @@ mod tests {
         );
     }
 
-    /// An identity with no issuer says so, rather than dropping the member —
-    /// the payload has one shape whether or not a token carried an issuer.
+    /// An identity with no issuer and no expiry says so, rather than dropping
+    /// the members — the payload has one shape whether or not a token was
+    /// behind it. The null `exp` is the issue #115 decision: no token, no
+    /// expiry.
     #[test]
-    fn the_me_payload_keeps_a_null_issuer() {
+    fn the_me_payload_keeps_a_null_issuer_and_a_null_expiry() {
         let payload = serde_json::to_value(MeResponse::from(&Claims::anonymous())).unwrap();
-        assert_eq!(payload["sub"], "anonymous");
-        assert!(payload["iss"].is_null());
+        // The whole object, so an absent member cannot pass as a null one.
+        assert_eq!(
+            payload,
+            serde_json::json!({
+                "sub": "anonymous",
+                "roles": [],
+                "iss": null,
+                "exp": null,
+            })
+        );
     }
 
     #[test]
