@@ -183,19 +183,14 @@ impl BlockEditorState {
     /// body rows follow. Returns false when the block is not a table or the
     /// cell is outside it.
     pub fn edit_cell(&mut self, addr: Address, row: usize, col: usize) -> bool {
-        let dims = match self.doc.block(addr).map(|b| &b.kind) {
+        let (ncols, nrows) = match self.doc.block(addr).map(|b| &b.kind) {
             Some(BlockKind::Table { header, rows }) => (header.len().max(1), rows.len()),
             _ => return false,
         };
-        if col >= dims.0 || row > dims.1 {
+        if col >= ncols || row > nrows {
             return false;
         }
-        self.focus = Some(addr);
-        self.editing = true;
-        self.cell = Some((row, col));
-        self.pending_cell = Some((row, col));
-        self.slash = None;
-        self.pending_focus = None;
+        enter_cell(self, addr, row, col);
         true
     }
 }
@@ -652,12 +647,7 @@ fn focus_block(st: &mut BlockEditorState, doc: &Document, addr: Address, hint: C
             st.editing = true;
             st.pending_code = Some(addr);
         }
-        Some(BlockKind::Table { .. }) => {
-            st.focus = Some(addr);
-            st.editing = true;
-            st.cell = Some((0, 0));
-            st.pending_cell = Some((0, 0));
-        }
+        Some(BlockKind::Table { .. }) => enter_cell(st, addr, 0, 0),
         Some(k) if k.is_data() => {
             st.focus = Some(addr);
             st.editing = true;
@@ -672,6 +662,17 @@ fn focus_block(st: &mut BlockEditorState, doc: &Document, addr: Address, hint: C
         Some(_) => select_block(st, addr),
         None => {}
     }
+}
+
+/// Enter a table's cell: display row 0 is the header, body rows follow. The
+/// one way in, so entering at (0, 0) and entering elsewhere cannot drift.
+fn enter_cell(st: &mut BlockEditorState, addr: Address, row: usize, col: usize) {
+    st.focus = Some(addr);
+    st.editing = true;
+    st.cell = Some((row, col));
+    st.pending_cell = Some((row, col));
+    st.slash = None;
+    st.pending_focus = None;
 }
 
 fn select_block(st: &mut BlockEditorState, addr: Address) {

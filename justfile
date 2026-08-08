@@ -67,7 +67,8 @@ generate-check:
 frontend-test: frontend-install
 	pnpm test
 
-# Run Rust tests (includes the contract corpus — see corpus-test)
+# Run Rust tests (includes the contract corpus and the block key corpus's
+# loader — see corpus-test and block-corpus-test)
 [group('test')]
 rust-test:
 	cargo test

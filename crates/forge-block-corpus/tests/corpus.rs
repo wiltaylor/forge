@@ -141,3 +141,129 @@ fn a_key_reads_back_in_the_browser_vocabulary() {
     assert_eq!(case.keys[0].char(), None);
     assert_eq!(case.keys_label(), "Shift+Tab");
 }
+
+/* ---------------- the rules, against corpora authored to break them ------ */
+
+/// A corpus of one case, with `patch` merged over a case that would otherwise
+/// validate. `null` in the patch removes the key.
+fn broken(patch: serde_json::Value) -> String {
+    let mut case = serde_json::json!({
+        "id": "a-case",
+        "title": "Backspace merges",
+        "applies": ["rust-tui", "rust-egui", "web"],
+        "doc": [{ "type": "paragraph", "md": "a" }, { "type": "paragraph", "md": "b" }],
+        "at": { "block": 1, "caret": 0 },
+        "keys": [{ "code": "Backspace" }],
+        "expect": [{ "type": "paragraph", "md": "ab" }]
+    });
+    let object = case.as_object_mut().expect("a case is an object");
+    for (key, value) in patch.as_object().expect("a patch is an object") {
+        if value.is_null() {
+            object.remove(key);
+        } else {
+            object.insert(key.clone(), value.clone());
+        }
+    }
+    serde_json::json!({
+        "corpus_version": "1.0",
+        "kits": ["rust-tui", "rust-egui", "web"],
+        "cases": [case]
+    })
+    .to_string()
+}
+
+fn rejection(patch: serde_json::Value) -> String {
+    Corpus::parse(&broken(patch)).expect_err("this corpus must be rejected")
+}
+
+#[test]
+fn a_case_that_validates_is_the_baseline() {
+    Corpus::parse(&broken(serde_json::json!({}))).expect("the unpatched case validates");
+}
+
+#[test]
+fn a_case_that_ignores_a_kit_is_rejected() {
+    let err = rejection(serde_json::json!({ "applies": ["rust-tui", "rust-egui"] }));
+    assert!(err.contains("\"web\""), "{err}");
+    assert!(err.contains("neither applies"), "{err}");
+}
+
+#[test]
+fn a_case_that_states_a_kit_twice_is_rejected() {
+    let err = rejection(serde_json::json!({
+        "inapplicable": { "rust-tui": "a reason" }
+    }));
+    assert!(err.contains("stated more than once"), "{err}");
+}
+
+#[test]
+fn an_unknown_kit_is_rejected() {
+    let err = rejection(serde_json::json!({
+        "applies": ["rust-tui", "rust-egui", "web", "rust-gtk"]
+    }));
+    assert!(err.contains("unknown kit"), "{err}");
+}
+
+/// Both ways of writing a gap down need the reason that makes it reviewable.
+#[test]
+fn a_gap_without_a_reason_is_rejected() {
+    let err = rejection(serde_json::json!({
+        "applies": ["rust-egui", "web"],
+        "inapplicable": { "rust-tui": "   " }
+    }));
+    assert!(err.contains("inapplicable with no reason"), "{err}");
+
+    let err = rejection(serde_json::json!({
+        "applies": ["rust-egui", "web"],
+        "diverges": { "rust-tui": { "issue": 28, "why": "" } }
+    }));
+    assert!(err.contains("diverges with no reason"), "{err}");
+}
+
+#[test]
+fn a_case_that_presses_nothing_is_rejected() {
+    let err = rejection(serde_json::json!({ "keys": [] }));
+    assert!(err.contains("presses at least one key"), "{err}");
+}
+
+#[test]
+fn a_blockless_document_is_rejected() {
+    let err = rejection(serde_json::json!({ "expect": [] }));
+    assert!(err.contains("never blockless"), "{err}");
+}
+
+#[test]
+fn a_block_the_schema_does_not_know_is_rejected() {
+    let err = rejection(serde_json::json!({ "doc": [{ "type": "sonnet", "md": "a" }] }));
+    assert!(err.contains("doc:"), "{err}");
+}
+
+#[test]
+fn a_half_written_address_is_rejected() {
+    let err = rejection(serde_json::json!({ "at": { "block": 0, "column": 1 } }));
+    assert!(err.contains("`column` and `index`"), "{err}");
+
+    let err = rejection(serde_json::json!({ "at": { "block": 0, "row": 1 } }));
+    assert!(err.contains("`row` and `col`"), "{err}");
+
+    let err = rejection(serde_json::json!({
+        "at": { "block": 0, "caret": 0, "row": 1, "col": 0 }
+    }));
+    assert!(err.contains("not both"), "{err}");
+}
+
+#[test]
+fn a_duplicate_case_id_is_rejected() {
+    let one = broken(serde_json::json!({}));
+    let mut corpus: serde_json::Value = serde_json::from_str(&one).expect("valid json");
+    let case = corpus["cases"][0].clone();
+    corpus["cases"].as_array_mut().expect("an array").push(case);
+    let err = Corpus::parse(&corpus.to_string()).expect_err("duplicate ids are rejected");
+    assert!(err.contains("duplicate case id"), "{err}");
+}
+
+#[test]
+fn an_unknown_field_is_rejected() {
+    let err = rejection(serde_json::json!({ "expects": [] }));
+    assert!(err.contains("unknown field"), "{err}");
+}

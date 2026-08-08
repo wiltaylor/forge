@@ -140,6 +140,11 @@ Issue #28 closes them. Three are keypress behaviour and are cases here:
 | A table starter three-by-two in two kits and two-by-one in the third | `slash-palette-starts-a-three-by-two-table` | `rust-tui` |
 | A forward-merge with no key binding in one kit | `delete-at-the-end-merges-the-next-paragraph-forward` | `rust-egui` |
 
+Spec #3 names the *web* kit as the one missing the forward merge. It is not:
+`packages/blocks/src/textedit.tsx` handles Delete at the end of a block, and
+the egui kit's text-mode key table has no Delete arm at all. The corpus records
+the kit that differs, so #28 fixes the right one.
+
 The fourth — a chart kind missing from one kit's painted-output snapshot list —
 is a test fixture, not a keypress. `slash-palette-offers-the-line-chart-kind`
 covers the behaviour a key corpus can state (the palette entry and the
@@ -160,6 +165,6 @@ spec decided.
   divider, math and each callout tone — plus the two ways it must *not* fire:
   mid-block, and on a block that is not a paragraph.
 - The table operations that a key reaches: typing through to a cell, Enter
-  moving down and appending, Tab between cells, and the ratatui kit's column
-  keys.
+  moving down and appending, Ctrl+Enter inserting, Tab and Shift+Tab between
+  cells, and the ratatui kit's column keys.
 - Splitting, list continuation, block moves, and editing inside a column cell.

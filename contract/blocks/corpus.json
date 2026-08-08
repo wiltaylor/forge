@@ -157,7 +157,7 @@
     {
       "id": "delete-at-the-end-merges-the-next-paragraph-forward",
       "title": "Delete at the end of a paragraph pulls the next paragraph into it",
-      "note": "Divergence 3 of the four: the egui kit binds no Delete in text mode, so the forward merge is missing there.",
+      "note": "Divergence 3 of the four. Spec #3 names the web kit as the one without the binding, but the web kit forward-merges (packages/blocks/src/textedit.tsx) and the egui kit does not. The corpus records the kit that actually differs.",
       "applies": ["rust-tui", "web"],
       "diverges": {
         "rust-egui": {
@@ -779,6 +779,39 @@
       "at": { "block": 0, "row": 0, "col": 0 },
       "keys": [{ "code": "Tab" }],
       "expect": [{ "type": "table", "header": ["a", "b"], "rows": [["1", "2"]] }]
+    },
+    {
+      "id": "table-shift-tab-moves-to-the-previous-cell",
+      "title": "Shift+Tab steps back a cell, so the next character lands there",
+      "note": "Cell focus is not a document fact, so the case types after the step: the character says which cell the focus reached.",
+      "applies": ["rust-tui", "rust-egui"],
+      "inapplicable": {
+        "web": "Cell focus order in the web kit is the browser's native tab order over the cell inputs; the kit binds no Tab handler to press."
+      },
+      "doc": [{ "type": "table", "header": ["", "b"], "rows": [["1", "2"]] }],
+      "at": { "block": 0, "row": 0, "col": 1 },
+      "keys": [{ "code": "Tab", "shift": true }, { "code": "KeyX", "key": "x" }],
+      "expect": [{ "type": "table", "header": ["x", "b"], "rows": [["1", "2"]] }]
+    },
+    {
+      "id": "table-ctrl-enter-inserts-a-row-below-the-focused-one",
+      "title": "Ctrl+Enter inserts a row under the focused one rather than appending at the end",
+      "applies": ["rust-tui", "web"],
+      "inapplicable": {
+        "rust-egui": "Row insert in the egui kit is a toolbar button under the grid; the kit binds no Ctrl+Enter to press."
+      },
+      "doc": [
+        { "type": "table", "header": ["a", "b"], "rows": [["1", "2"], ["3", "4"]] }
+      ],
+      "at": { "block": 0, "row": 1, "col": 0 },
+      "keys": [{ "code": "Enter", "ctrl": true }],
+      "expect": [
+        {
+          "type": "table",
+          "header": ["a", "b"],
+          "rows": [["1", "2"], ["", ""], ["3", "4"]]
+        }
+      ]
     },
     {
       "id": "table-alt-equals-inserts-a-column-after-the-focused-one",

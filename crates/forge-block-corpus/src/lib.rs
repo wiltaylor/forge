@@ -15,7 +15,7 @@
 //! }
 //! ```
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use forge_blocks::{new_id, Address, Block, Document, DOCUMENT_VERSION};
 use serde::Deserialize;
@@ -135,6 +135,7 @@ impl At {
         }
     }
 
+    /// What the editor is doing when the first key arrives.
     pub fn mode(&self) -> Mode {
         match (self.caret, self.row, self.col) {
             (_, Some(row), Some(col)) => Mode::Cell(row, col),
@@ -211,6 +212,11 @@ impl Key {
 }
 
 impl Case {
+    /// Whether `kit` must produce [`Case::expected`].
+    pub fn applies_to(&self, kit: &str) -> bool {
+        self.applies.iter().any(|k| k == kit)
+    }
+
     /// The starting document. Ids are minted here — the corpus does not author
     /// them, because block identity is not part of the editing policy.
     pub fn document(&self) -> Document {
@@ -235,43 +241,51 @@ impl Case {
 /// Read authored, id-less blocks as a document. Ids are minted on the way in
 /// so the schema's own deserializer does the shape checking.
 fn document_of(blocks: &[Value]) -> Result<Document, String> {
-    let mut out = Vec::with_capacity(blocks.len());
-    for block in blocks {
-        let mut block = block.clone();
-        mint_ids(&mut block);
-        let block: Block = serde_json::from_value(block).map_err(|e| e.to_string())?;
-        out.push(block);
-    }
+    let mut authored = Value::Array(blocks.to_vec());
+    walk_blocks(&mut authored, &mut |block| {
+        block.entry("id").or_insert_with(|| Value::String(new_id()));
+    });
+    let blocks: Vec<Block> = serde_json::from_value(authored).map_err(|e| e.to_string())?;
     Ok(Document {
         version: DOCUMENT_VERSION,
-        blocks: out,
+        blocks,
     })
 }
 
-/// Give a block — and every block in its column cells — an id.
-fn mint_ids(block: &mut Value) {
-    let Some(obj) = block.as_object_mut() else {
+/// Apply `f` to every block object in a `blocks` array, down through the cells
+/// of any `columns` block. One walker, because minting ids and stripping them
+/// are the same traversal.
+fn walk_blocks(blocks: &mut Value, f: &mut impl FnMut(&mut serde_json::Map<String, Value>)) {
+    let Some(list) = blocks.as_array_mut() else {
         return;
     };
-    obj.entry("id").or_insert_with(|| Value::String(new_id()));
-    let Some(columns) = obj.get_mut("columns").and_then(Value::as_array_mut) else {
-        return;
-    };
-    for column in columns {
-        let Some(nested) = column.get_mut("blocks").and_then(Value::as_array_mut) else {
+    for block in list {
+        let Some(block) = block.as_object_mut() else {
             continue;
         };
-        for block in nested {
-            mint_ids(block);
+        f(block);
+        let Some(columns) = block.get_mut("columns").and_then(Value::as_array_mut) else {
+            continue;
+        };
+        for column in columns {
+            if let Some(nested) = column.get_mut("blocks") {
+                walk_blocks(nested, f);
+            }
         }
     }
 }
 
 impl Corpus {
     /// Parse and validate the authored corpus.
-    pub fn load() -> Result<Corpus, String> {
-        let corpus: Corpus =
-            serde_json::from_str(CORPUS_JSON).map_err(|e| format!("corpus.json: {e}"))?;
+    pub fn load() -> Result<Self, String> {
+        Self::parse(CORPUS_JSON)
+    }
+
+    /// Parse and validate a corpus from JSON. The rules live here rather than
+    /// in [`load`](Self::load) so they can be tested against a corpus authored
+    /// to break them.
+    pub fn parse(json: &str) -> Result<Self, String> {
+        let corpus: Corpus = serde_json::from_str(json).map_err(|e| format!("corpus.json: {e}"))?;
         corpus.validate()?;
         Ok(corpus)
     }
@@ -279,13 +293,12 @@ impl Corpus {
     /// Every rule a case must keep, so a gap has to be written down rather
     /// than created by forgetting.
     pub fn validate(&self) -> Result<(), String> {
-        let mut seen: Vec<&str> = Vec::new();
+        let mut seen: BTreeSet<&str> = BTreeSet::new();
         for case in &self.cases {
             let id = &case.id;
-            if seen.contains(&case.id.as_str()) {
+            if !seen.insert(case.id.as_str()) {
                 return Err(format!("{id}: duplicate case id"));
             }
-            seen.push(&case.id);
             if case.keys.is_empty() {
                 return Err(format!("{id}: a case presses at least one key"));
             }
@@ -306,7 +319,7 @@ impl Corpus {
                 }
             }
             for kit in &self.kits {
-                let stated = usize::from(case.applies.contains(kit))
+                let stated = usize::from(case.applies_to(kit))
                     + usize::from(case.inapplicable.contains_key(kit))
                     + usize::from(case.diverges.contains_key(kit));
                 match stated {
@@ -319,9 +332,15 @@ impl Corpus {
                     _ => return Err(format!("{id}: kit {kit:?} is stated more than once")),
                 }
             }
+            // A gap has to be written down *with a reason*, either way round.
             for (kit, reason) in &case.inapplicable {
                 if reason.trim().is_empty() {
                     return Err(format!("{id}: kit {kit:?} is inapplicable with no reason"));
+                }
+            }
+            for (kit, divergence) in &case.diverges {
+                if divergence.why.trim().is_empty() {
+                    return Err(format!("{id}: kit {kit:?} diverges with no reason"));
                 }
             }
         }
@@ -330,9 +349,7 @@ impl Corpus {
 
     /// The cases `kit` must pass, in authored order.
     pub fn cases_for<'a>(&'a self, kit: &'a str) -> impl Iterator<Item = &'a Case> {
-        self.cases
-            .iter()
-            .filter(move |c| c.applies.iter().any(|k| k == kit))
+        self.cases.iter().filter(move |c| c.applies_to(kit))
     }
 
     /// The cases `kit` is known to fail, with the issue that closes each.
@@ -354,30 +371,11 @@ impl Corpus {
 pub fn judged(doc: &Document) -> Value {
     let mut value = serde_json::to_value(doc).expect("Document serializes");
     if let Some(blocks) = value.get_mut("blocks") {
-        strip_ids(blocks);
+        walk_blocks(blocks, &mut |block| {
+            block.remove("id");
+        });
     }
     value
-}
-
-/// Drop `id` from every block in a `blocks` array, through column cells.
-fn strip_ids(blocks: &mut Value) {
-    let Some(list) = blocks.as_array_mut() else {
-        return;
-    };
-    for block in list {
-        let Some(obj) = block.as_object_mut() else {
-            continue;
-        };
-        obj.remove("id");
-        let Some(columns) = obj.get_mut("columns").and_then(Value::as_array_mut) else {
-            continue;
-        };
-        for column in columns {
-            if let Some(nested) = column.get_mut("blocks") {
-                strip_ids(nested);
-            }
-        }
-    }
 }
 
 /* ---------------- the runner -------------------------------------------- */
@@ -395,7 +393,7 @@ pub fn run(kit: &str, mut drive: impl FnMut(&Case) -> Document) {
     let mut ran = 0usize;
 
     for case in &corpus.cases {
-        let expected_to_match = if case.applies.iter().any(|k| k == kit) {
+        let expected_to_match = if case.applies_to(kit) {
             true
         } else if case.diverges.contains_key(kit) {
             false
