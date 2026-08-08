@@ -22,6 +22,11 @@ The Python driver has the same pair in
 
 `just corpus-test` runs every driver.
 
+The block editor has a corpus of its own, in the same spirit but over
+documents and keypresses rather than requests:
+[`contract/blocks/corpus.json`](blocks/README.md), run by
+`just block-corpus-test`.
+
 ## Applicability, and why it is not optional
 
 Every case names **every** transport, either in `applies` or in

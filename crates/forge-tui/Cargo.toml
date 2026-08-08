@@ -37,3 +37,4 @@ full = ["markdown", "chat", "code", "calendar", "term", "blocks"]
 [dev-dependencies]
 insta = "1"
 forge-blocks = { workspace = true }
+forge-block-corpus = { workspace = true }

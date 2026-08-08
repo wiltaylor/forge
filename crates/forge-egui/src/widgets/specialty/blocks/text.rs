@@ -395,12 +395,15 @@ fn handle_keys(
         backspace: bool,
         esc: bool,
     }
+    // Order matters: `consume_key` ignores *extra* Shift and Alt, so the more
+    // specific binding has to consume the event first or the plainer one
+    // swallows it (Shift+Tab would read as Tab and indent instead of outdent).
     let keys = ui.ctx().input_mut(|i| Keys {
         alt_up: i.consume_key(Modifiers::ALT, Key::ArrowUp),
         alt_down: i.consume_key(Modifiers::ALT, Key::ArrowDown),
         enter: i.consume_key(Modifiers::NONE, Key::Enter),
-        tab: i.consume_key(Modifiers::NONE, Key::Tab),
         shift_tab: i.consume_key(Modifiers::SHIFT, Key::Tab),
+        tab: i.consume_key(Modifiers::NONE, Key::Tab),
         up: (popup || on_first) && i.consume_key(Modifiers::NONE, Key::ArrowUp),
         down: (popup || on_last) && i.consume_key(Modifiers::NONE, Key::ArrowDown),
         backspace: at_start && !popup && i.consume_key(Modifiers::NONE, Key::Backspace),

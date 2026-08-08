@@ -1,0 +1,825 @@
+{
+  "corpus_version": "1.0",
+  "kits": ["rust-tui", "rust-egui", "web"],
+  "cases": [
+    {
+      "id": "backspace-merges-a-paragraph-into-the-previous-one",
+      "title": "Backspace at offset 0 appends the paragraph to the one above",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [
+        { "type": "paragraph", "md": "hello " },
+        { "type": "paragraph", "md": "world" }
+      ],
+      "at": { "block": 1, "caret": 0 },
+      "keys": [{ "code": "Backspace" }],
+      "expect": [{ "type": "paragraph", "md": "hello world" }]
+    },
+    {
+      "id": "backspace-demotes-a-heading-before-it-merges",
+      "title": "Backspace at offset 0 turns a heading into a paragraph and stops there",
+      "note": "The demote-before-merge rule: only paragraphs merge into other blocks, so the first press converts and the second merges.",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [
+        { "type": "paragraph", "md": "a" },
+        { "type": "heading", "level": 2, "md": "title" }
+      ],
+      "at": { "block": 1, "caret": 0 },
+      "keys": [{ "code": "Backspace" }],
+      "expect": [
+        { "type": "paragraph", "md": "a" },
+        { "type": "paragraph", "md": "title" }
+      ]
+    },
+    {
+      "id": "backspace-twice-demotes-then-merges-a-heading",
+      "title": "A second Backspace merges the demoted heading into the block above",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [
+        { "type": "paragraph", "md": "a" },
+        { "type": "heading", "level": 2, "md": "title" }
+      ],
+      "at": { "block": 1, "caret": 0 },
+      "keys": [{ "code": "Backspace" }, { "code": "Backspace" }],
+      "expect": [{ "type": "paragraph", "md": "atitle" }]
+    },
+    {
+      "id": "backspace-demotes-a-quote-before-it-merges",
+      "title": "Backspace at offset 0 turns a quote into a paragraph",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [
+        { "type": "paragraph", "md": "a" },
+        { "type": "quote", "md": "quoted" }
+      ],
+      "at": { "block": 1, "caret": 0 },
+      "keys": [{ "code": "Backspace" }],
+      "expect": [
+        { "type": "paragraph", "md": "a" },
+        { "type": "paragraph", "md": "quoted" }
+      ]
+    },
+    {
+      "id": "backspace-demotes-a-list-item-before-it-merges",
+      "title": "Backspace at offset 0 turns a list item into a paragraph",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [
+        { "type": "paragraph", "md": "a" },
+        { "type": "list_item", "style": "bullet", "indent": 0, "md": "item" }
+      ],
+      "at": { "block": 1, "caret": 0 },
+      "keys": [{ "code": "Backspace" }],
+      "expect": [
+        { "type": "paragraph", "md": "a" },
+        { "type": "paragraph", "md": "item" }
+      ]
+    },
+    {
+      "id": "backspace-demotes-an-admonition-to-its-body",
+      "title": "Backspace at offset 0 turns an admonition into a paragraph of its body",
+      "note": "The title is not part of the body, so demoting drops it. That is the policy, stated here so a kit cannot quietly keep it.",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [
+        { "type": "paragraph", "md": "a" },
+        { "type": "admonition", "tone": "info", "title": "Careful", "md": "body" }
+      ],
+      "at": { "block": 1, "caret": 0 },
+      "keys": [{ "code": "Backspace" }],
+      "expect": [
+        { "type": "paragraph", "md": "a" },
+        { "type": "paragraph", "md": "body" }
+      ]
+    },
+    {
+      "id": "backspace-at-the-first-block-changes-nothing",
+      "title": "Backspace at offset 0 of the first block has nothing to merge with",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [{ "type": "paragraph", "md": "only" }],
+      "at": { "block": 0, "caret": 0 },
+      "keys": [{ "code": "Backspace" }],
+      "expect": [{ "type": "paragraph", "md": "only" }]
+    },
+    {
+      "id": "backspace-deletes-a-divider-instead-of-merging",
+      "title": "Backspace at offset 0 after a divider removes the divider and keeps the text",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [
+        { "type": "paragraph", "md": "a" },
+        { "type": "divider" },
+        { "type": "paragraph", "md": "b" }
+      ],
+      "at": { "block": 2, "caret": 0 },
+      "keys": [{ "code": "Backspace" }],
+      "expect": [
+        { "type": "paragraph", "md": "a" },
+        { "type": "paragraph", "md": "b" }
+      ]
+    },
+    {
+      "id": "backspace-does-not-merge-a-paragraph-into-a-table",
+      "title": "Backspace at offset 0 above a non-text block changes nothing",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [
+        { "type": "table", "header": ["a"], "rows": [["1"]] },
+        { "type": "paragraph", "md": "b" }
+      ],
+      "at": { "block": 1, "caret": 0 },
+      "keys": [{ "code": "Backspace" }],
+      "expect": [
+        { "type": "table", "header": ["a"], "rows": [["1"]] },
+        { "type": "paragraph", "md": "b" }
+      ]
+    },
+    {
+      "id": "backspace-at-the-start-of-a-column-cell-stays-inside-the-cell",
+      "title": "Backspace at offset 0 of a column cell's first block changes nothing",
+      "note": "Merging is between siblings. A cell's first block has no previous sibling, so the press must not reach across into another column.",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [
+        {
+          "type": "columns",
+          "columns": [
+            { "ratio": 0.5, "blocks": [{ "type": "paragraph", "md": "left" }] },
+            { "ratio": 0.5, "blocks": [{ "type": "paragraph", "md": "right" }] }
+          ]
+        }
+      ],
+      "at": { "block": 0, "column": 1, "index": 0, "caret": 0 },
+      "keys": [{ "code": "Backspace" }],
+      "expect": [
+        {
+          "type": "columns",
+          "columns": [
+            { "ratio": 0.5, "blocks": [{ "type": "paragraph", "md": "left" }] },
+            { "ratio": 0.5, "blocks": [{ "type": "paragraph", "md": "right" }] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "delete-at-the-end-merges-the-next-paragraph-forward",
+      "title": "Delete at the end of a paragraph pulls the next paragraph into it",
+      "note": "Divergence 3 of the four: the egui kit binds no Delete in text mode, so the forward merge is missing there.",
+      "applies": ["rust-tui", "web"],
+      "diverges": {
+        "rust-egui": {
+          "issue": 28,
+          "why": "The egui kit's text-mode key table has no Delete arm, so the caret-at-end press falls through to the TextEdit and the document is untouched."
+        }
+      },
+      "doc": [
+        { "type": "paragraph", "md": "hello " },
+        { "type": "paragraph", "md": "world" }
+      ],
+      "at": { "block": 0, "caret": 6 },
+      "keys": [{ "code": "Delete" }],
+      "expect": [{ "type": "paragraph", "md": "hello world" }]
+    },
+    {
+      "id": "delete-at-the-end-does-not-pull-a-heading-forward",
+      "title": "Delete at the end of a paragraph leaves a following heading alone",
+      "note": "Only paragraphs merge into other blocks, forwards as well as backwards.",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [
+        { "type": "paragraph", "md": "a" },
+        { "type": "heading", "level": 1, "md": "b" }
+      ],
+      "at": { "block": 0, "caret": 1 },
+      "keys": [{ "code": "Delete" }],
+      "expect": [
+        { "type": "paragraph", "md": "a" },
+        { "type": "heading", "level": 1, "md": "b" }
+      ]
+    },
+    {
+      "id": "enter-splits-a-paragraph-at-the-caret",
+      "title": "Enter splits the paragraph's markdown source at the caret",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [{ "type": "paragraph", "md": "hello" }],
+      "at": { "block": 0, "caret": 2 },
+      "keys": [{ "code": "Enter" }],
+      "expect": [
+        { "type": "paragraph", "md": "he" },
+        { "type": "paragraph", "md": "llo" }
+      ]
+    },
+    {
+      "id": "enter-at-the-end-of-a-heading-starts-a-paragraph",
+      "title": "Enter gives a heading a paragraph tail, not another heading",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [{ "type": "heading", "level": 2, "md": "Title" }],
+      "at": { "block": 0, "caret": 5 },
+      "keys": [{ "code": "Enter" }],
+      "expect": [
+        { "type": "heading", "level": 2, "md": "Title" },
+        { "type": "paragraph", "md": "" }
+      ]
+    },
+    {
+      "id": "enter-continues-a-bullet-list",
+      "title": "Enter on a non-empty list item starts the next item at the same indent",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [{ "type": "list_item", "style": "bullet", "indent": 2, "md": "item" }],
+      "at": { "block": 0, "caret": 4 },
+      "keys": [{ "code": "Enter" }],
+      "expect": [
+        { "type": "list_item", "style": "bullet", "indent": 2, "md": "item" },
+        { "type": "list_item", "style": "bullet", "indent": 2, "md": "" }
+      ]
+    },
+    {
+      "id": "enter-continues-a-todo-list-unchecked",
+      "title": "Enter on a checked todo starts the next one unchecked",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [
+        { "type": "list_item", "style": "todo", "checked": true, "indent": 0, "md": "done" }
+      ],
+      "at": { "block": 0, "caret": 4 },
+      "keys": [{ "code": "Enter" }],
+      "expect": [
+        { "type": "list_item", "style": "todo", "checked": true, "indent": 0, "md": "done" },
+        { "type": "list_item", "style": "todo", "checked": false, "indent": 0, "md": "" }
+      ]
+    },
+    {
+      "id": "enter-on-an-empty-list-item-makes-it-a-paragraph",
+      "title": "Enter on an empty list item ends the list instead of extending it",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [{ "type": "list_item", "style": "bullet", "indent": 0, "md": "" }],
+      "at": { "block": 0, "caret": 0 },
+      "keys": [{ "code": "Enter" }],
+      "expect": [{ "type": "paragraph", "md": "" }]
+    },
+    {
+      "id": "enter-splits-inside-a-column-cell",
+      "title": "Enter splits a block inside a column cell into two blocks of that cell",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [
+        {
+          "type": "columns",
+          "columns": [
+            { "ratio": 0.5, "blocks": [{ "type": "paragraph", "md": "ab" }] },
+            { "ratio": 0.5, "blocks": [{ "type": "paragraph", "md": "" }] }
+          ]
+        }
+      ],
+      "at": { "block": 0, "column": 0, "index": 0, "caret": 1 },
+      "keys": [{ "code": "Enter" }],
+      "expect": [
+        {
+          "type": "columns",
+          "columns": [
+            {
+              "ratio": 0.5,
+              "blocks": [
+                { "type": "paragraph", "md": "a" },
+                { "type": "paragraph", "md": "b" }
+              ]
+            },
+            { "ratio": 0.5, "blocks": [{ "type": "paragraph", "md": "" }] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tab-indents-a-list-item",
+      "title": "Tab moves a list item one level deeper",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [{ "type": "list_item", "style": "bullet", "indent": 0, "md": "item" }],
+      "at": { "block": 0, "caret": 0 },
+      "keys": [{ "code": "Tab" }],
+      "expect": [{ "type": "list_item", "style": "bullet", "indent": 1, "md": "item" }]
+    },
+    {
+      "id": "shift-tab-outdents-a-list-item",
+      "title": "Shift+Tab moves a list item one level out",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [{ "type": "list_item", "style": "bullet", "indent": 2, "md": "item" }],
+      "at": { "block": 0, "caret": 0 },
+      "keys": [{ "code": "Tab", "shift": true }],
+      "expect": [{ "type": "list_item", "style": "bullet", "indent": 1, "md": "item" }]
+    },
+    {
+      "id": "shift-tab-clamps-the-indent-at-zero",
+      "title": "Shift+Tab on an unindented list item changes nothing",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [{ "type": "list_item", "style": "number", "indent": 0, "md": "item" }],
+      "at": { "block": 0, "caret": 0 },
+      "keys": [{ "code": "Tab", "shift": true }],
+      "expect": [{ "type": "list_item", "style": "number", "indent": 0, "md": "item" }]
+    },
+    {
+      "id": "tab-clamps-the-indent-at-five",
+      "title": "Tab on a list item already five deep changes nothing",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [{ "type": "list_item", "style": "bullet", "indent": 5, "md": "deep" }],
+      "at": { "block": 0, "caret": 0 },
+      "keys": [{ "code": "Tab" }],
+      "expect": [{ "type": "list_item", "style": "bullet", "indent": 5, "md": "deep" }]
+    },
+    {
+      "id": "tab-on-a-paragraph-changes-nothing",
+      "title": "Tab only indents list items",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [{ "type": "paragraph", "md": "text" }],
+      "at": { "block": 0, "caret": 0 },
+      "keys": [{ "code": "Tab" }],
+      "expect": [{ "type": "paragraph", "md": "text" }]
+    },
+    {
+      "id": "alt-down-moves-a-block-past-its-next-sibling",
+      "title": "Alt+ArrowDown swaps the block with the one below it",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [
+        { "type": "paragraph", "md": "first" },
+        { "type": "paragraph", "md": "second" }
+      ],
+      "at": { "block": 0, "caret": 0 },
+      "keys": [{ "code": "ArrowDown", "alt": true }],
+      "expect": [
+        { "type": "paragraph", "md": "second" },
+        { "type": "paragraph", "md": "first" }
+      ]
+    },
+    {
+      "id": "alt-up-at-the-top-changes-nothing",
+      "title": "Alt+ArrowUp on the first block has nowhere to go",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [
+        { "type": "paragraph", "md": "first" },
+        { "type": "paragraph", "md": "second" }
+      ],
+      "at": { "block": 0, "caret": 0 },
+      "keys": [{ "code": "ArrowUp", "alt": true }],
+      "expect": [
+        { "type": "paragraph", "md": "first" },
+        { "type": "paragraph", "md": "second" }
+      ]
+    },
+    {
+      "id": "shortcut-one-hash-makes-a-heading-1",
+      "title": "Typing \"# \" at the start of a paragraph makes a level 1 heading",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [{ "type": "paragraph", "md": "" }],
+      "at": { "block": 0, "caret": 0 },
+      "keys": [
+        { "code": "Digit3", "key": "#", "shift": true },
+        { "code": "Space", "key": " " }
+      ],
+      "expect": [{ "type": "heading", "level": 1, "md": "" }]
+    },
+    {
+      "id": "shortcut-two-hashes-makes-a-heading-2",
+      "title": "Typing \"## \" at the start of a paragraph makes a level 2 heading",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [{ "type": "paragraph", "md": "" }],
+      "at": { "block": 0, "caret": 0 },
+      "keys": [
+        { "code": "Digit3", "key": "#", "shift": true },
+        { "code": "Digit3", "key": "#", "shift": true },
+        { "code": "Space", "key": " " }
+      ],
+      "expect": [{ "type": "heading", "level": 2, "md": "" }]
+    },
+    {
+      "id": "shortcut-three-hashes-makes-a-heading-3",
+      "title": "Typing \"### \" at the start of a paragraph makes a level 3 heading",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [{ "type": "paragraph", "md": "" }],
+      "at": { "block": 0, "caret": 0 },
+      "keys": [
+        { "code": "Digit3", "key": "#", "shift": true },
+        { "code": "Digit3", "key": "#", "shift": true },
+        { "code": "Digit3", "key": "#", "shift": true },
+        { "code": "Space", "key": " " }
+      ],
+      "expect": [{ "type": "heading", "level": 3, "md": "" }]
+    },
+    {
+      "id": "shortcut-four-hashes-makes-a-heading-4",
+      "title": "Typing \"#### \" at the start of a paragraph makes a level 4 heading",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [{ "type": "paragraph", "md": "" }],
+      "at": { "block": 0, "caret": 0 },
+      "keys": [
+        { "code": "Digit3", "key": "#", "shift": true },
+        { "code": "Digit3", "key": "#", "shift": true },
+        { "code": "Digit3", "key": "#", "shift": true },
+        { "code": "Digit3", "key": "#", "shift": true },
+        { "code": "Space", "key": " " }
+      ],
+      "expect": [{ "type": "heading", "level": 4, "md": "" }]
+    },
+    {
+      "id": "shortcut-carries-the-text-after-the-prefix",
+      "title": "A shortcut typed ahead of text keeps the text",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [{ "type": "paragraph", "md": "" }],
+      "at": { "block": 0, "caret": 0 },
+      "keys": [
+        { "code": "Digit3", "key": "#", "shift": true },
+        { "code": "Space", "key": " " },
+        { "code": "KeyH", "key": "H", "shift": true },
+        { "code": "KeyI", "key": "i" }
+      ],
+      "expect": [{ "type": "heading", "level": 1, "md": "Hi" }]
+    },
+    {
+      "id": "shortcut-dash-space-makes-a-bullet-item",
+      "title": "Typing \"- \" at the start of a paragraph makes a bullet item",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [{ "type": "paragraph", "md": "" }],
+      "at": { "block": 0, "caret": 0 },
+      "keys": [{ "code": "Minus", "key": "-" }, { "code": "Space", "key": " " }],
+      "expect": [{ "type": "list_item", "style": "bullet", "indent": 0, "md": "" }]
+    },
+    {
+      "id": "shortcut-star-space-makes-a-bullet-item",
+      "title": "Typing \"* \" at the start of a paragraph makes a bullet item",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [{ "type": "paragraph", "md": "" }],
+      "at": { "block": 0, "caret": 0 },
+      "keys": [
+        { "code": "Digit8", "key": "*", "shift": true },
+        { "code": "Space", "key": " " }
+      ],
+      "expect": [{ "type": "list_item", "style": "bullet", "indent": 0, "md": "" }]
+    },
+    {
+      "id": "shortcut-one-dot-space-makes-a-numbered-item",
+      "title": "Typing \"1. \" at the start of a paragraph makes a numbered item",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [{ "type": "paragraph", "md": "" }],
+      "at": { "block": 0, "caret": 0 },
+      "keys": [
+        { "code": "Digit1", "key": "1" },
+        { "code": "Period", "key": "." },
+        { "code": "Space", "key": " " }
+      ],
+      "expect": [{ "type": "list_item", "style": "number", "indent": 0, "md": "" }]
+    },
+    {
+      "id": "shortcut-one-paren-space-makes-a-numbered-item",
+      "title": "Typing \"1) \" at the start of a paragraph makes a numbered item",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [{ "type": "paragraph", "md": "" }],
+      "at": { "block": 0, "caret": 0 },
+      "keys": [
+        { "code": "Digit1", "key": "1" },
+        { "code": "Digit0", "key": ")", "shift": true },
+        { "code": "Space", "key": " " }
+      ],
+      "expect": [{ "type": "list_item", "style": "number", "indent": 0, "md": "" }]
+    },
+    {
+      "id": "shortcut-dash-space-converts-before-a-todo-prefix-completes",
+      "title": "Typing \"- [ ] \" makes a bullet item holding \"[ ] \", because \"- \" converts first",
+      "note": "The grammar reads the todo prefixes before the bullet one, but a shortcut fires the moment its prefix is complete, and \"- \" completes first. \"[] \" is the typed route to a todo; \"- [ ] \" is the pasted one.",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [{ "type": "paragraph", "md": "" }],
+      "at": { "block": 0, "caret": 0 },
+      "keys": [
+        { "code": "Minus", "key": "-" },
+        { "code": "Space", "key": " " },
+        { "code": "BracketLeft", "key": "[" },
+        { "code": "Space", "key": " " },
+        { "code": "BracketRight", "key": "]" },
+        { "code": "Space", "key": " " }
+      ],
+      "expect": [
+        { "type": "list_item", "style": "bullet", "indent": 0, "md": "[ ] " }
+      ]
+    },
+    {
+      "id": "shortcut-empty-brackets-makes-an-unchecked-todo",
+      "title": "Typing \"[] \" at the start of a paragraph makes an unchecked todo",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [{ "type": "paragraph", "md": "" }],
+      "at": { "block": 0, "caret": 0 },
+      "keys": [
+        { "code": "BracketLeft", "key": "[" },
+        { "code": "BracketRight", "key": "]" },
+        { "code": "Space", "key": " " }
+      ],
+      "expect": [
+        { "type": "list_item", "style": "todo", "checked": false, "indent": 0, "md": "" }
+      ]
+    },
+    {
+      "id": "shortcut-angle-space-makes-a-quote",
+      "title": "Typing \"> \" at the start of a paragraph makes a quote",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [{ "type": "paragraph", "md": "" }],
+      "at": { "block": 0, "caret": 0 },
+      "keys": [
+        { "code": "Period", "key": ">", "shift": true },
+        { "code": "Space", "key": " " }
+      ],
+      "expect": [{ "type": "quote", "md": "" }]
+    },
+    {
+      "id": "shortcut-three-backticks-makes-a-code-block",
+      "title": "Typing \"```\" at the start of a paragraph makes a code block",
+      "note": "The grammar accepts an empty language, so the third backtick converts. A language typed after it lands in the code body, not in `lang`.",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [{ "type": "paragraph", "md": "" }],
+      "at": { "block": 0, "caret": 0 },
+      "keys": [
+        { "code": "Backquote", "key": "`" },
+        { "code": "Backquote", "key": "`" },
+        { "code": "Backquote", "key": "`" }
+      ],
+      "expect": [{ "type": "code", "lang": "", "code": "" }]
+    },
+    {
+      "id": "shortcut-three-dashes-makes-a-divider",
+      "title": "Typing \"---\" at the start of a paragraph makes a divider",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [{ "type": "paragraph", "md": "" }],
+      "at": { "block": 0, "caret": 0 },
+      "keys": [
+        { "code": "Minus", "key": "-" },
+        { "code": "Minus", "key": "-" },
+        { "code": "Minus", "key": "-" }
+      ],
+      "expect": [{ "type": "divider" }]
+    },
+    {
+      "id": "shortcut-double-dollar-makes-a-math-block",
+      "title": "Typing \"$$\" at the start of a paragraph makes a math block",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [{ "type": "paragraph", "md": "" }],
+      "at": { "block": 0, "caret": 0 },
+      "keys": [
+        { "code": "Digit4", "key": "$", "shift": true },
+        { "code": "Digit4", "key": "$", "shift": true }
+      ],
+      "expect": [{ "type": "math", "tex": "" }]
+    },
+    {
+      "id": "shortcut-triple-colon-info-makes-a-callout",
+      "title": "Typing \":::info\" at the start of a paragraph makes an info callout",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [{ "type": "paragraph", "md": "" }],
+      "at": { "block": 0, "caret": 0 },
+      "keys": [
+        { "code": "Semicolon", "key": ":", "shift": true },
+        { "code": "Semicolon", "key": ":", "shift": true },
+        { "code": "Semicolon", "key": ":", "shift": true },
+        { "code": "KeyI", "key": "i" },
+        { "code": "KeyN", "key": "n" },
+        { "code": "KeyF", "key": "f" },
+        { "code": "KeyO", "key": "o" }
+      ],
+      "expect": [{ "type": "admonition", "tone": "info", "title": "", "md": "" }]
+    },
+    {
+      "id": "shortcut-triple-colon-danger-makes-a-callout",
+      "title": "Typing \":::danger\" at the start of a paragraph makes a danger callout",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [{ "type": "paragraph", "md": "" }],
+      "at": { "block": 0, "caret": 0 },
+      "keys": [
+        { "code": "Semicolon", "key": ":", "shift": true },
+        { "code": "Semicolon", "key": ":", "shift": true },
+        { "code": "Semicolon", "key": ":", "shift": true },
+        { "code": "KeyD", "key": "d" },
+        { "code": "KeyA", "key": "a" },
+        { "code": "KeyN", "key": "n" },
+        { "code": "KeyG", "key": "g" },
+        { "code": "KeyE", "key": "e" },
+        { "code": "KeyR", "key": "r" }
+      ],
+      "expect": [{ "type": "admonition", "tone": "danger", "title": "", "md": "" }]
+    },
+    {
+      "id": "shortcut-triple-colon-with-an-unknown-tone-stays-a-paragraph",
+      "title": "Typing \":::nope\" leaves the paragraph alone",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [{ "type": "paragraph", "md": "" }],
+      "at": { "block": 0, "caret": 0 },
+      "keys": [
+        { "code": "Semicolon", "key": ":", "shift": true },
+        { "code": "Semicolon", "key": ":", "shift": true },
+        { "code": "Semicolon", "key": ":", "shift": true },
+        { "code": "KeyN", "key": "n" },
+        { "code": "KeyO", "key": "o" },
+        { "code": "KeyP", "key": "p" },
+        { "code": "KeyE", "key": "e" }
+      ],
+      "expect": [{ "type": "paragraph", "md": ":::nope" }]
+    },
+    {
+      "id": "shortcut-only-fires-at-the-start-of-the-block",
+      "title": "A shortcut prefix typed after text is just text",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [{ "type": "paragraph", "md": "x" }],
+      "at": { "block": 0, "caret": 1 },
+      "keys": [
+        { "code": "Digit3", "key": "#", "shift": true },
+        { "code": "Space", "key": " " }
+      ],
+      "expect": [{ "type": "paragraph", "md": "x# " }]
+    },
+    {
+      "id": "shortcut-does-not-fire-on-a-non-paragraph",
+      "title": "A shortcut prefix typed into a heading is just text",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [{ "type": "heading", "level": 1, "md": "" }],
+      "at": { "block": 0, "caret": 0 },
+      "keys": [{ "code": "Minus", "key": "-" }, { "code": "Space", "key": " " }],
+      "expect": [{ "type": "heading", "level": 1, "md": "- " }]
+    },
+    {
+      "id": "slash-palette-converts-an-empty-paragraph",
+      "title": "The slash palette turns the empty paragraph it opened on into the picked kind",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [{ "type": "paragraph", "md": "" }],
+      "at": { "block": 0, "caret": 0 },
+      "keys": [
+        { "code": "Slash", "key": "/" },
+        { "code": "KeyQ", "key": "Q", "shift": true },
+        { "code": "KeyU", "key": "u" },
+        { "code": "KeyO", "key": "o" },
+        { "code": "KeyT", "key": "t" },
+        { "code": "KeyE", "key": "e" },
+        { "code": "Enter" }
+      ],
+      "expect": [{ "type": "quote", "md": "" }]
+    },
+    {
+      "id": "slash-palette-offers-a-heading-4",
+      "title": "The slash palette offers four heading levels",
+      "note": "Divergence 1 of the four: the ratatui kit's palette stops at Heading 3, so the query matches nothing and the block is untouched.",
+      "applies": ["rust-egui", "web"],
+      "diverges": {
+        "rust-tui": {
+          "issue": 28,
+          "why": "The ratatui kit's built-in palette lists Heading 1 to 3 only, so the query has no match and Enter picks nothing."
+        }
+      },
+      "doc": [{ "type": "paragraph", "md": "" }],
+      "at": { "block": 0, "caret": 0 },
+      "keys": [
+        { "code": "Slash", "key": "/" },
+        { "code": "KeyH", "key": "H", "shift": true },
+        { "code": "KeyE", "key": "e" },
+        { "code": "KeyA", "key": "a" },
+        { "code": "KeyD", "key": "d" },
+        { "code": "KeyI", "key": "i" },
+        { "code": "KeyN", "key": "n" },
+        { "code": "KeyG", "key": "g" },
+        { "code": "Space", "key": " " },
+        { "code": "Digit4", "key": "4" },
+        { "code": "Enter" }
+      ],
+      "expect": [{ "type": "heading", "level": 4, "md": "" }]
+    },
+    {
+      "id": "slash-palette-starts-a-three-by-two-table",
+      "title": "A new table starts three columns wide and two rows deep",
+      "note": "Divergence 2 of the four: the ratatui kit builds its own two-by-one table instead of the registry starter.",
+      "applies": ["rust-egui", "web"],
+      "diverges": {
+        "rust-tui": {
+          "issue": 28,
+          "why": "The ratatui kit's palette builds a two-column, one-row table of its own rather than reading the registry starter."
+        }
+      },
+      "doc": [{ "type": "paragraph", "md": "" }],
+      "at": { "block": 0, "caret": 0 },
+      "keys": [
+        { "code": "Slash", "key": "/" },
+        { "code": "KeyT", "key": "T", "shift": true },
+        { "code": "KeyA", "key": "a" },
+        { "code": "KeyB", "key": "b" },
+        { "code": "KeyL", "key": "l" },
+        { "code": "KeyE", "key": "e" },
+        { "code": "Enter" }
+      ],
+      "expect": [
+        {
+          "type": "table",
+          "header": ["", "", ""],
+          "rows": [
+            ["", "", ""],
+            ["", "", ""]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "slash-palette-offers-the-line-chart-kind",
+      "title": "The slash palette offers the line chart, with the registry's starter payload",
+      "note": "Divergence 4 of the four is the line chart missing from one kit's painted-output snapshot list. The palette entry and starter payload are the behaviour a key corpus can state; the snapshot list is a test fixture and #28 fills it in.",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [{ "type": "paragraph", "md": "" }],
+      "at": { "block": 0, "caret": 0 },
+      "keys": [
+        { "code": "Slash", "key": "/" },
+        { "code": "KeyL", "key": "L", "shift": true },
+        { "code": "KeyI", "key": "i" },
+        { "code": "KeyN", "key": "n" },
+        { "code": "KeyE", "key": "e" },
+        { "code": "Space", "key": " " },
+        { "code": "KeyC", "key": "c" },
+        { "code": "KeyH", "key": "h" },
+        { "code": "KeyA", "key": "a" },
+        { "code": "KeyR", "key": "r" },
+        { "code": "KeyT", "key": "t" },
+        { "code": "Enter" }
+      ],
+      "expect": [
+        {
+          "type": "line_chart",
+          "categories": ["A", "B", "C"],
+          "series": [{ "name": "Series 1", "values": [3.0, 5.0, 4.0] }]
+        }
+      ]
+    },
+    {
+      "id": "table-typing-writes-into-the-focused-cell",
+      "title": "Typing in a table cell writes through to the document",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [{ "type": "table", "header": ["", "b"], "rows": [["1", "2"]] }],
+      "at": { "block": 0, "row": 0, "col": 0 },
+      "keys": [{ "code": "KeyX", "key": "x" }],
+      "expect": [{ "type": "table", "header": ["x", "b"], "rows": [["1", "2"]] }]
+    },
+    {
+      "id": "table-enter-above-the-last-row-only-moves-down",
+      "title": "Enter in a table cell that is not on the last row leaves the table alone",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [
+        { "type": "table", "header": ["a", "b"], "rows": [["1", "2"], ["3", "4"]] }
+      ],
+      "at": { "block": 0, "row": 0, "col": 0 },
+      "keys": [{ "code": "Enter" }],
+      "expect": [
+        { "type": "table", "header": ["a", "b"], "rows": [["1", "2"], ["3", "4"]] }
+      ]
+    },
+    {
+      "id": "table-enter-on-the-last-row-appends-a-row",
+      "title": "Enter in a cell of the last row appends an empty row",
+      "applies": ["rust-tui", "rust-egui", "web"],
+      "doc": [{ "type": "table", "header": ["a", "b"], "rows": [["1", "2"]] }],
+      "at": { "block": 0, "row": 1, "col": 0 },
+      "keys": [{ "code": "Enter" }],
+      "expect": [
+        { "type": "table", "header": ["a", "b"], "rows": [["1", "2"], ["", ""]] }
+      ]
+    },
+    {
+      "id": "table-tab-moves-to-the-next-cell",
+      "title": "Tab in a table cell moves the focus without touching the table",
+      "applies": ["rust-tui", "rust-egui"],
+      "inapplicable": {
+        "web": "Cell focus order in the web kit is the browser's native tab order over the cell inputs; the kit binds no Tab handler to press."
+      },
+      "doc": [{ "type": "table", "header": ["a", "b"], "rows": [["1", "2"]] }],
+      "at": { "block": 0, "row": 0, "col": 0 },
+      "keys": [{ "code": "Tab" }],
+      "expect": [{ "type": "table", "header": ["a", "b"], "rows": [["1", "2"]] }]
+    },
+    {
+      "id": "table-alt-equals-inserts-a-column-after-the-focused-one",
+      "title": "Alt+= adds an empty column after the focused one, in the header and every row",
+      "applies": ["rust-tui"],
+      "inapplicable": {
+        "rust-egui": "Column ops in the egui kit are toolbar buttons under the grid; the kit binds no key to press.",
+        "web": "Column ops in the web kit are toolbar buttons under the grid; the kit binds no key to press."
+      },
+      "doc": [{ "type": "table", "header": ["a", "b"], "rows": [["1", "2"]] }],
+      "at": { "block": 0, "row": 0, "col": 0 },
+      "keys": [{ "code": "Equal", "key": "=", "alt": true }],
+      "expect": [
+        { "type": "table", "header": ["a", "", "b"], "rows": [["1", "", "2"]] }
+      ]
+    },
+    {
+      "id": "table-alt-minus-removes-the-focused-column",
+      "title": "Alt+- removes the focused column from the header and every row",
+      "applies": ["rust-tui"],
+      "inapplicable": {
+        "rust-egui": "Column ops in the egui kit are toolbar buttons under the grid; the kit binds no key to press.",
+        "web": "Column ops in the web kit are toolbar buttons under the grid; the kit binds no key to press."
+      },
+      "doc": [{ "type": "table", "header": ["a", "b"], "rows": [["1", "2"]] }],
+      "at": { "block": 0, "row": 0, "col": 0 },
+      "keys": [{ "code": "Minus", "key": "-", "alt": true }],
+      "expect": [{ "type": "table", "header": ["b"], "rows": [["2"]] }]
+    },
+    {
+      "id": "table-alt-minus-keeps-the-last-column",
+      "title": "Alt+- refuses to empty a table of its last column",
+      "applies": ["rust-tui"],
+      "inapplicable": {
+        "rust-egui": "Column ops in the egui kit are toolbar buttons under the grid; the kit binds no key to press.",
+        "web": "Column ops in the web kit are toolbar buttons under the grid; the kit binds no key to press."
+      },
+      "doc": [{ "type": "table", "header": ["a"], "rows": [["1"]] }],
+      "at": { "block": 0, "row": 0, "col": 0 },
+      "keys": [{ "code": "Minus", "key": "-", "alt": true }],
+      "expect": [{ "type": "table", "header": ["a"], "rows": [["1"]] }]
+    }
+  ]
+}

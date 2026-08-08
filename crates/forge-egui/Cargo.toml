@@ -63,5 +63,6 @@ rdp = ["dep:forge-core", "forge-core/rdp", "dep:tokio", "dep:tracing"]
 widgets = ["term", "term-ssh", "vnc", "rdp"]
 
 [dev-dependencies]
+forge-block-corpus = { workspace = true }
 egui_kittest = { version = "0.35", features = ["eframe"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync", "time"] }
