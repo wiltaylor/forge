@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "crates/forge-blocks",
     "crates/forge-core",
+    "crates/forge-xterm",
     "crates/forge-server",
     "crates/forge-auth",
     "crates/forge-tui",
@@ -27,6 +28,7 @@ repository = "https://github.com/wiltaylor/forge"
 [workspace.dependencies]
 forge-blocks = { path = "crates/forge-blocks" }
 forge-core = { path = "crates/forge-core" }
+forge-xterm = { path = "crates/forge-xterm" }
 forge-server = { path = "crates/forge-server" }
 forge-tui = { path = "crates/forge-tui" }
 forge-egui = { path = "crates/forge-egui" }
