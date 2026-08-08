@@ -1,0 +1,636 @@
+{
+  "contract_version": "1.0",
+  "transports": ["rust-http", "python-http", "rust-ipc", "ts-client"],
+  "vars": {
+    "user": "admin",
+    "password": "hunter2",
+    "wrong_password": "definitely-wrong",
+    "doc": "paritytest-doc",
+    "component_file": "widget.js",
+    "sse_topic": "paritytest-sse",
+    "ws_topic": "paritytest-ws"
+  },
+  "fixture": {
+    "app": "forge-contract-corpus",
+    "auth": {
+      "enabled": true,
+      "users": [{ "name": "${user}", "password": "${password}", "roles": [] }]
+    },
+    "docstore": true,
+    "events": true,
+    "actions": ["echo", "publish"],
+    "components": {
+      "manifest": {
+        "components": [
+          {
+            "name": "Widget",
+            "tag": "forge-widget",
+            "file": "${component_file}",
+            "hash": "sha256-corpus",
+            "props": [],
+            "events": [],
+            "version": "1.0.0"
+          }
+        ]
+      },
+      "files": {
+        "${component_file}": "export const widget = 1;\n"
+      }
+    },
+    "frontend": {
+      "files": {
+        "index.html": "<!doctype html>\n<title>corpus</title>\n"
+      }
+    }
+  },
+  "cases": [
+    {
+      "id": "health-open",
+      "title": "GET /api/health needs no token and reports capabilities",
+      "applies": ["rust-http", "python-http", "rust-ipc", "ts-client"],
+      "inapplicable": {},
+      "steps": [
+        {
+          "request": { "method": "GET", "path": "/api/health", "auth": "none" },
+          "expect": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": {
+                "auth_enabled": true,
+                "uptime_s": { "$type": "number" },
+                "actions": ["echo", "publish"]
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "login-returns-token",
+      "title": "POST /api/auth/login returns a token, an expiry and the user",
+      "applies": ["rust-http", "python-http", "rust-ipc", "ts-client"],
+      "inapplicable": {},
+      "steps": [
+        {
+          "request": {
+            "method": "POST",
+            "path": "/api/auth/login",
+            "auth": "none",
+            "body": { "username": "${user}", "password": "${password}" }
+          },
+          "expect": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": {
+                "token": { "$min_length": 1 },
+                "expires_at": { "$type": "number" },
+                "user": { "name": "${user}", "roles": { "$exact": [] } }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "login-bad-credentials",
+      "title": "POST /api/auth/login rejects a wrong password with 401",
+      "applies": ["rust-http", "python-http", "rust-ipc", "ts-client"],
+      "inapplicable": {},
+      "steps": [
+        {
+          "request": {
+            "method": "POST",
+            "path": "/api/auth/login",
+            "auth": "none",
+            "body": { "username": "${user}", "password": "${wrong_password}" }
+          },
+          "expect": {
+            "status": 401,
+            "body": { "ok": false, "error": { "$type": "string" } }
+          }
+        }
+      ]
+    },
+    {
+      "id": "me-requires-token",
+      "title": "GET /api/auth/me without a token is 401",
+      "applies": ["rust-http", "python-http", "rust-ipc", "ts-client"],
+      "inapplicable": {},
+      "steps": [
+        {
+          "request": { "method": "GET", "path": "/api/auth/me", "auth": "none" },
+          "expect": { "status": 401, "body": { "ok": false } }
+        }
+      ]
+    },
+    {
+      "id": "me-with-bearer",
+      "title": "GET /api/auth/me returns the decoded claims for a bearer token",
+      "applies": ["rust-http", "python-http", "rust-ipc", "ts-client"],
+      "inapplicable": {},
+      "steps": [
+        {
+          "request": { "method": "GET", "path": "/api/auth/me", "auth": "bearer" },
+          "expect": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": {
+                "sub": "${user}",
+                "roles": { "$type": "array" },
+                "exp": { "$type": "integer" }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "me-with-query-token",
+      "title": "A ?token= query parameter is accepted in place of the header",
+      "applies": ["rust-http", "python-http", "ts-client"],
+      "inapplicable": {
+        "rust-ipc": "IPC commands take typed arguments; there is no query string to carry a token."
+      },
+      "steps": [
+        {
+          "request": { "method": "GET", "path": "/api/auth/me", "auth": "query" },
+          "expect": { "status": 200, "body": { "data": { "sub": "${user}" } } }
+        }
+      ]
+    },
+    {
+      "id": "me-garbage-token-rejected",
+      "title": "A token that is not a JWT is rejected with 401",
+      "applies": ["rust-http", "python-http", "rust-ipc", "ts-client"],
+      "inapplicable": {},
+      "steps": [
+        {
+          "request": {
+            "method": "GET",
+            "path": "/api/auth/me",
+            "auth": "none",
+            "headers": { "authorization": "Bearer not.a.jwt" }
+          },
+          "expect": { "status": 401, "body": { "ok": false } }
+        }
+      ]
+    },
+    {
+      "id": "data-requires-auth",
+      "title": "GET /api/data without a token is 401",
+      "applies": ["rust-http", "python-http", "rust-ipc", "ts-client"],
+      "inapplicable": {},
+      "steps": [
+        {
+          "request": { "method": "GET", "path": "/api/data", "auth": "none" },
+          "expect": { "status": 401, "body": { "ok": false } }
+        }
+      ]
+    },
+    {
+      "id": "doc-roundtrip",
+      "title": "A document can be written, read, listed, deleted twice and is then gone",
+      "applies": ["rust-http", "python-http", "rust-ipc", "ts-client"],
+      "inapplicable": {},
+      "steps": [
+        {
+          "request": {
+            "method": "PUT",
+            "path": "/api/data/${doc}",
+            "auth": "bearer",
+            "body": { "n": 1, "nested": { "ok": true }, "s": "x" }
+          },
+          "expect": { "status": 200, "body": { "ok": true } }
+        },
+        {
+          "request": { "method": "GET", "path": "/api/data/${doc}", "auth": "bearer" },
+          "expect": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": { "$exact": { "n": 1, "nested": { "ok": true }, "s": "x" } }
+            }
+          }
+        },
+        {
+          "request": { "method": "GET", "path": "/api/data", "auth": "bearer" },
+          "expect": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": {
+                "$contains": {
+                  "name": "${doc}",
+                  "bytes": { "$gt": 0 },
+                  "modified": { "$type": "number" }
+                }
+              }
+            }
+          }
+        },
+        {
+          "request": { "method": "DELETE", "path": "/api/data/${doc}", "auth": "bearer" },
+          "expect": { "status": 200, "body": { "ok": true } }
+        },
+        {
+          "request": { "method": "DELETE", "path": "/api/data/${doc}", "auth": "bearer" },
+          "expect": { "status": 200, "body": { "ok": true } }
+        },
+        {
+          "request": { "method": "GET", "path": "/api/data/${doc}", "auth": "bearer" },
+          "expect": {
+            "status": 404,
+            "body": { "ok": false, "error": { "$type": "string" } }
+          }
+        }
+      ]
+    },
+    {
+      "id": "doc-name-rejected-uppercase",
+      "title": "A document name with an upper-case letter is rejected with 400",
+      "applies": ["rust-http", "python-http", "rust-ipc", "ts-client"],
+      "inapplicable": {},
+      "steps": [
+        {
+          "request": {
+            "method": "PUT",
+            "path": "/api/data/UPPER",
+            "auth": "bearer",
+            "body": {}
+          },
+          "expect": { "status": 400, "body": { "ok": false } }
+        }
+      ]
+    },
+    {
+      "id": "doc-name-rejected-leading-dash",
+      "title": "A document name starting with a dash is rejected with 400",
+      "applies": ["rust-http", "python-http", "rust-ipc", "ts-client"],
+      "inapplicable": {},
+      "steps": [
+        {
+          "request": {
+            "method": "PUT",
+            "path": "/api/data/-lead",
+            "auth": "bearer",
+            "body": {}
+          },
+          "expect": { "status": 400, "body": { "ok": false } }
+        }
+      ]
+    },
+    {
+      "id": "doc-name-rejected-leading-dot",
+      "title": "A document name starting with a dot is rejected with 400",
+      "applies": ["rust-http", "python-http", "rust-ipc", "ts-client"],
+      "inapplicable": {},
+      "steps": [
+        {
+          "request": {
+            "method": "PUT",
+            "path": "/api/data/.dot",
+            "auth": "bearer",
+            "body": {}
+          },
+          "expect": { "status": 400, "body": { "ok": false } }
+        }
+      ]
+    },
+    {
+      "id": "doc-name-rejected-too-long",
+      "title": "A document name longer than 64 characters is rejected with 400",
+      "applies": ["rust-http", "python-http", "rust-ipc", "ts-client"],
+      "inapplicable": {},
+      "steps": [
+        {
+          "request": {
+            "method": "PUT",
+            "path": "/api/data/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "auth": "bearer",
+            "body": {}
+          },
+          "expect": { "status": 400, "body": { "ok": false } }
+        }
+      ]
+    },
+    {
+      "id": "doc-name-rejected-space",
+      "title": "A document name containing a space is rejected with 400",
+      "note": "Authored percent-encoded because that is what a space looks like on the wire.",
+      "applies": ["rust-http", "python-http", "rust-ipc", "ts-client"],
+      "inapplicable": {},
+      "steps": [
+        {
+          "request": {
+            "method": "PUT",
+            "path": "/api/data/a%20b",
+            "auth": "bearer",
+            "body": {}
+          },
+          "expect": { "status": 400, "body": { "ok": false } }
+        }
+      ]
+    },
+    {
+      "id": "doc-name-rejected-dot-dot",
+      "title": "A document name of two dots is rejected with 400",
+      "note": "Percent-encoded so the dot segment reaches the doc-name rule instead of being collapsed by a URL normaliser.",
+      "applies": ["rust-http", "python-http", "rust-ipc", "ts-client"],
+      "inapplicable": {},
+      "steps": [
+        {
+          "request": {
+            "method": "PUT",
+            "path": "/api/data/%2E%2E",
+            "auth": "bearer",
+            "body": {}
+          },
+          "expect": { "status": 400, "body": { "ok": false } }
+        }
+      ]
+    },
+    {
+      "id": "doc-name-rejected-path-separator",
+      "title": "A document name containing a slash never reaches the route and is 404",
+      "note": "The doc-name rule is not what rejects this one: a second path segment misses the route. Equally safe, and both HTTP backends must agree on it.",
+      "applies": ["rust-http", "python-http", "ts-client"],
+      "inapplicable": {
+        "rust-ipc": "IPC passes the document name as a string argument, so a separator reaches the doc-name rule instead of missing a route."
+      },
+      "steps": [
+        {
+          "request": {
+            "method": "PUT",
+            "path": "/api/data/sl/ash",
+            "auth": "bearer",
+            "body": {}
+          },
+          "expect": { "status": 404, "body": { "ok": false } }
+        }
+      ]
+    },
+    {
+      "id": "action-echo",
+      "title": "POST /api/actions/echo returns the payload it was given",
+      "applies": ["rust-http", "python-http", "rust-ipc", "ts-client"],
+      "inapplicable": {},
+      "steps": [
+        {
+          "request": {
+            "method": "POST",
+            "path": "/api/actions/echo",
+            "auth": "bearer",
+            "body": { "ping": "pong", "n": 3 }
+          },
+          "expect": {
+            "status": 200,
+            "body": { "ok": true, "data": { "$exact": { "ping": "pong", "n": 3 } } }
+          }
+        }
+      ]
+    },
+    {
+      "id": "action-unknown",
+      "title": "An unregistered action is 404 and the error lists the registered names",
+      "applies": ["rust-http", "python-http", "rust-ipc", "ts-client"],
+      "inapplicable": {},
+      "steps": [
+        {
+          "request": {
+            "method": "POST",
+            "path": "/api/actions/definitely-not-registered",
+            "auth": "bearer",
+            "body": {}
+          },
+          "expect": {
+            "status": 404,
+            "body": { "ok": false, "error": { "$contains": "echo" } }
+          }
+        }
+      ]
+    },
+    {
+      "id": "sse-delivers-published-event",
+      "title": "An event published while an SSE stream is open arrives on that stream",
+      "kind": "sse",
+      "applies": ["rust-http", "python-http"],
+      "inapplicable": {
+        "rust-ipc": "IPC delivers events as Tauri events, not as an HTTP event stream.",
+        "ts-client": "EventSource exposes neither the response status nor the content-type header this case asserts."
+      },
+      "steps": [
+        {
+          "request": {
+            "method": "GET",
+            "path": "/api/events",
+            "auth": "query",
+            "query": { "topics": "${sse_topic}" }
+          },
+          "expect": {
+            "status": 200,
+            "headers": { "content-type": { "$prefix": "text/event-stream" } }
+          }
+        },
+        {
+          "request": {
+            "method": "POST",
+            "path": "/api/actions/publish",
+            "auth": "bearer",
+            "body": { "topic": "${sse_topic}", "data": { "hello": "sse" } }
+          },
+          "expect": { "status": 200, "body": { "ok": true } }
+        },
+        {
+          "await_event": {
+            "topic": "${sse_topic}",
+            "data": { "$exact": { "hello": "sse" } }
+          }
+        }
+      ]
+    },
+    {
+      "id": "api-miss-is-json-404",
+      "title": "An unknown /api path is a JSON 404 envelope, not the SPA fallback",
+      "applies": ["rust-http", "python-http", "ts-client"],
+      "inapplicable": {
+        "rust-ipc": "IPC has no URL space, so there is no unknown path to miss."
+      },
+      "steps": [
+        {
+          "request": {
+            "method": "GET",
+            "path": "/api/definitely-not-a-route",
+            "auth": "none"
+          },
+          "expect": {
+            "status": 404,
+            "headers": { "content-type": { "$prefix": "application/json" } },
+            "body": { "ok": false }
+          }
+        }
+      ]
+    },
+    {
+      "id": "spa-fallback-serves-html",
+      "title": "An unknown non-/api path falls back to the SPA index",
+      "applies": ["rust-http", "python-http"],
+      "inapplicable": {
+        "rust-ipc": "The webview loads its assets directly; the bridge serves no static frontend.",
+        "ts-client": "The client parses envelopes; an HTML response is outside its surface."
+      },
+      "steps": [
+        {
+          "request": { "method": "GET", "path": "/some/client/route", "auth": "none" },
+          "expect": {
+            "status": 200,
+            "headers": { "content-type": { "$contains": "text/html" } },
+            "text": { "$contains": "<!doctype html>" }
+          }
+        }
+      ]
+    },
+    {
+      "id": "components-manifest",
+      "title": "GET /api/components returns the manifest with the app name injected",
+      "applies": ["rust-http", "python-http", "rust-ipc", "ts-client"],
+      "inapplicable": {},
+      "steps": [
+        {
+          "request": { "method": "GET", "path": "/api/components", "auth": "bearer" },
+          "expect": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": {
+                "app": { "$type": "string" },
+                "components": [
+                  { "name": "Widget", "tag": "forge-widget", "file": "${component_file}" }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "components-require-auth",
+      "title": "GET /api/components without a token is 401",
+      "applies": ["rust-http", "python-http", "rust-ipc", "ts-client"],
+      "inapplicable": {},
+      "steps": [
+        {
+          "request": { "method": "GET", "path": "/api/components", "auth": "none" },
+          "expect": { "status": 401, "body": { "ok": false } }
+        }
+      ]
+    },
+    {
+      "id": "component-file-served",
+      "title": "A manifest bundle file is served verbatim",
+      "applies": ["rust-http", "python-http"],
+      "inapplicable": {
+        "rust-ipc": "The bridge returns the manifest, not bundle bytes; the webview loads bundles over the asset protocol.",
+        "ts-client": "The client parses envelopes; a JavaScript bundle body is outside its surface."
+      },
+      "steps": [
+        {
+          "request": {
+            "method": "GET",
+            "path": "/api/components/${component_file}",
+            "auth": "bearer"
+          },
+          "expect": {
+            "status": 200,
+            "text": { "$contains": "export const widget" }
+          }
+        }
+      ]
+    },
+    {
+      "id": "component-file-traversal-rejected",
+      "title": "A bundle filename that escapes the components directory is rejected with 400",
+      "note": "Percent-encoded so the traversal reaches the filename rule rather than missing the route.",
+      "applies": ["rust-http", "python-http", "ts-client"],
+      "inapplicable": {
+        "rust-ipc": "The bridge returns the manifest, not bundle bytes, so there is no bundle path to escape from."
+      },
+      "steps": [
+        {
+          "request": {
+            "method": "GET",
+            "path": "/api/components/%2E%2E%2Fsecret.js",
+            "auth": "bearer"
+          },
+          "expect": { "status": 400, "body": { "ok": false } }
+        }
+      ]
+    },
+    {
+      "id": "ws-requires-token",
+      "title": "A websocket upgrade without a token is refused with 401",
+      "kind": "ws",
+      "applies": ["rust-http", "python-http"],
+      "inapplicable": {
+        "rust-ipc": "IPC delivers events as Tauri events; there is no websocket handshake.",
+        "ts-client": "The socket wrapper reports a close, not the handshake status."
+      },
+      "steps": [
+        {
+          "connect": { "path": "/api/ws", "auth": "none" },
+          "expect": { "status": 401, "body": { "ok": false } }
+        }
+      ]
+    },
+    {
+      "id": "ws-ping-pong",
+      "title": "A websocket ping is answered with a pong",
+      "kind": "ws",
+      "applies": ["rust-http", "python-http", "ts-client"],
+      "inapplicable": {
+        "rust-ipc": "IPC delivers events as Tauri events, not as websocket frames."
+      },
+      "steps": [
+        { "connect": { "path": "/api/ws", "auth": "query" } },
+        { "send": { "type": "ping" } },
+        { "await_frame": { "$exact": { "type": "pong" } } }
+      ]
+    },
+    {
+      "id": "ws-subscribe-and-receive",
+      "title": "A websocket subscriber receives an event published on its topic",
+      "kind": "ws",
+      "note": "The ping/pong between subscribe and publish is what makes the next frame deterministic: frames are handled in order, so the pong proves the subscription is live.",
+      "applies": ["rust-http", "python-http", "ts-client"],
+      "inapplicable": {
+        "rust-ipc": "IPC delivers events as Tauri events, not as websocket frames."
+      },
+      "steps": [
+        { "connect": { "path": "/api/ws", "auth": "query" } },
+        { "send": { "type": "subscribe", "topics": ["${ws_topic}"] } },
+        { "send": { "type": "ping" } },
+        { "await_frame": { "$exact": { "type": "pong" } } },
+        {
+          "request": {
+            "method": "POST",
+            "path": "/api/actions/publish",
+            "auth": "bearer",
+            "body": { "topic": "${ws_topic}", "data": { "hello": "ws" } }
+          },
+          "expect": { "status": 200, "body": { "ok": true } }
+        },
+        {
+          "await_frame": {
+            "$exact": {
+              "type": "event",
+              "topic": "${ws_topic}",
+              "data": { "hello": "ws" }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -32,6 +32,12 @@ Backends:
 
 The contract all of them implement: [`docs/api-contract.md`](docs/api-contract.md).
 
+The same contract as data: [`contract/corpus.json`](contract/README.md) — each
+case states its request, the envelope and status it expects, and which
+transports it applies to. `crates/forge-contract` reads it and matches against
+it, so the Rust drivers share one implementation. Run it with
+`just corpus-test`.
+
 Terminal UIs (no contract, standalone): `crates/forge-tui` — the design
 system as a ratatui widget kit, see [Terminal UIs](#terminal-uis-forge-tui).
 

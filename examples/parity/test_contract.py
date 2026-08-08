@@ -1,5 +1,9 @@
 """Black-box Forge API contract tests (docs/api-contract.md).
 
+Superseded by `contract/corpus.json`, where every case below now lives as
+authored data. The Python driver that runs the corpus is issue #37; until it
+lands, this suite stays as the Python-side check.
+
 Run against a LIVE server (either backend — that's the point):
 
     FORGE_TEST_BASE_URL=http://127.0.0.1:8765 pytest examples/parity -q
