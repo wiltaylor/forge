@@ -5,6 +5,7 @@
 //! Truecolor themes degrade to 256-color via [`to_indexed`]; 16-color
 //! terminals get a hand-written semantic mapping in `Theme::quantized`.
 
+use crate::env::TermEnv;
 use ratatui::style::Color;
 
 /// How many colors the terminal can address. Detected once at startup and
@@ -17,13 +18,13 @@ pub enum ColorMode {
 }
 
 impl ColorMode {
-    /// Detect from the environment. `FORGE_TUI_COLOR` (`truecolor`/`256`/`16`)
-    /// overrides; otherwise `COLORTERM=truecolor|24bit` selects truecolor,
-    /// `TERM=linux|dumb` falls to 16 colors, and everything else gets 256 —
-    /// the safe default for multiplexers and ssh sessions that strip
-    /// `COLORTERM`.
-    pub fn detect() -> ColorMode {
-        if let Ok(v) = std::env::var("FORGE_TUI_COLOR") {
+    /// Detect from a captured [`TermEnv`] — a pure function of its input.
+    /// `FORGE_TUI_COLOR` (`truecolor`/`256`/`16`) overrides; otherwise
+    /// `COLORTERM=truecolor|24bit` selects truecolor, `TERM=linux|dumb` falls
+    /// to 16 colors, and everything else gets 256 — the safe default for
+    /// multiplexers and ssh sessions that strip `COLORTERM`.
+    pub fn detect(env: &TermEnv) -> ColorMode {
+        if let Some(v) = &env.color {
             match v.to_ascii_lowercase().as_str() {
                 "truecolor" | "24bit" | "rgb" => return ColorMode::TrueColor,
                 "256" | "indexed" => return ColorMode::Indexed256,
@@ -31,16 +32,15 @@ impl ColorMode {
                 _ => {}
             }
         }
-        if let Ok(v) = std::env::var("COLORTERM") {
+        if let Some(v) = &env.colorterm {
             let v = v.to_ascii_lowercase();
             if v.contains("truecolor") || v.contains("24bit") {
                 return ColorMode::TrueColor;
             }
         }
-        match std::env::var("TERM").as_deref() {
-            Ok("linux") | Ok("dumb") | Err(_) => ColorMode::Ansi16,
-            Ok(t) if t.contains("256color") => ColorMode::Indexed256,
-            Ok(_) => ColorMode::Indexed256,
+        match env.term.as_deref() {
+            Some("linux") | Some("dumb") | None => ColorMode::Ansi16,
+            Some(_) => ColorMode::Indexed256,
         }
     }
 }
@@ -185,5 +185,45 @@ pub fn quantize(c: Color, mode: ColorMode) -> Color {
     match (mode, c) {
         (ColorMode::Indexed256, Color::Rgb(r, g, b)) => Color::Indexed(nearest_indexed(r, g, b)),
         _ => c,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn detect_override_beats_colorterm() {
+        let env = TermEnv {
+            color: Some("16".into()),
+            colorterm: Some("truecolor".into()),
+            ..TermEnv::default()
+        };
+        assert_eq!(ColorMode::detect(&env), ColorMode::Ansi16);
+    }
+
+    #[test]
+    fn detect_colorterm_selects_truecolor() {
+        let env = TermEnv {
+            colorterm: Some("truecolor".into()),
+            term: Some("xterm-256color".into()),
+            ..TermEnv::default()
+        };
+        assert_eq!(ColorMode::detect(&env), ColorMode::TrueColor);
+    }
+
+    #[test]
+    fn detect_falls_back_on_term() {
+        let dumb = TermEnv {
+            term: Some("dumb".into()),
+            ..TermEnv::default()
+        };
+        assert_eq!(ColorMode::detect(&dumb), ColorMode::Ansi16);
+        assert_eq!(ColorMode::detect(&TermEnv::default()), ColorMode::Ansi16);
+        let xterm = TermEnv {
+            term: Some("xterm-256color".into()),
+            ..TermEnv::default()
+        };
+        assert_eq!(ColorMode::detect(&xterm), ColorMode::Indexed256);
     }
 }
