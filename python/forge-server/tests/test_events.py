@@ -31,6 +31,27 @@ async def test_bus_drops_oldest_when_full():
     assert sub.queue.qsize() == QUEUE_SIZE - 1
 
 
+async def test_bus_buffer_depth_is_the_callers_choice():
+    """The contract fixes only that the buffer is bounded, so how deep it is
+    belongs to the caller. This is the seam under the corpus case
+    ``ws-lagged-tells-a-consumer-it-missed-events``, whose fixture asks for a
+    one-deep buffer so that a small flood overruns it."""
+    bus = EventBus(buffer=1)
+    sub = bus.subscribe()
+    bus.publish("t", 1)
+    bus.publish("t", 2)
+    assert sub.lagged is True
+    assert sub.queue.get_nowait() == ("t", 2)
+
+
+async def test_a_bus_buffer_is_always_at_least_one_deep():
+    """A zero-deep buffer would drop everything, so it is a one-deep one."""
+    bus = EventBus(buffer=0)
+    sub = bus.subscribe()
+    bus.publish("t", 1)
+    assert sub.queue.get_nowait() == ("t", 1)
+
+
 def test_ws_ping_subscribe_receive():
     app = ForgeApp("ev").with_events()
     client = TestClient(app.fastapi)
