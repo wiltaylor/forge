@@ -28,6 +28,7 @@ import { renderBlocksSlash } from './generate/blocks-slash.mjs';
 import { renderBlocksTypes } from './generate/blocks-types.mjs';
 import { renderEguiTokens } from './generate/egui-tokens.mjs';
 import { renderEguiPalette, renderTuiPalette } from './generate/rust-palette.mjs';
+import { renderThemeTs } from './generate/theme-ts.mjs';
 import { renderTokensCss } from './generate/tokens-css.mjs';
 
 const REPO = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -35,6 +36,7 @@ const REPO = dirname(dirname(fileURLToPath(import.meta.url)));
 /** Every generated file: repo-relative path, and the function that emits its text. */
 const ARTIFACTS = [
   { path: 'packages/tokens/css/tokens.css', render: renderTokensCss },
+  { path: 'packages/tokens/src/theme.gen.ts', render: renderThemeTs },
   { path: 'crates/forge-tui/src/theme/palette.rs', render: renderTuiPalette },
   { path: 'crates/forge-egui/src/theme/palette.rs', render: renderEguiPalette },
   { path: 'crates/forge-egui/src/theme/tokens.rs', render: renderEguiTokens },

@@ -8,15 +8,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import {
-  PRINT_WIDTH,
-  docComment,
-  entryLines,
-  expression,
-  orderedPayload,
-  quote,
-  valueLines,
-} from './blocks-source.mjs';
+import { entryLines, expression, orderedPayload, valueLines } from './blocks-source.mjs';
+import { PRINT_WIDTH } from './ts.mjs';
 
 test('a value spells as the TypeScript that builds it', () => {
   assert.equal(expression('a'), "'a'");
@@ -25,11 +18,6 @@ test('a value spells as the TypeScript that builds it', () => {
   assert.equal(expression(null), 'null');
   assert.equal(expression([1, 'two']), "[1, 'two']");
   assert.equal(expression({ a: 1, 'x-y': 2 }), "{ a: 1, 'x-y': 2 }");
-});
-
-test('a quote inside a string is escaped, and so is a backslash', () => {
-  assert.equal(quote("it's"), "'it\\'s'");
-  assert.equal(quote('a\\b'), "'a\\\\b'");
 });
 
 test('the id placeholder becomes a fresh id, not a constant', () => {
@@ -77,10 +65,4 @@ test('a payload is ordered by the wire fields, absent ones left out', () => {
     style: 'bullet',
     md: 'x',
   });
-});
-
-test('a doc comment of one line stays on one line', () => {
-  assert.deepEqual(docComment(['only'], '  '), ['  /** only */']);
-  assert.deepEqual(docComment([], '  '), []);
-  assert.deepEqual(docComment(['one', 'two']), ['/** one', '    two */']);
 });

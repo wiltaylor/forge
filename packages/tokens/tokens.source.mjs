@@ -2,9 +2,9 @@
  * The authored Forge token source — the one place a token value changes.
  *
  * A generator makes each palette from this file, and the tree holds the result.
- * Today that is the CSS custom properties in `css/tokens.css`, both Rust kit
- * palettes, and forge-egui's geometry, type and motion tokens. The typed theme
- * follows as its generator lands. Run `just generate` after you edit this file.
+ * Today that is the CSS custom properties in `css/tokens.css`, the typed theme
+ * in `src/theme.gen.ts`, both Rust kit palettes, and forge-egui's geometry,
+ * type and motion tokens. Run `just generate` after you edit this file.
  * `just check` fails while a generated file is stale.
  *
  * Shape
