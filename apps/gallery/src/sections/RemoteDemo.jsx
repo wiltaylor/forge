@@ -1,5 +1,5 @@
 import { For, Match, Show, Switch, createResource, createSignal } from 'solid-js';
-import { PageHead, Card, Grid, Alert, Badge, Logs, LogLine } from '@forge/ui';
+import { PageHead, Card, Alert, Badge, LogLine } from '@forge/ui';
 import { loadRemote, Remote } from '@forge/remote';
 import { api } from '../api';
 
@@ -36,7 +36,7 @@ export default function RemoteDemo() {
               <Badge tone="accent">app: {h().manifest.app}</Badge>{' '}
               <Badge>{h().manifest.components.length} components</Badge>
             </div>
-            <Grid>
+            <div class="fgrid">
               <Show when={h().get('status-card')?.tag}>
                 {(tag) => (
                   <Remote
@@ -55,13 +55,13 @@ export default function RemoteDemo() {
                   />
                 )}
               </Show>
-            </Grid>
+            </div>
             <Card title="CustomEvents from the remotes">
-              <Logs style={{ height: '140px' }}>
+              <div class="flogs" style={{ height: '140px' }}>
                 <For each={events()} fallback={<LogLine time="—" level="debug">interact with the widgets above</LogLine>}>
                   {(e) => <LogLine time={e.time} level="info">{e.kind}: {e.detail}</LogLine>}
                 </For>
-              </Logs>
+              </div>
             </Card>
           </div>
           )}

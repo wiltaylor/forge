@@ -1,20 +1,20 @@
 import { RefreshCw, Rocket, Search, Trash2 } from 'lucide-solid';
 import {
-  PageHead, Card, Button, Input, Badge, Toast, Kbd, StatusDot, Eyebrow, Grid, Stat,
+  PageHead, Card, Button, Input, Badge, Toast, StatusDot, Stat,
 } from '@forge/ui';
 
 export default function Primitives() {
   return (
     <>
-      <PageHead title="Primitives" sub="Button, Input, Badge, Toast, Kbd, StatusDot, Stat"
+      <PageHead title="Primitives" sub="Button, Input, Badge, Toast, StatusDot, Stat"
                 actions={<Button variant="primary" icon={Rocket}>Deploy</Button>} />
 
-      <Grid style={{ 'margin-bottom': '16px' }}>
+      <div class="fgrid" style={{ 'margin-bottom': '16px' }}>
         <Card><Stat label="Uptime" value="99.98 %" delta="+0.01 %" tone="success" /></Card>
         <Card><Stat label="Requests" value="1.2 M" delta="flat" tone="neutral" /></Card>
         <Card><Stat label="P95 latency" value="142 ms" delta="+12 ms" tone="danger" /></Card>
         <Card><Stat label="GPU util" value="87 %" delta="-3 %" tone="success" /></Card>
-      </Grid>
+      </div>
 
       <Card title="Buttons" action={<Badge tone="neutral">.fbtn</Badge>}>
         <div style={{ display: 'flex', gap: '8px', 'flex-wrap': 'wrap', 'align-items': 'center' }}>
@@ -50,8 +50,8 @@ export default function Primitives() {
           <Badge>neutral</Badge>
           <span><StatusDot tone="success" /> healthy</span>
           <span><StatusDot tone="danger" /> down</span>
-          <Kbd>⌘K</Kbd>
-          <Eyebrow>Eyebrow label</Eyebrow>
+          <kbd class="fkbd">⌘K</kbd>
+          <div class="eyebrow">Eyebrow label</div>
         </div>
         <div style={{ display: 'flex', gap: '10px', 'flex-wrap': 'wrap', 'margin-top': '14px' }}>
           <Toast tone="success">Deploy finished in 41 s</Toast>

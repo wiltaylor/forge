@@ -1,5 +1,5 @@
 import { For, Show, createResource, createSignal } from 'solid-js';
-import { PageHead, Card, Grid, Button, Input, Textarea, Table, toast } from '@forge/ui';
+import { PageHead, Card, Button, Input, Textarea, Table, toast } from '@forge/ui';
 import { api } from '../api';
 
 /* The JSON document store: save / load / list / delete via @forge/client. */
@@ -32,7 +32,7 @@ export default function DataDemo() {
   return (
     <>
       <PageHead title="Document store" sub="GET/PUT/DELETE /api/data/{name} — atomic JSON docs" />
-      <Grid>
+      <div class="fgrid">
         <Card title="Editor" action={<Button variant="primary" onClick={save}>Save</Button>}>
           <div style={{ display: 'grid', gap: 'var(--sp-3)' }}>
             <Input label="Document name" value={name()} onInput={(e) => setName(e.currentTarget.value)}
@@ -64,7 +64,7 @@ export default function DataDemo() {
             </Table>
           </Show>
         </Card>
-      </Grid>
+      </div>
     </>
   );
 }

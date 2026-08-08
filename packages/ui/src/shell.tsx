@@ -34,10 +34,6 @@ export function AppShell(props: AppShellProps): JSX.Element {
   );
 }
 
-export function NavSection(props: { children?: JSX.Element }): JSX.Element {
-  return <div class="fsidebar-section">{props.children}</div>;
-}
-
 export interface NavLinkProps extends JSX.AnchorHTMLAttributes<HTMLAnchorElement> {
   icon?: IconComponent;
   active?: boolean;
@@ -254,8 +250,4 @@ export function SettingsSection(props: { title: JSX.Element; sub?: JSX.Element; 
       {props.children}
     </section>
   );
-}
-
-export function SettingsRow(props: { children?: JSX.Element }): JSX.Element {
-  return <div class="settings-row">{props.children}</div>;
 }

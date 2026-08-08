@@ -4,7 +4,8 @@ import { ChevronDown } from './internal/icons';
 
 /* ---------------- Table ---------------------------------------------------- */
 /* Markup-only: pass thead/tbody as children. The wrap div gives wide tables
-   horizontal scroll at <=768px. */
+   horizontal scroll at <=768px.
+   Kept: encodes the required ftable-wrap wrapper around the table element. */
 export function Table(props: JSX.HTMLAttributes<HTMLTableElement>): JSX.Element {
   const [local, rest] = splitProps(props, ['children']);
   return (
@@ -15,11 +16,7 @@ export function Table(props: JSX.HTMLAttributes<HTMLTableElement>): JSX.Element 
 }
 
 /* ---------------- Logs ----------------------------------------------------- */
-export function Logs(props: JSX.HTMLAttributes<HTMLDivElement>): JSX.Element {
-  const [local, rest] = splitProps(props, ['children']);
-  return <div class="flogs" {...rest}>{local.children}</div>;
-}
-
+/* Kept: encodes the three-span time/level/message row structure. */
 export interface LogLineProps {
   time?: JSX.Element;
   level?: 'info' | 'warn' | 'error' | 'debug' | (string & {});

@@ -1,5 +1,5 @@
 import { createSignal } from 'solid-js';
-import { PageHead, Card, Grid, Stat, Toggle } from '@forge/ui';
+import { PageHead, Card, Stat, Toggle } from '@forge/ui';
 import { PieChart, LineChart, BarChart, GanttChart, Sparkline } from '@forge/charts';
 import { Flowchart } from '@forge/graph';
 
@@ -57,7 +57,7 @@ export default function ChartsDemo() {
     <>
       <PageHead title="Charts" sub="Zero-dep SVG — pie, line, bar, gantt, sparkline, flowchart. Categorical order is the validated Forge ramp." />
 
-      <Grid style={{ 'margin-bottom': '16px', '--fgrid-min': '280px' }}>
+      <div class="fgrid" style={{ 'margin-bottom': '16px', '--fgrid-min': '280px' }}>
         <Card title="Storage by share (pie)">
           <PieChart data={[
             { label: 'AI-Models', value: 3200 },
@@ -74,7 +74,7 @@ export default function ChartsDemo() {
             { label: 'severus', value: 120 },
           ]} />
         </Card>
-      </Grid>
+      </div>
 
       <Card title="Requests per hour (line, 3 series, area fills)">
         <LineChart series={REQUESTS} area height={220}
@@ -93,7 +93,7 @@ export default function ChartsDemo() {
       </Card>
       <div style={{ height: '16px' }} />
 
-      <Grid style={{ 'margin-bottom': '16px' }}>
+      <div class="fgrid" style={{ 'margin-bottom': '16px' }}>
         <Card>
           <Stat label="Requests / h" value="16 k" delta="+9 %" tone="success" />
           <div style={{ 'margin-top': '8px' }}>
@@ -106,7 +106,7 @@ export default function ChartsDemo() {
             <Sparkline points={[90, 95, 110, 100, 120, 115, 138, 130, 142, 142]} tone="danger" />
           </div>
         </Card>
-      </Grid>
+      </div>
 
       <Card title="CI pipeline (flowchart — auto-layout, ants on active, flash on broken, retry back-edge)">
         <Flowchart nodes={FLOW_NODES} edges={FLOW_EDGES} />

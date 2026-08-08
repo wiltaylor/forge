@@ -1,5 +1,5 @@
 import { createSignal, onMount, onCleanup, For } from 'solid-js';
-import { PageHead, Card, Stat, Button, Textarea, Logs, LogLine } from '@forge/ui';
+import { PageHead, Card, Stat, Button, Textarea, LogLine } from '@forge/ui';
 import { api } from '../api';
 
 /* The data plane over IPC: health via the generic request command, notes
@@ -59,7 +59,7 @@ export default function Overview() {
         sub="EventBus → forge://event: a 2 s backend ticker plus the publish action"
         action={<Button variant="primary" onClick={publish}>Publish event</Button>}
       >
-        <Logs style={{ 'max-height': '240px', 'overflow-y': 'auto' }}>
+        <div class="flogs" style={{ 'max-height': '240px', 'overflow-y': 'auto' }}>
           <For each={[...log()].reverse()} fallback={<LogLine level="debug">waiting for events…</LogLine>}>
             {(e) => (
               <LogLine time={e.t} level={e.topic === 'demo' ? 'warn' : 'info'}>
@@ -67,7 +67,7 @@ export default function Overview() {
               </LogLine>
             )}
           </For>
-        </Logs>
+        </div>
       </Card>
     </div>
   );
