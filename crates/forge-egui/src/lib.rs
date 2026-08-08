@@ -61,7 +61,9 @@ pub mod prelude {
         run, App, Command, Ctx, DialogResult, NavItem, NavSection, RunOptions, Shell, ShellState,
         ToastHandle,
     };
-    pub use crate::theme::{chart_series, series_color, Scheme, Severity, Theme};
+    pub use crate::theme::{
+        chart_series, series_color, Scheme, Severity, Surface, TextRole, Theme,
+    };
     pub use crate::widgets::*;
     pub use crate::{Error, Result};
     // Re-exported so downstream apps never pin their own (possibly diverging)

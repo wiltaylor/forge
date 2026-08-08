@@ -48,6 +48,41 @@ pub enum Severity {
     Info,
 }
 
+/// Named background roles — the meaning of each step of the `bg` ramp.
+///
+/// Paint with [`Theme::surface`] instead of indexing the ramp, so a widget
+/// says which surface it is on rather than which array slot that surface
+/// happens to occupy.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Surface {
+    /// The page behind everything.
+    Page,
+    /// A card, panel or bar sitting on the page.
+    Card,
+    /// A hovered row, or a card nested inside a card.
+    Hover,
+    /// A pressed control, or the active row of a list.
+    Pressed,
+    /// A popover, dropdown or menu floating above the page.
+    Popover,
+}
+
+/// Named foreground roles — the meaning of each step of the `fg` ramp.
+///
+/// Read with [`Theme::text`]. Named `TextRole` rather than `Text` to match
+/// forge-tui, where the short name would collide with `ratatui::text::Text`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TextRole {
+    /// Primary text — body copy, values, headings.
+    Primary,
+    /// Secondary text — labels and supporting copy.
+    Secondary,
+    /// Tertiary text — captions, hints, timestamps.
+    Tertiary,
+    /// Disabled text and placeholders.
+    Disabled,
+}
+
 /// A semantic color triple: solid tone, surface tint, and text-on-tint.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SemanticTriple {
@@ -81,7 +116,8 @@ pub struct BorderTokens {
 
 /// The full Forge token set. Field layout mirrors the web `Theme` interface
 /// and forge-tui: `bg` rises page(0) → popover(4), `fg` descends primary(0)
-/// → disabled(3).
+/// → disabled(3). Read those two ramps through [`Theme::surface`] and
+/// [`Theme::text`], which name each step.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Theme {
     pub name: &'static str,
@@ -116,6 +152,27 @@ impl Theme {
             Severity::Warning => &self.warning,
             Severity::Danger => &self.danger,
             Severity::Info => &self.info,
+        }
+    }
+
+    /// The background color for a named [`Surface`].
+    pub fn surface(&self, s: Surface) -> Color32 {
+        match s {
+            Surface::Page => self.bg[0],
+            Surface::Card => self.bg[1],
+            Surface::Hover => self.bg[2],
+            Surface::Pressed => self.bg[3],
+            Surface::Popover => self.bg[4],
+        }
+    }
+
+    /// The foreground color for a named [`TextRole`].
+    pub fn text(&self, r: TextRole) -> Color32 {
+        match r {
+            TextRole::Primary => self.fg[0],
+            TextRole::Secondary => self.fg[1],
+            TextRole::Tertiary => self.fg[2],
+            TextRole::Disabled => self.fg[3],
         }
     }
 
