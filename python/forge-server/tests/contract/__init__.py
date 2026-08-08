@@ -8,6 +8,7 @@ Nothing here knows about HTTP. The driver lives in ``tests/test_corpus.py``.
 """
 
 from .corpus import (
+    ABSENT,
     PYTHON_HTTP,
     Auth,
     AwaitEventStep,
@@ -29,6 +30,7 @@ from .corpus import (
 from .matcher import MatchError, Vars, interpolate, interpolate_value, match_value
 
 __all__ = [
+    "ABSENT",
     "PYTHON_HTTP",
     "Auth",
     "AwaitEventStep",

@@ -4,11 +4,13 @@ A plain ``StaticFiles(html=True)`` mount has no SPA fallback (unknown paths
 404), so this registers an explicit catch-all that returns ``index.html``
 for unknown non-``/api`` paths. ``/api/*`` misses stay JSON 404 envelopes.
 
-The catch-all takes every method, not only GET, because the contract says an
-``/api`` miss is a 404 envelope whatever the method — a ``PUT`` to
-``/api/data/a/b`` is a route that does not exist, not a method that is not
-allowed. A method that *is* wrong for a route that does exist still gets its
-405: see :func:`_method_mismatch`.
+The catch-all takes every method, not only GET. A ``PUT`` to ``/api/data/a/b``
+is a route that does not exist, not a method that is not allowed, and the
+contract corpus states the status:
+``contract/corpus.json``'s ``doc-name-rejected-path-separator`` expects a 404
+from that request and notes that both HTTP backends must agree on it. A method
+that *is* wrong for a route that does exist still gets its 405: see
+:func:`_method_mismatch`.
 """
 
 from __future__ import annotations
@@ -20,13 +22,13 @@ from fastapi.responses import FileResponse
 from starlette.routing import BaseRoute, Match
 from starlette.staticfiles import StaticFiles
 
-# Everything a client can send. The catch-all answers them all, so that a miss
-# is a miss whatever the method.
+# Every method a client of this contract sends. The catch-all answers them all,
+# so that a miss is a miss whatever the method.
 METHODS = ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
 
 # Methods the static frontend serves. Anything else on a non-/api path is a
 # 404, which is what the Rust backend's fallback returns.
-SERVED = {"GET", "HEAD"}
+SERVED_METHODS = {"GET", "HEAD"}
 
 
 def register_routes(
@@ -50,7 +52,7 @@ def register_routes(
         # /api misses must stay JSON 404 envelopes, never index.html.
         if full_path == "api" or full_path.startswith("api/"):
             raise HTTPException(404, f"no such API route: /{full_path}")
-        if request.method not in SERVED:
+        if request.method not in SERVED_METHODS:
             raise HTTPException(404, f"not found: /{full_path}")
         if full_path:
             candidate = (dist / full_path).resolve()

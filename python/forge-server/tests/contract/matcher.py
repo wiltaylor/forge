@@ -105,28 +105,44 @@ def _check_operator(
     if operator == "$exact":
         _equal(interpolate_value(operand, variables), actual, path)
     elif operator == "$min_length":
+        wanted = _operand(operand, int, "$min_length takes a count", path)
         if not isinstance(actual, str):
             raise MatchError(f"at {path}: $min_length needs a string, got {_show(actual)}")
-        if len(actual) < operand:
-            raise MatchError(f"at {path}: {actual!r} is shorter than {operand} characters")
+        if len(actual) < wanted:
+            raise MatchError(f"at {path}: {actual!r} is shorter than {wanted} characters")
     elif operator == "$type":
-        if not _is_type(operand, actual):
-            raise MatchError(f"at {path}: expected a {operand}, got {_show(actual)}")
+        wanted = _operand(operand, str, "$type takes a type name", path)
+        if wanted not in TYPES:
+            raise MatchError(f"at {path}: unknown $type {wanted!r}")
+        if not TYPES[wanted](actual):
+            raise MatchError(f"at {path}: expected a {wanted}, got {_show(actual)}")
     elif operator == "$contains":
         _check_contains(operand, actual, variables, path)
     elif operator == "$prefix":
-        wanted = interpolate(operand, variables)
+        wanted = interpolate(_operand(operand, str, "$prefix takes a string", path), variables)
         if not isinstance(actual, str):
             raise MatchError(f"at {path}: $prefix needs a string, got {_show(actual)}")
         if not actual.startswith(wanted):
             raise MatchError(f"at {path}: {actual!r} does not start with {wanted!r}")
     elif operator == "$gt":
-        if not isinstance(actual, (int, float)) or isinstance(actual, bool):
+        wanted = _operand(operand, (int, float), "$gt takes a number", path)
+        if not _is_number(actual):
             raise MatchError(f"at {path}: $gt needs a number, got {_show(actual)}")
-        if not actual > operand:
-            raise MatchError(f"at {path}: {actual} is not greater than {operand}")
+        if not actual > wanted:
+            raise MatchError(f"at {path}: {actual} is not greater than {wanted}")
     else:
         raise MatchError(f"at {path}: unknown matcher {operator!r}")
+
+
+def _operand(operand: Any, kind: type | tuple[type, ...], complaint: str, path: str) -> Any:
+    """An operator's own argument, checked before it is used.
+
+    A corpus that authors ``{"$gt": "x"}`` is a corpus bug, and must read as
+    one rather than as whatever error using it happens to raise.
+    """
+    if not isinstance(operand, kind) or isinstance(operand, bool):
+        raise MatchError(f"at {path}: {complaint}, got {_show(operand)}")
+    return operand
 
 
 def _check_contains(
@@ -152,22 +168,21 @@ def _check_contains(
     raise MatchError(f"at {path}: $contains needs a string or an array, got {_show(actual)}")
 
 
-def _is_type(wanted: str, actual: Any) -> bool:
-    if wanted == "string":
-        return isinstance(actual, str)
-    if wanted == "number":
-        return isinstance(actual, (int, float)) and not isinstance(actual, bool)
-    if wanted == "integer":
-        return isinstance(actual, int) and not isinstance(actual, bool)
-    if wanted == "boolean":
-        return isinstance(actual, bool)
-    if wanted == "array":
-        return isinstance(actual, list)
-    if wanted == "object":
-        return isinstance(actual, dict)
-    if wanted == "null":
-        return actual is None
-    raise MatchError(f"unknown $type {wanted!r}")
+def _is_number(value: Any) -> bool:
+    # `True` is an `int` in Python, and no JSON type calls it a number.
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
+#: The type names ``$type`` takes, and what each one accepts.
+TYPES = {
+    "string": lambda value: isinstance(value, str),
+    "number": _is_number,
+    "integer": lambda value: isinstance(value, int) and not isinstance(value, bool),
+    "boolean": lambda value: isinstance(value, bool),
+    "array": lambda value: isinstance(value, list),
+    "object": lambda value: isinstance(value, dict),
+    "null": lambda value: value is None,
+}
 
 
 def _check_subset(

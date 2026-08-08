@@ -33,6 +33,7 @@ from websockets.exceptions import ConnectionClosed, InvalidStatus
 from websockets.sync.client import connect as ws_connect
 
 from contract import (
+    ABSENT,
     PYTHON_HTTP,
     Auth,
     AwaitEventStep,
@@ -119,7 +120,7 @@ class Harness:
     @classmethod
     def build(cls, corpus: Corpus, root: Path) -> "Harness":
         fixture = corpus.fixture
-        variables = corpus.variables()
+        variables = dict(corpus.vars)
         data = root / "data"
         components = root / "components"
         frontend = root / "frontend"
@@ -297,12 +298,12 @@ class Harness:
         _check_status_and_headers(expect, response, index, self.vars)
         if expect is None:
             return
-        if expect.has_body:
+        if expect.body is not ABSENT:
             body = response.json()
             if body is _NOT_JSON:
                 raise Failure(f"step {index}: body is not JSON: {response.text!r}")
             _match(expect.body, body, self.vars, index)
-        if expect.has_text:
+        if expect.text is not ABSENT:
             _match(expect.text, response.text, self.vars, index)
 
 

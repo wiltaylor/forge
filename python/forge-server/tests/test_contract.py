@@ -147,6 +147,25 @@ def test_strings_interpolate_before_comparing():
     assert "unknown variable" in fails("${nope}", "x")
 
 
+@pytest.mark.parametrize(
+    "expected,complaint",
+    [
+        ({"$min_length": "one"}, "$min_length takes a count"),
+        ({"$type": 7}, "$type takes a type name"),
+        ({"$type": "strng"}, "unknown $type 'strng'"),
+        ({"$prefix": 7}, "$prefix takes a string"),
+        ({"$gt": "0"}, "$gt takes a number"),
+        ({"$nope": 1}, "unknown matcher '$nope'"),
+    ],
+)
+def test_a_matcher_given_the_wrong_operand_says_so(expected, complaint):
+    """An operand the matcher cannot use is a corpus bug, and must read as one
+    rather than as whatever error using it happens to raise."""
+    error = fails(expected, "anything")
+    assert complaint in error
+    assert error.startswith("at $:")
+
+
 def test_a_mixed_operator_object_is_a_corpus_bug():
     assert "exactly one $ key" in fails({"$type": "object", "n": 1}, {"n": 1})
 

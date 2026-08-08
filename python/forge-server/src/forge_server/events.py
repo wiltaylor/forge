@@ -14,6 +14,7 @@ from typing import Any, Callable
 from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from sse_starlette.sse import EventSourceResponse
 
+from .config import log
 from .envelope import fail
 
 QUEUE_SIZE = 64
@@ -160,6 +161,14 @@ async def _refuse(ws: WebSocket, exc: HTTPException) -> None:
     it does on every other endpoint.
     """
     if "websocket.http.response" not in (ws.scope.get("extensions") or {}):
+        # Said out loud rather than passed over: on this host a refused upgrade
+        # does not carry the status the contract states, and a silent
+        # difference is the thing the contract corpus exists to stop.
+        log.warning(
+            "this ASGI server has no `websocket.http.response` extension, so a "
+            "refused upgrade closes with 1008 instead of the contract's %d",
+            exc.status_code,
+        )
         await ws.close(code=1008)  # policy violation (bad/missing token)
         return
     response = fail(str(exc.detail), status=exc.status_code)

@@ -18,8 +18,12 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-# tests/contract/corpus.py -> tests -> forge-server -> python -> repo root
+# corpus.py -> contract -> tests -> forge-server -> python -> the repo root
 CORPUS_PATH = Path(__file__).resolve().parents[4] / "contract" / "corpus.json"
+
+#: An expectation the case did not author. ``null`` is itself a matcher, so
+#: absence needs a value of its own.
+ABSENT = object()
 
 #: Transport id of the Python HTTP driver.
 PYTHON_HTTP = "python-http"
@@ -123,14 +127,11 @@ class Expect:
     status: int
     #: Header name (lower-case) to a matcher over its value.
     headers: dict[str, Any]
-    #: Matcher over the parsed JSON body.
+    #: Matcher over the parsed JSON body, or :data:`ABSENT`.
     body: Any
-    #: Matcher over the raw body, for responses that are not JSON.
+    #: Matcher over the raw body for a response that is not JSON, or
+    #: :data:`ABSENT`.
     text: Any
-    #: Whether the case authored a body / text matcher at all, since ``null``
-    #: is itself a matcher.
-    has_body: bool = False
-    has_text: bool = False
 
 
 @dataclass(frozen=True)
@@ -233,10 +234,6 @@ class Corpus:
         """Cases a transport must run, in authored order."""
         return [case for case in self.cases if case.applies_to(transport)]
 
-    def variables(self) -> dict[str, str]:
-        """The substitution table, ready for a driver to add ``token`` to."""
-        return dict(self.vars)
-
     def validate(self) -> None:
         """Reject a corpus that cannot be run honestly.
 
@@ -297,7 +294,10 @@ class Corpus:
             # A driver would drop a body expectation authored here without a
             # word, which is the silent gap this corpus exists to stop. Assert
             # on the events instead, with `await_event`.
-            if first.expect is not None and (first.expect.has_body or first.expect.has_text):
+            authored = first.expect is not None and (
+                first.expect.body is not ABSENT or first.expect.text is not ABSENT
+            )
+            if authored:
                 raise CorpusError(
                     f"case {case.id!r} expects a body from the request that opens the "
                     "stream; only its status and headers can be checked"
@@ -530,8 +530,6 @@ def _expect_or_none(raw: dict, where: str) -> Expect | None:
     return Expect(
         status=_required(obj, "status", where, int),
         headers=_typed(_optional(obj, "headers", where, dict, {}), f"{where}.headers", dict),
-        body=obj.get("body"),
-        text=obj.get("text"),
-        has_body="body" in obj,
-        has_text="text" in obj,
+        body=obj.get("body", ABSENT),
+        text=obj.get("text", ABSENT),
     )

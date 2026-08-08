@@ -52,6 +52,12 @@ def register_routes(
     # request path before routing, so an encoded separator would otherwise
     # make the request miss this route entirely. The filename rule is what
     # must reject a traversal, and it cannot reject what it never sees.
+    #
+    # It follows that a plainly nested path — `/api/components/a/b.js` — also
+    # reaches the rule, and is a 400 here where the Rust route misses and
+    # returns 404. Both refuse it; the contract does not say which layer
+    # answers. Raised on #40, which gives the filename rule one implementation
+    # per language.
     @app.get("/api/components/{file:path}")
     async def bundle(file: str, claims: dict = Depends(require_claims)):
         validate_filename(file)
