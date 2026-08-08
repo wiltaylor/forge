@@ -48,10 +48,17 @@ build: frontend-build rust-build
 frontend-test: frontend-install
 	pnpm test
 
-# Run Rust tests
+# Run Rust tests (includes the contract corpus — see corpus-test)
 [group('test')]
 rust-test:
 	cargo test
+
+# Run the contract corpus (contract/corpus.json) against the Rust HTTP driver.
+# No live server: the driver builds the fixture the corpus describes.
+[group('test')]
+corpus-test:
+	cargo test -p forge-contract
+	cargo test -p forge-server --test corpus
 
 # Run Python package tests
 [group('test')]

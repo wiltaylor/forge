@@ -2,8 +2,11 @@
 
 Version: 1.0 — **frozen**. `@forge/client`, `crates/forge-server` (Rust) and
 `python/forge-server` (Python) all conform to this document. Changes require a
-version bump and updates to all three implementations plus the parity test
-suite (`examples/parity`).
+version bump and updates to all three implementations plus the contract corpus
+(`contract/corpus.json`) and the parity test suite (`examples/parity`).
+
+This document is the prose. [`contract/corpus.json`](../contract/README.md) is
+the same contract as authored data — the table its drivers run.
 
 ## Envelope
 

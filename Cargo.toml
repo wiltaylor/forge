@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
     "crates/forge-blocks",
+    "crates/forge-contract",
     "crates/forge-core",
     "crates/forge-server",
     "crates/forge-auth",
@@ -26,6 +27,7 @@ repository = "https://github.com/wiltaylor/forge"
 
 [workspace.dependencies]
 forge-blocks = { path = "crates/forge-blocks" }
+forge-contract = { path = "crates/forge-contract" }
 forge-core = { path = "crates/forge-core" }
 forge-server = { path = "crates/forge-server" }
 forge-tui = { path = "crates/forge-tui" }

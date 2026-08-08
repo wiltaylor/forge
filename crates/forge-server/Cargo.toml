@@ -44,6 +44,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 mime_guess = "2"
 
 [dev-dependencies]
+forge-contract = { workspace = true }
 tower = { version = "0.5", features = ["util"] }
 http-body-util = "0.1"
 # Matches the tokio-tungstenite version axum 0.8 uses internally.

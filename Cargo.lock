@@ -2608,6 +2608,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "forge-contract"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "forge-core"
 version = "0.1.0"
 dependencies = [
@@ -2657,6 +2665,7 @@ dependencies = [
  "argon2",
  "axum",
  "dotenvy",
+ "forge-contract",
  "forge-core",
  "futures-util",
  "http-body-util",
