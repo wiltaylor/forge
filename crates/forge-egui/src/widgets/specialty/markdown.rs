@@ -520,7 +520,7 @@ fn render_blocks(ui: &mut Ui, t: &Theme, blocks: &[MdBlock], quote: bool) {
         match block {
             MdBlock::Heading { level, spans } => {
                 let size = match level {
-                    1 => t.type_scale.h3,
+                    1 => t.type_scale.xl,
                     2 => t.type_scale.lg,
                     3 => t.type_scale.md,
                     _ => t.type_scale.base,

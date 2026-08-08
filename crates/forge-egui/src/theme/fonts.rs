@@ -4,11 +4,21 @@
 //!
 //! egui allows one weight per family, so Medium and SemiBold are registered
 //! as *named* families; [`Theme::font`](super::Theme::font) picks the right
-//! one from a [`FontWeight`](super::FontWeight). Without the feature all
-//! weights collapse onto egui's default proportional font.
+//! one from a [`FontWeight`]. Without the feature all weights collapse onto
+//! egui's default proportional font.
+//!
+//! [`FontWeight`] lives here rather than beside the geometry tokens: it names
+//! the families this module registers, and `theme/tokens.rs` is generated.
 
-use super::tokens::FontWeight;
 use egui::FontFamily;
+
+/// Font weights the Forge sans family ships.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum FontWeight {
+    Regular,
+    Medium,
+    SemiBold,
+}
 
 #[cfg_attr(not(feature = "fonts"), allow(dead_code))]
 pub(crate) const MEDIUM: &str = "plex-sans-medium";

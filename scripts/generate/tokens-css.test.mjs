@@ -12,7 +12,14 @@ import test from 'node:test';
 import { bannerLines } from './banner.mjs';
 import { parseBlocks } from './css-blocks.mjs';
 import { formatValue, renderTokensCss } from './tokens-css.mjs';
-import { SOURCE_PATH, groups, isSchemeToken, tokens, valueFor } from '../../packages/tokens/tokens.source.mjs';
+import {
+  SOURCE_PATH,
+  groups,
+  isSchemeToken,
+  tokens,
+  tokensFor,
+  valueFor,
+} from '../../packages/tokens/tokens.source.mjs';
 
 const css = renderTokensCss();
 const blocks = parseBlocks(css);
@@ -40,13 +47,19 @@ test('every block the stylesheet needs is emitted', () => {
   ].sort());
 });
 
-test(':root declares the whole token set and nothing else', () => {
-  assert.deepEqual(names(ROOT), tokens.map((t) => `--${t.name}`));
+test(':root declares the whole web token set and nothing else', () => {
+  assert.deepEqual(names(ROOT), tokensFor('web').map((t) => `--${t.name}`));
 });
 
 test('the override blocks restate exactly the per-scheme tokens', () => {
-  const scheme = tokens.filter(isSchemeToken).map((t) => `--${t.name}`);
+  const scheme = tokensFor('web').filter(isSchemeToken).map((t) => `--${t.name}`);
   for (const block of [MEDIA_LIGHT, ATTR_LIGHT, ATTR_DARK]) assert.deepEqual(names(block), scheme);
+});
+
+test('a token scoped to another kit gets no custom property', () => {
+  const scoped = tokens.filter((t) => t.only && !t.only.includes('web'));
+  assert.ok(scoped.length, 'the source scopes nothing away from the web');
+  for (const token of scoped) assert.doesNotMatch(css, new RegExp(`--${token.name}\\b`), token.name);
 });
 
 test('each block declares its own color-scheme', () => {

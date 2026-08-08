@@ -26,6 +26,7 @@ import { fileURLToPath } from 'node:url';
 import { renderBlocksEmoji } from './generate/blocks-emoji.mjs';
 import { renderBlocksSlash } from './generate/blocks-slash.mjs';
 import { renderBlocksTypes } from './generate/blocks-types.mjs';
+import { renderEguiTokens } from './generate/egui-tokens.mjs';
 import { renderEguiPalette, renderTuiPalette } from './generate/rust-palette.mjs';
 import { renderTokensCss } from './generate/tokens-css.mjs';
 
@@ -36,6 +37,7 @@ const ARTIFACTS = [
   { path: 'packages/tokens/css/tokens.css', render: renderTokensCss },
   { path: 'crates/forge-tui/src/theme/palette.rs', render: renderTuiPalette },
   { path: 'crates/forge-egui/src/theme/palette.rs', render: renderEguiPalette },
+  { path: 'crates/forge-egui/src/theme/tokens.rs', render: renderEguiTokens },
   { path: 'packages/blocks/src/types.gen.ts', render: renderBlocksTypes },
   { path: 'packages/blocks/src/slash.gen.ts', render: renderBlocksSlash },
   { path: 'packages/blocks/src/emoji.gen.ts', render: renderBlocksEmoji },

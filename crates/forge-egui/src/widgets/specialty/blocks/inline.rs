@@ -24,9 +24,9 @@ pub(super) fn text_style(t: &Theme, kind: &BlockKind) -> InlineStyle {
     match kind {
         BlockKind::Heading { level, .. } => InlineStyle {
             size: match level {
-                1 => t.type_scale.h1,
-                2 => t.type_scale.h2,
-                3 => t.type_scale.h3,
+                1 => t.type_scale.xl3,
+                2 => t.type_scale.xl2,
+                3 => t.type_scale.xl,
                 _ => t.type_scale.lg,
             },
             weight: FontWeight::SemiBold,

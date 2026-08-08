@@ -50,7 +50,7 @@ impl<'a> PageHead<'a> {
                     }
                     ui.label(
                         egui::RichText::new(self.title)
-                            .font(t.font(ui.ctx(), FontWeight::SemiBold, t.type_scale.h3))
+                            .font(t.font(ui.ctx(), FontWeight::SemiBold, t.type_scale.xl))
                             .color(t.text(TextRole::Primary)),
                     );
                     if let Some(sub) = self.sub {

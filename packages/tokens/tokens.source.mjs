@@ -19,6 +19,12 @@
  *   - `dark` and `light` — a scheme token; declared in `:root` and repeated in
  *     each scheme-override block.
  *
+ * A token belongs to every kit unless it names the kits it belongs to:
+ *   { name: 'sidebar-rail-w', only: ['egui'], … }
+ * `only` is for a dimension one kit has and the others have no equivalent of.
+ * Such a token gets no CSS custom property, and reading it from a kit it is not
+ * scoped to is an error rather than a silent value.
+ *
  * Values
  * ------
  *   { hex: '#11141A' }                     an sRGB literal, as authored
@@ -232,6 +238,11 @@ export const groups = [
     tokens: [
       { name: 'sidebar-w', value: raw('240px') },
       { name: 'topbar-h', value: raw('48px') },
+      // The desktop shell collapses its sidebar to an icon rail and carries a
+      // status bar along the bottom. The web shell does neither, so these two
+      // are scoped to that kit rather than declared as custom properties.
+      { name: 'sidebar-rail-w', note: 'collapsed sidebar', only: ['egui'], value: raw('56px') },
+      { name: 'statusbar-h', only: ['egui'], value: raw('28px') },
     ],
   },
 ];
@@ -242,12 +253,25 @@ export const tokens = groups.flatMap((group) => group.tokens ?? []);
 /** True when the token is declared per scheme rather than once for both. */
 export const isSchemeToken = (token) => token.dark !== undefined;
 
+/** True when the kit declares this token — every kit, unless the token says otherwise. */
+export const inKit = (token, kit) => token.only === undefined || token.only.includes(kit);
+
+/** Every token the kit declares, in declaration order. */
+export const tokensFor = (kit) => tokens.filter((token) => inKit(token, kit));
+
 const byName = new Map(tokens.map((token) => [token.name, token]));
 
-/** The token of that name. Throws rather than emitting a palette with a hole in it. */
-export function tokenNamed(name) {
+/**
+ * The token of that name. Throws rather than emitting a palette with a hole in
+ * it. Naming a kit also refuses a token that kit does not declare, so a layout
+ * cannot quietly read another kit's dimension.
+ */
+export function tokenNamed(name, kit = undefined) {
   const token = byName.get(name);
   if (!token) throw new Error(`no token named "${name}" in ${SOURCE_PATH}`);
+  if (kit !== undefined && !inKit(token, kit)) {
+    throw new Error(`"${name}" is scoped to ${token.only.join(', ')}, so the ${kit} kit cannot read it`);
+  }
   return token;
 }
 

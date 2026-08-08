@@ -54,7 +54,7 @@ impl Theme {
                 ),
                 (
                     TextStyle::Heading,
-                    FontId::new(ts.h3, fonts::family(super::FontWeight::SemiBold)),
+                    FontId::new(ts.xl, fonts::family(super::FontWeight::SemiBold)),
                 ),
             ]
             .into();
