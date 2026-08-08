@@ -10,7 +10,7 @@ use super::inline::{inline_job, text_style, InlineStyle};
 use super::{byte_of_char, keys, popups, siblings, Action, BlockEditorState, CaretHint, Ecx};
 use crate::theme::{FontWeight, TextRole};
 use egui::text::{CCursor, CCursorRange};
-use egui::{Key, Modifiers, Pos2, Rect, Sense, Stroke, Ui, Vec2};
+use egui::{Key, Pos2, Rect, Sense, Stroke, Ui, Vec2};
 use forge_blocks::{Address, BlockKind, Document, ListStyle, Mode};
 
 /// A plain text block row: indent + marker + body.
@@ -383,18 +383,13 @@ fn slash_keys(ui: &Ui, ecx: &mut Ecx, st: &mut BlockEditorState, addr: Address) 
     if !st.slash.as_ref().is_some_and(|s| s.addr == addr) {
         return false;
     }
-    let (up, down, enter, esc) = ui.ctx().input_mut(|i| {
-        // Tab means nothing to the palette, but it is not the draft's
-        // either: a multiline `TextEdit` would answer it with a tab
-        // character in the query.
-        i.consume_key(Modifiers::NONE, Key::Tab);
-        (
-            i.consume_key(Modifiers::NONE, Key::ArrowUp),
-            i.consume_key(Modifiers::NONE, Key::ArrowDown),
-            i.consume_key(Modifiers::NONE, Key::Enter),
-            i.consume_key(Modifiers::NONE, Key::Escape),
-        )
-    });
+    // Tab means nothing to the palette, but it is not the draft's either: a
+    // multiline `TextEdit` would answer it with a tab character in the query.
+    keys::consume_plain(ui, Key::Tab);
+    let up = keys::consume_plain(ui, Key::ArrowUp);
+    let down = keys::consume_plain(ui, Key::ArrowDown);
+    let enter = keys::consume_plain(ui, Key::Enter);
+    let esc = keys::consume_plain(ui, Key::Escape);
     let query = st.draft.strip_prefix('/').unwrap_or("").to_lowercase();
     let n = popups::slash_choices(st, addr.in_column(), &query).len();
     if let Some(slash) = st.slash.as_mut() {
@@ -436,32 +431,21 @@ fn emoji_keys(
     };
     let hits = forge_blocks::search_emoji(&prefix, popups::EMOJI_LIMIT);
     if !hits.is_empty() {
-        let (up, down, enter, tab) = ui.ctx().input_mut(|i| {
-            (
-                i.consume_key(Modifiers::NONE, Key::ArrowUp),
-                i.consume_key(Modifiers::NONE, Key::ArrowDown),
-                i.consume_key(Modifiers::NONE, Key::Enter),
-                i.consume_key(Modifiers::NONE, Key::Tab),
-            )
-        });
-        if down {
+        if keys::consume_plain(ui, Key::ArrowDown) {
             st.emoji_hl = (st.emoji_hl + 1).min(hits.len() - 1);
             return true;
         }
-        if up {
+        if keys::consume_plain(ui, Key::ArrowUp) {
             st.emoji_hl = st.emoji_hl.saturating_sub(1);
             return true;
         }
-        if enter || tab {
+        if keys::consume_plain(ui, Key::Enter) || keys::consume_plain(ui, Key::Tab) {
             let (code, _) = hits[st.emoji_hl.min(hits.len() - 1)];
             popups::complete_emoji(ui.ctx(), st, doc, addr, id, start, code);
             return true;
         }
     }
-    if ui
-        .ctx()
-        .input_mut(|i| i.consume_key(Modifiers::NONE, Key::Escape))
-    {
+    if keys::consume_plain(ui, Key::Escape) {
         st.emoji_dismissed = Some(prefix);
         return true;
     }
@@ -474,12 +458,8 @@ fn emoji_keys(
 fn nav_keys(ui: &Ui, ecx: &mut Ecx, st: &mut BlockEditorState, addr: Address) {
     let on_first = st.caret.row == 0;
     let on_last = st.caret.row + 1 >= st.caret.rows.max(1);
-    let (up, down) = ui.ctx().input_mut(|i| {
-        (
-            on_first && i.consume_key(Modifiers::NONE, Key::ArrowUp),
-            on_last && i.consume_key(Modifiers::NONE, Key::ArrowDown),
-        )
-    });
+    let up = on_first && keys::consume_plain(ui, Key::ArrowUp);
+    let down = on_last && keys::consume_plain(ui, Key::ArrowDown);
     if up {
         ecx.actions.push(Action::NavPrev {
             addr,

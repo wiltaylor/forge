@@ -65,18 +65,7 @@ pub(super) fn code_block(
     // block-level keys (Escape leaves, Alt+arrows move the block) and leaves
     // the rest — Enter included, it is a newline in here — to the buffer.
     if !ecx.read_only && ui.ctx().memory(|m| m.has_focus(body_id)) {
-        keys::handle(
-            ui,
-            ecx,
-            st,
-            doc,
-            keys::Focused {
-                addr,
-                mode: Mode::Buffer,
-                buffer: Some(body_id),
-                selection: false,
-            },
-        );
+        keys::buffer(ui, ecx, st, doc, addr, body_id);
     }
 
     let Some(BlockKind::Code { lang, code }) = doc.block_mut(addr).map(|b| &mut b.kind) else {
@@ -591,18 +580,15 @@ pub(super) fn admonition(
         triple.base,
     );
 
-    if cycle_tone || title_changed {
-        if let Some(BlockKind::Admonition { tone, title, .. }) =
-            doc.block_mut(addr).map(|b| &mut b.kind)
+    // The badge click cycles the tone through the same action the resolver's
+    // `Op::CycleTone` lands on, so the order has one author.
+    if cycle_tone {
+        ecx.actions.push(Action::CycleTone(addr));
+    }
+    if title_changed {
+        if let Some(BlockKind::Admonition { title, .. }) = doc.block_mut(addr).map(|b| &mut b.kind)
         {
-            if cycle_tone {
-                // One cycle order, in the shared crate — the same one
-                // `Op::CycleTone` walks.
-                *tone = tone.next();
-            }
-            if title_changed {
-                *title = title_buf;
-            }
+            *title = title_buf;
             st.changed = true;
         }
     }

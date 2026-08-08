@@ -11,10 +11,8 @@ use crate::widgets::charts::{BarChart, BarGroup, LineChart, LineSeries, PieChart
 use crate::widgets::specialty::code::highlight_job;
 use crate::widgets::specialty::{FlowEdge, FlowNode, Flowchart};
 use crate::widgets::Tone as WidgetTone;
-use egui::{
-    Align2, CornerRadius, Frame, Key, Margin, Modifiers, Pos2, Rect, Sense, Shape, Stroke, Ui, Vec2,
-};
-use forge_blocks::{Address, BlockKind, Document, MessageKind, Mode};
+use egui::{Align2, CornerRadius, Frame, Key, Margin, Pos2, Rect, Sense, Shape, Stroke, Ui, Vec2};
+use forge_blocks::{Address, BlockKind, Document, MessageKind};
 
 /* ---------------- dispatch ---------------- */
 
@@ -213,24 +211,7 @@ fn json_edit(
     // discards on a second press — so that one key never reaches the shared
     // key model; the rest of the buffer's block-level keys do.
     if ui.ctx().memory(|m| m.has_focus(body_id)) {
-        let esc = ui
-            .ctx()
-            .input_mut(|i| i.consume_key(Modifiers::NONE, Key::Escape));
-        if !esc {
-            keys::handle(
-                ui,
-                ecx,
-                st,
-                doc,
-                keys::Focused {
-                    addr,
-                    mode: Mode::Buffer,
-                    buffer: Some(body_id),
-                    selection: false,
-                },
-            );
-        }
-        if esc {
+        if keys::consume_plain(ui, Key::Escape) {
             match serde_json::from_str::<BlockKind>(&st.json_draft) {
                 Ok(kind) => {
                     if let Some(b) = doc.block_mut(addr) {
@@ -253,6 +234,8 @@ fn json_edit(
                     }
                 }
             }
+        } else {
+            keys::buffer(ui, ecx, st, doc, addr, body_id);
         }
     }
 

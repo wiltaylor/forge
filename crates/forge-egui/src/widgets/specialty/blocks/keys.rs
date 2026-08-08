@@ -47,7 +47,8 @@ pub(super) struct Focused {
 }
 
 /// Read the next keypress this editor acts on, resolve it against the shared
-/// policy, and perform what comes back. Says whether a key was taken.
+/// policy, and perform what comes back. Says whether a key resolved to
+/// something the editor acted on — which is not the same as consuming it.
 ///
 /// Scanning stops at the first key the editor takes; keys before it belong to
 /// the focused buffer (a typed character, a caret move) and are left in the
@@ -75,10 +76,14 @@ pub(super) fn handle(
                 // Walking past it is how this kit performs the op.
                 Some(Op::Insert(_)) => continue,
                 Some(op) => return Some((event.clone(), Some(op))),
-                // Tab is never text in this editor. The resolver leaves it
-                // unbound off a list item, and a multiline `TextEdit` would
-                // answer by typing a tab character into the markdown source.
-                None if key.code == "Tab" => return Some((event.clone(), None)),
+                // Tab is never markdown. The resolver leaves it unbound off a
+                // list item, and the multiline `TextEdit` holding the source
+                // would answer by typing a tab character into it. A code or
+                // JSON body is a different buffer with a different answer —
+                // there, a tab is exactly what Tab means.
+                None if key.code == "Tab" && matches!(focused.mode, Mode::Text { .. }) => {
+                    return Some((event.clone(), None))
+                }
                 None => continue,
             }
         }
@@ -96,6 +101,52 @@ pub(super) fn handle(
         drop_event(ui.ctx(), &event);
     }
     true
+}
+
+/// The same, for a buffer of the kit's own holding a block's content — a
+/// code body, a data block's JSON source. The block-level keys still apply;
+/// every other key is the buffer's.
+pub(super) fn buffer(
+    ui: &Ui,
+    ecx: &mut Ecx,
+    st: &mut BlockEditorState,
+    doc: &Document,
+    addr: Address,
+    body: Id,
+) {
+    handle(
+        ui,
+        ecx,
+        st,
+        doc,
+        Focused {
+            addr,
+            mode: Mode::Buffer,
+            buffer: Some(body),
+            selection: false,
+        },
+    );
+}
+
+/// `consume_key` for a key held with no modifier at all.
+///
+/// egui's own ignores *extra* Shift and Alt, so a popup asking for `↑` would
+/// eat the Alt+↑ that moves the block. Every key this kit takes before the
+/// resolver is asked for exactly, so the resolver still sees the chords.
+pub(super) fn consume_plain(ui: &Ui, want: egui::Key) -> bool {
+    ui.ctx().input_mut(|i| {
+        let mut hit = false;
+        i.events.retain(|event| {
+            let is_match = matches!(
+                event,
+                Event::Key { key, pressed: true, modifiers, .. }
+                    if *key == want && modifiers.is_none()
+            );
+            hit |= is_match;
+            !is_match
+        });
+        hit
+    })
 }
 
 /// One egui event in the shared key shape, or `None` when it is not a
@@ -178,10 +229,15 @@ fn perform(
             true
         }
         Op::Enter => act(Action::Focus(addr, CaretHint::End)),
-        // The palette is a popup over the focused block's draft, filtered by
-        // everything after the leading `/`. So the `/` goes on into the
-        // draft — and with no draft to filter, a merely selected block has
-        // no palette to open.
+        // The palette is a popup inside the focused text block's `TextEdit`,
+        // filtered by everything after the leading `/` in its draft — so the
+        // `/` goes on into that draft rather than being spent here.
+        //
+        // A gap, not a policy: with a block merely selected there is no draft
+        // and no `TextEdit` to anchor to, so `/` opens nothing. The ratatui
+        // kit binds it in both modes. Closing it means making the palette a
+        // popup of the editor rather than of one text block, which is a
+        // change to this kit's UI, not to its key handling.
         Op::OpenPalette => {
             if matches!(focused.mode, Mode::Text { .. }) {
                 st.slash = Some(SlashState { addr, hl: 0 });
@@ -196,11 +252,13 @@ fn perform(
             at,
             focus: Some(focus),
         } => act(Action::InsertTableRow { addr, at, focus }),
-        // Row and column ops away from the last row are toolbar buttons
-        // under this kit's grid, not key bindings — the reason
-        // `contract/blocks/corpus.json` marks their three cases inapplicable
-        // to rust-egui. Binding them here would make that note false while
-        // leaving the cases unrun, so they stop at the adapter.
+        // The table ops that are not "Enter off the last row" have no
+        // keyboard home in this kit: `+ Row` / `− Row` / `+ Col` / `− Col`
+        // are toolbar buttons under the grid, and Ctrl+Enter is bound to
+        // nothing at all. `contract/blocks/corpus.json` records exactly that,
+        // in the four table cases it marks inapplicable to `rust-egui`.
+        // Binding them here would make those notes false while leaving the
+        // cases unrun, so they stop at the adapter.
         Op::InsertRow { .. } | Op::InsertCol { .. } | Op::RemoveCol { .. } => false,
     }
 }

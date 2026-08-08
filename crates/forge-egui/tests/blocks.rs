@@ -417,3 +417,64 @@ fn alt_down_moves_the_block_from_inside_the_code_buffer() {
         "Escape must surrender the code body's focus"
     );
 }
+
+/// Tab is markdown's business, not a buffer's. The editor swallows it in a
+/// text block — the resolver leaves it unbound off a list item, and a tab
+/// character has no place in the source — but a code body answers it the way
+/// a code editor should.
+#[test]
+fn tab_types_a_tab_in_the_code_buffer() {
+    use forge_egui::forge_blocks::{Address, Block};
+    let doc = Document::from_blocks(vec![Block::new(BlockKind::Code {
+        lang: "rs".into(),
+        code: String::new(),
+    })]);
+    let state = RefCell::new(BlockEditorState::new(doc));
+    state.borrow_mut().edit(Address::Root(0), 0);
+    let mut harness = themed_harness(|ui| {
+        let mut s = state.borrow_mut();
+        let _ = BlockEditor::new(&mut s).show(ui);
+    });
+    harness.run();
+    harness.key_press(egui::Key::Tab);
+    harness.run();
+    drop(harness);
+    let state = state.borrow();
+    let BlockKind::Code { ref code, .. } = state.doc.blocks[0].kind else {
+        panic!("expected a code block");
+    };
+    assert_eq!(code, "\t");
+}
+
+/// The emoji popup takes the plain arrows to walk its list, and only those:
+/// Alt+↓ still means "move the block", which is the resolver's call.
+#[test]
+fn alt_down_moves_the_block_with_the_emoji_popup_open() {
+    use forge_egui::forge_blocks::{Address, Block};
+    let doc = Document::from_blocks(vec![
+        Block::new(BlockKind::Paragraph { md: ":smi".into() }),
+        Block::new(BlockKind::Paragraph { md: "after".into() }),
+    ]);
+    let state = RefCell::new(BlockEditorState::new(doc));
+    // The caret sits right after the prefix, which is what opens the popup.
+    state.borrow_mut().edit(Address::Root(0), 4);
+    let mut harness = themed_harness(|ui| {
+        let mut s = state.borrow_mut();
+        let _ = BlockEditor::new(&mut s).show(ui);
+    });
+    harness.run();
+    harness.key_press_modifiers(egui::Modifiers::ALT, egui::Key::ArrowDown);
+    harness.run();
+    drop(harness);
+    let state = state.borrow();
+    assert_eq!(
+        state
+            .doc
+            .blocks
+            .iter()
+            .filter_map(|b| b.kind.md())
+            .collect::<Vec<_>>(),
+        vec!["after", ":smi"],
+        "Alt+down must move the block past its sibling"
+    );
+}
