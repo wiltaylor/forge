@@ -11,6 +11,12 @@ export default defineConfig({
   resolve: { dedupe: ['solid-js'] },
   test: {
     environment: 'happy-dom',
+    /* The video render arm mounts an embed iframe; without this, happy-dom
+       fetches the real URL from inside the test. This setting keeps the
+       iframe's `src` set but skips the navigation, silently. */
+    environmentOptions: {
+      happyDOM: { settings: { navigation: { disableChildFrameNavigation: true } } },
+    },
     setupFiles: ['tests/setup.ts'],
   },
 });
