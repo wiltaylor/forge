@@ -1,6 +1,6 @@
 use crate::event::{in_area, is_press, scroll_delta, Outcome};
 use crate::text;
-use crate::theme::Theme;
+use crate::theme::{Surface, TextRole, Theme};
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
@@ -30,8 +30,8 @@ impl Level {
 
     fn color(self, t: &Theme) -> Color {
         match self {
-            Level::Trace => t.fg[3],
-            Level::Debug => t.fg[2],
+            Level::Trace => t.text(TextRole::Disabled),
+            Level::Debug => t.text(TextRole::Tertiary),
             Level::Info => t.info.base,
             Level::Warn => t.warning.base,
             Level::Error => t.danger.base,
@@ -174,7 +174,7 @@ impl<'a> StatefulWidget for Logs<'a> {
         state.view_h = area.height as usize;
         state.area = area;
         paint(area, |t| {
-            buf.set_style(area, Style::new().bg(t.bg[1]));
+            buf.set_style(area, Style::new().bg(t.surface(Surface::Card)));
             let max_offset = state.len.saturating_sub(state.view_h);
             if state.follow {
                 state.offset = max_offset;
@@ -191,7 +191,14 @@ impl<'a> StatefulWidget for Logs<'a> {
                 if let Some(ts) = &line.ts {
                     let tw = text::width(ts) as u16;
                     if area.width > tw + 6 {
-                        buf.set_string(x, y, ts, Style::new().fg(t.fg[3]).bg(t.bg[1]));
+                        buf.set_string(
+                            x,
+                            y,
+                            ts,
+                            Style::new()
+                                .fg(t.text(TextRole::Disabled))
+                                .bg(t.surface(Surface::Card)),
+                        );
                         x += tw + 1;
                     }
                 }
@@ -201,13 +208,20 @@ impl<'a> StatefulWidget for Logs<'a> {
                     line.level.label(),
                     Style::new()
                         .fg(line.level.color(t))
-                        .bg(t.bg[1])
+                        .bg(t.surface(Surface::Card))
                         .add_modifier(Modifier::BOLD),
                 );
                 x += 4;
                 let avail = (area.x + area.width).saturating_sub(x) as usize;
                 let shown = text::truncate(&line.text, avail);
-                buf.set_string(x, y, &shown, Style::new().fg(t.fg[1]).bg(t.bg[1]));
+                buf.set_string(
+                    x,
+                    y,
+                    &shown,
+                    Style::new()
+                        .fg(t.text(TextRole::Secondary))
+                        .bg(t.surface(Surface::Card)),
+                );
                 // Search highlight (case-insensitive substring on the visible slice).
                 if let Some(needle) = state.search.as_deref().filter(|n| !n.is_empty()) {
                     let hay = shown.to_lowercase();

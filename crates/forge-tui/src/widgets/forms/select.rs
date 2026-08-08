@@ -1,5 +1,6 @@
 use crate::event::{clicked, is_press, left_down, Outcome};
 use crate::text;
+use crate::theme::{Surface, TextRole};
 use crate::widgets::forms::{ListBox, ListBoxState};
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
@@ -153,27 +154,41 @@ impl<'a> StatefulWidget for Select<'a> {
             };
             let field = Rect::new(area.x, area.y, area.width, 1);
             state.field = field;
-            buf.set_style(field, Style::new().bg(t.bg[2]));
-            buf.set_string(area.x, area.y, "▎", Style::new().fg(edge).bg(t.bg[2]));
+            buf.set_style(field, Style::new().bg(t.surface(Surface::Hover)));
+            buf.set_string(
+                area.x,
+                area.y,
+                "▎",
+                Style::new().fg(edge).bg(t.surface(Surface::Hover)),
+            );
             let (label, style) = match state.value.and_then(|i| self.items.get(i)) {
                 Some(v) => (
                     *v,
-                    Style::new().fg(if self.disabled { t.fg[3] } else { t.fg[0] }),
+                    Style::new().fg(if self.disabled {
+                        t.text(TextRole::Disabled)
+                    } else {
+                        t.text(TextRole::Primary)
+                    }),
                 ),
-                None => (self.placeholder, Style::new().fg(t.fg[3])),
+                None => (
+                    self.placeholder,
+                    Style::new().fg(t.text(TextRole::Disabled)),
+                ),
             };
             buf.set_string(
                 area.x + 1,
                 area.y,
                 text::truncate(label, area.width.saturating_sub(4) as usize),
-                style.bg(t.bg[2]),
+                style.bg(t.surface(Surface::Hover)),
             );
             if area.width >= 3 {
                 buf.set_string(
                     area.x + area.width - 2,
                     area.y,
                     if state.open { "▴" } else { "▾" },
-                    Style::new().fg(t.fg[2]).bg(t.bg[2]),
+                    Style::new()
+                        .fg(t.text(TextRole::Tertiary))
+                        .bg(t.surface(Surface::Hover)),
                 );
             }
 
@@ -184,8 +199,12 @@ impl<'a> StatefulWidget for Select<'a> {
                 if popup.height >= 3 {
                     Clear.render(popup, buf);
                     let block = Block::bordered()
-                        .border_style(Style::new().fg(t.border.strong).bg(t.bg[4]))
-                        .style(Style::new().bg(t.bg[4]));
+                        .border_style(
+                            Style::new()
+                                .fg(t.border.strong)
+                                .bg(t.surface(Surface::Popover)),
+                        )
+                        .style(Style::new().bg(t.surface(Surface::Popover)));
                     let inner = block.inner(popup);
                     block.render(popup, buf);
                     // The committed value is shown as a display-only selection;

@@ -11,7 +11,7 @@
 use crate::event::{clicked, is_press, left_down, Keymap, Outcome};
 use crate::runtime::{Overlay, OverlayOutcome};
 use crate::text;
-use crate::theme::{ambient_theme, Theme};
+use crate::theme::{ambient_theme, Surface, TextRole, Theme};
 use crate::widgets::overlays::{
     Command, DropdownMenu, MenuEntry, MenuState, Modal, Palette, PaletteState,
 };
@@ -118,7 +118,9 @@ impl Overlay for ConfirmDialog {
                 inner.x,
                 y,
                 line,
-                Style::new().fg(theme.fg[1]).bg(theme.bg[4]),
+                Style::new()
+                    .fg(theme.text(TextRole::Secondary))
+                    .bg(theme.surface(Surface::Popover)),
             );
         }
         let by = inner.y + inner.height.saturating_sub(1);
@@ -242,13 +244,17 @@ impl Overlay for HelpOverlay {
                 inner.x,
                 y,
                 kbd,
-                Style::new().fg(theme.fg[0]).bg(theme.bg[3]),
+                Style::new()
+                    .fg(theme.text(TextRole::Primary))
+                    .bg(theme.surface(Surface::Pressed)),
             );
             buf.set_string(
                 inner.x + kbd_w + 2,
                 y,
                 text::truncate(help, inner.width.saturating_sub(kbd_w + 2) as usize),
-                Style::new().fg(theme.fg[1]).bg(theme.bg[4]),
+                Style::new()
+                    .fg(theme.text(TextRole::Secondary))
+                    .bg(theme.surface(Surface::Popover)),
             );
         }
     }

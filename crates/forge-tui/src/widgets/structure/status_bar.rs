@@ -1,4 +1,5 @@
 use crate::text;
+use crate::theme::{Surface, TextRole};
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
@@ -27,7 +28,9 @@ impl<'a> StatusBar<'a> {
 impl Widget for StatusBar<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         paint(area, |t| {
-            let style = Style::new().fg(t.fg[2]).bg(t.bg[1]);
+            let style = Style::new()
+                .fg(t.text(TextRole::Tertiary))
+                .bg(t.surface(Surface::Card));
             buf.set_style(Rect::new(area.x, area.y, area.width, 1), style);
             buf.set_string(
                 area.x + 1,

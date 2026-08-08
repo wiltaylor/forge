@@ -2,7 +2,7 @@
 //! targeted style assertions (theming tier). Full style dumps are avoided —
 //! too churn-prone.
 
-use forge_tui::theme::Theme;
+use forge_tui::theme::{TextRole, Theme};
 use forge_tui::widgets::*;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
@@ -111,7 +111,7 @@ fn input_renders_value_cursor_and_placeholder() {
     insta::assert_snapshot!(buffer_text(&buf));
     // Focused edge bar is accent; placeholder is disabled-tone.
     assert_eq!(buf[(0, 0)].style().fg, Some(t.accent.base));
-    assert_eq!(buf[(14, 0)].style().fg, Some(t.fg[3]));
+    assert_eq!(buf[(14, 0)].style().fg, Some(t.text(TextRole::Disabled)));
 }
 
 #[test]

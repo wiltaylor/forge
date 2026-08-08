@@ -1,5 +1,6 @@
 use crate::event::{in_area, is_press, left_down, Outcome};
 use crate::text;
+use crate::theme::{Surface, TextRole};
 use crate::widgets::overlays::place;
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
@@ -207,8 +208,12 @@ impl<'a> StatefulWidget for DropdownMenu<'a> {
             state.panel = panel;
             Clear.render(panel, buf);
             let block = ratatui::widgets::Block::bordered()
-                .border_style(Style::new().fg(t.border.strong).bg(t.bg[4]))
-                .style(Style::new().bg(t.bg[4]));
+                .border_style(
+                    Style::new()
+                        .fg(t.border.strong)
+                        .bg(t.surface(Surface::Popover)),
+                )
+                .style(Style::new().bg(t.surface(Surface::Popover)));
             let inner = block.inner(panel);
             block.render(panel, buf);
 
@@ -224,7 +229,9 @@ impl<'a> StatefulWidget for DropdownMenu<'a> {
                             inner.x,
                             y,
                             "─".repeat(inner.width as usize),
-                            Style::new().fg(t.border.subtle).bg(t.bg[4]),
+                            Style::new()
+                                .fg(t.border.subtle)
+                                .bg(t.surface(Surface::Popover)),
                         );
                     }
                     MenuEntry::Section(title) => {
@@ -233,7 +240,9 @@ impl<'a> StatefulWidget for DropdownMenu<'a> {
                             inner.x + 1,
                             y,
                             text::truncate(&title, inner.width.saturating_sub(2) as usize),
-                            Style::new().fg(t.fg[2]).bg(t.bg[4]),
+                            Style::new()
+                                .fg(t.text(TextRole::Tertiary))
+                                .bg(t.surface(Surface::Popover)),
                         );
                     }
                     MenuEntry::Item {
@@ -250,15 +259,17 @@ impl<'a> StatefulWidget for DropdownMenu<'a> {
                         let is_cursor = entry.selectable() && selectable_idx == state.highlight;
                         let mut style = Style::new()
                             .fg(if *disabled {
-                                t.fg[3]
+                                t.text(TextRole::Disabled)
                             } else if *danger {
                                 t.danger.fg
                             } else {
-                                t.fg[0]
+                                t.text(TextRole::Primary)
                             })
-                            .bg(t.bg[4]);
+                            .bg(t.surface(Surface::Popover));
                         if is_cursor {
-                            style = style.bg(t.bg[3]).add_modifier(Modifier::BOLD);
+                            style = style
+                                .bg(t.surface(Surface::Pressed))
+                                .add_modifier(Modifier::BOLD);
                             buf.set_style(Rect::new(inner.x, y, inner.width, 1), style);
                         }
                         buf.set_string(
@@ -274,11 +285,13 @@ impl<'a> StatefulWidget for DropdownMenu<'a> {
                                     inner.x + inner.width - kw - 1,
                                     y,
                                     *kbd,
-                                    Style::new().fg(t.fg[2]).bg(if is_cursor {
-                                        t.bg[3]
-                                    } else {
-                                        t.bg[4]
-                                    }),
+                                    Style::new()
+                                        .fg(t.text(TextRole::Tertiary))
+                                        .bg(if is_cursor {
+                                            t.surface(Surface::Pressed)
+                                        } else {
+                                            t.surface(Surface::Popover)
+                                        }),
                                 );
                             }
                         }

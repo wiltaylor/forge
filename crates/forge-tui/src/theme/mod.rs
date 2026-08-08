@@ -80,7 +80,7 @@ pub enum TextRole {
 pub struct SemanticTriple {
     /// Solid tone — borders, icons, gauge fills.
     pub base: Color,
-    /// Tint background (alpha pre-blended over `bg[1]`).
+    /// Tint background (alpha pre-blended over [`Surface::Card`]).
     pub bg: Color,
     /// Text readable on the tint.
     pub fg: Color,
@@ -91,7 +91,7 @@ pub struct Accent {
     pub base: Color,
     pub hover: Color,
     pub press: Color,
-    /// Selection/tint background (alpha pre-blended over `bg[1]`).
+    /// Selection/tint background (alpha pre-blended over [`Surface::Card`]).
     pub bg: Color,
     /// Accent-tinted text.
     pub fg: Color,
@@ -175,7 +175,7 @@ impl Theme {
                 base,
                 hover: shift(base, 0.10 * toward_fg),
                 press: shift(base, -0.12 * toward_fg),
-                bg: blend(base, self.bg[1], 0.14),
+                bg: blend(base, self.surface(Surface::Card), 0.14),
                 fg: shift(base, 0.45 * toward_fg),
                 contrast: self.accent.contrast,
             },

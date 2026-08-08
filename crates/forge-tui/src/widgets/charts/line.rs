@@ -1,4 +1,4 @@
-use crate::theme::series_color;
+use crate::theme::{series_color, Surface, TextRole};
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
@@ -96,15 +96,15 @@ impl Widget for LineChart<'_> {
                     Axis::default()
                         .bounds(x)
                         .labels([label(x[0]), label((x[0] + x[1]) / 2.0), label(x[1])])
-                        .style(Style::new().fg(t.fg[2])),
+                        .style(Style::new().fg(t.text(TextRole::Tertiary))),
                 )
                 .y_axis(
                     Axis::default()
                         .bounds(y)
                         .labels([label(y[0]), label((y[0] + y[1]) / 2.0), label(y[1])])
-                        .style(Style::new().fg(t.fg[2])),
+                        .style(Style::new().fg(t.text(TextRole::Tertiary))),
                 )
-                .style(Style::new().bg(t.bg[1]))
+                .style(Style::new().bg(t.surface(Surface::Card)))
                 .render(area, buf);
         });
     }

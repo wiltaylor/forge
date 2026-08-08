@@ -10,7 +10,7 @@ use ratatui::style::{Modifier, Style};
 use ratatui::widgets::{StatefulWidget, Widget};
 
 use crate::text;
-use crate::theme::Theme;
+use crate::theme::{Surface, TextRole, Theme};
 use crate::widgets::forms::Input;
 use crate::widgets::overlays::{Command, PaletteState, Popover};
 
@@ -108,7 +108,9 @@ pub(super) fn render_slash(
             inner.x + 1,
             inner.y + 1,
             "No matching blocks",
-            Style::new().fg(t.fg[3]).bg(t.bg[4]),
+            Style::new()
+                .fg(t.text(TextRole::Disabled))
+                .bg(t.surface(Surface::Popover)),
         );
         return;
     }
@@ -117,11 +119,13 @@ pub(super) fn render_slash(
         let Some(&ci) = matches.get(mi) else { break };
         let Some(cmd) = commands.get(ci) else { break };
         let y = inner.y + 1 + vis as u16;
-        let mut style = Style::new().fg(t.fg[1]).bg(t.bg[4]);
+        let mut style = Style::new()
+            .fg(t.text(TextRole::Secondary))
+            .bg(t.surface(Surface::Popover));
         if mi == hpos {
             style = Style::new()
-                .fg(t.fg[0])
-                .bg(t.bg[3])
+                .fg(t.text(TextRole::Primary))
+                .bg(t.surface(Surface::Pressed))
                 .add_modifier(Modifier::BOLD);
             buf.set_style(Rect::new(inner.x, y, inner.width, 1), style);
         }
@@ -159,11 +163,13 @@ pub(super) fn render_emoji(
         if i as u16 >= inner.height {
             break;
         }
-        let mut style = Style::new().fg(t.fg[1]).bg(t.bg[4]);
+        let mut style = Style::new()
+            .fg(t.text(TextRole::Secondary))
+            .bg(t.surface(Surface::Popover));
         if i == em.sel {
             style = Style::new()
-                .fg(t.fg[0])
-                .bg(t.bg[3])
+                .fg(t.text(TextRole::Primary))
+                .bg(t.surface(Surface::Pressed))
                 .add_modifier(Modifier::BOLD);
             buf.set_style(Rect::new(inner.x, y, inner.width, 1), style);
         }

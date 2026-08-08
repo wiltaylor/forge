@@ -4,6 +4,7 @@
 //! elbow lines through the gaps.
 
 use crate::text;
+use crate::theme::{Surface, TextRole};
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
@@ -189,7 +190,7 @@ impl Widget for Flowchart<'_> {
                             start,
                             y1,
                             text::truncate(label, avail),
-                            Style::new().fg(t.fg[2]),
+                            Style::new().fg(t.text(TextRole::Tertiary)),
                         );
                     }
                 }
@@ -201,15 +202,21 @@ impl Widget for Flowchart<'_> {
                     continue;
                 };
                 let block = Block::bordered()
-                    .border_style(Style::new().fg(t.border.default).bg(t.bg[1]))
-                    .style(Style::new().bg(t.bg[1]));
+                    .border_style(
+                        Style::new()
+                            .fg(t.border.default)
+                            .bg(t.surface(Surface::Card)),
+                    )
+                    .style(Style::new().bg(t.surface(Surface::Card)));
                 let inner = block.inner(*rect);
                 block.render(*rect, buf);
                 buf.set_string(
                     inner.x + 1,
                     inner.y,
                     text::truncate(node.label, inner.width.saturating_sub(1) as usize),
-                    Style::new().fg(t.fg[0]).bg(t.bg[1]),
+                    Style::new()
+                        .fg(t.text(TextRole::Primary))
+                        .bg(t.surface(Surface::Card)),
                 );
             }
         });

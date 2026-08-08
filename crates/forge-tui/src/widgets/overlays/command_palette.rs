@@ -1,5 +1,6 @@
 use crate::event::{in_area, is_press, left_down, scroll_delta, Outcome};
 use crate::text;
+use crate::theme::{Surface, TextRole};
 use crate::widgets::forms::{Input, InputState};
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
@@ -181,8 +182,12 @@ impl<'a> StatefulWidget for Palette<'a> {
             state.panel = panel;
             Clear.render(panel, buf);
             let block = Block::bordered()
-                .border_style(Style::new().fg(t.border.strong).bg(t.bg[4]))
-                .style(Style::new().bg(t.bg[4]));
+                .border_style(
+                    Style::new()
+                        .fg(t.border.strong)
+                        .bg(t.surface(Surface::Popover)),
+                )
+                .style(Style::new().bg(t.surface(Surface::Popover)));
             let inner = block.inner(panel);
             block.render(panel, buf);
             if inner.height < 2 {
@@ -210,7 +215,9 @@ impl<'a> StatefulWidget for Palette<'a> {
                     list.x + 1,
                     list.y,
                     "No matching commands",
-                    Style::new().fg(t.fg[3]).bg(t.bg[4]),
+                    Style::new()
+                        .fg(t.text(TextRole::Disabled))
+                        .bg(t.surface(Surface::Popover)),
                 );
                 return;
             }
@@ -222,11 +229,13 @@ impl<'a> StatefulWidget for Palette<'a> {
                 let cmd = &self.commands[ci];
                 let y = list.y + vis as u16;
                 let is_cursor = fi == state.highlight;
-                let mut style = Style::new().fg(t.fg[1]).bg(t.bg[4]);
+                let mut style = Style::new()
+                    .fg(t.text(TextRole::Secondary))
+                    .bg(t.surface(Surface::Popover));
                 if is_cursor {
                     style = Style::new()
-                        .fg(t.fg[0])
-                        .bg(t.bg[3])
+                        .fg(t.text(TextRole::Primary))
+                        .bg(t.surface(Surface::Pressed))
                         .add_modifier(Modifier::BOLD);
                     buf.set_style(Rect::new(list.x, y, list.width, 1), style);
                 }
@@ -244,8 +253,12 @@ impl<'a> StatefulWidget for Palette<'a> {
                             y,
                             kbd,
                             Style::new()
-                                .fg(t.fg[2])
-                                .bg(if is_cursor { t.bg[3] } else { t.bg[4] }),
+                                .fg(t.text(TextRole::Tertiary))
+                                .bg(if is_cursor {
+                                    t.surface(Surface::Pressed)
+                                } else {
+                                    t.surface(Surface::Popover)
+                                }),
                         );
                     }
                 }

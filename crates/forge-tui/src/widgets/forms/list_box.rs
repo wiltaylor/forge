@@ -1,5 +1,6 @@
 use crate::event::{in_area, is_press, left_down, scroll_delta, Outcome};
 use crate::text;
+use crate::theme::{Surface, TextRole};
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
@@ -200,11 +201,17 @@ impl<'a> StatefulWidget for ListBox<'a> {
                 let y = area.y + vis as u16;
                 let is_cursor = i == state.highlight;
                 let is_selected = state.is_selected(i);
-                let mut style = Style::new().fg(if is_selected { t.accent.fg } else { t.fg[1] });
+                let mut style = Style::new().fg(if is_selected {
+                    t.accent.fg
+                } else {
+                    t.text(TextRole::Secondary)
+                });
                 if is_cursor {
-                    style = style
-                        .bg(t.bg[3])
-                        .fg(if is_selected { t.accent.fg } else { t.fg[0] });
+                    style = style.bg(t.surface(Surface::Pressed)).fg(if is_selected {
+                        t.accent.fg
+                    } else {
+                        t.text(TextRole::Primary)
+                    });
                     if self.focused {
                         style = style.add_modifier(Modifier::BOLD);
                     }

@@ -1,5 +1,5 @@
 use crate::text;
-use crate::theme::Severity;
+use crate::theme::{Severity, Surface, TextRole};
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
@@ -57,7 +57,12 @@ impl Widget for Progress<'_> {
             if let Some(label) = self.label {
                 let label = text::truncate(label, (w / 3) as usize);
                 let lw = text::width(&label) as u16 + 1;
-                buf.set_string(x, area.y, label, Style::new().fg(t.fg[1]));
+                buf.set_string(
+                    x,
+                    area.y,
+                    label,
+                    Style::new().fg(t.text(TextRole::Secondary)),
+                );
                 x += lw;
                 w = w.saturating_sub(lw);
             }
@@ -70,8 +75,10 @@ impl Widget for Progress<'_> {
                 let cells = w as f64 * self.ratio;
                 let full = cells.floor() as u16;
                 let frac = ((cells - full as f64) * 8.0).round() as usize;
-                let bar_style = Style::new().fg(fill_color).bg(t.bg[3]);
-                let track_style = Style::new().fg(t.bg[3]).bg(t.bg[3]);
+                let bar_style = Style::new().fg(fill_color).bg(t.surface(Surface::Pressed));
+                let track_style = Style::new()
+                    .fg(t.surface(Surface::Pressed))
+                    .bg(t.surface(Surface::Pressed));
                 buf.set_string(x, area.y, "█".repeat(full as usize), bar_style);
                 let mut end = x + full;
                 if frac > 0 && full < w {
@@ -84,7 +91,12 @@ impl Widget for Progress<'_> {
             }
             if self.show_percent && pct_w > 0 {
                 let pct = format!("{:>4}%", (self.ratio * 100.0).round() as u16);
-                buf.set_string(x + w, area.y, pct, Style::new().fg(t.fg[2]));
+                buf.set_string(
+                    x + w,
+                    area.y,
+                    pct,
+                    Style::new().fg(t.text(TextRole::Tertiary)),
+                );
             }
         });
     }

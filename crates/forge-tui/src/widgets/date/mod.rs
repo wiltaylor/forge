@@ -1,6 +1,7 @@
 //! Calendar + DatePicker (cargo feature `calendar`, uses the `time` crate).
 
 use crate::event::{clicked, in_area, is_press, left_down, scroll_delta, Outcome};
+use crate::theme::{Surface, TextRole};
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
@@ -188,18 +189,20 @@ impl StatefulWidget for Calendar {
                 hx,
                 area.y,
                 &header,
-                Style::new().fg(t.fg[0]).add_modifier(if self.focused {
-                    Modifier::BOLD | Modifier::UNDERLINED
-                } else {
-                    Modifier::BOLD
-                }),
+                Style::new()
+                    .fg(t.text(TextRole::Primary))
+                    .add_modifier(if self.focused {
+                        Modifier::BOLD | Modifier::UNDERLINED
+                    } else {
+                        Modifier::BOLD
+                    }),
             );
             // Weekday row.
             buf.set_string(
                 area.x,
                 area.y + 1,
                 "Mo Tu We Th Fr Sa Su",
-                Style::new().fg(t.fg[3]),
+                Style::new().fg(t.text(TextRole::Disabled)),
             );
             // Day grid.
             let first = match Date::from_calendar_date(year, month, 1) {
@@ -230,7 +233,7 @@ impl StatefulWidget for Calendar {
                 } else if is_today {
                     Style::new().fg(t.accent.fg).add_modifier(Modifier::BOLD)
                 } else {
-                    Style::new().fg(t.fg[1])
+                    Style::new().fg(t.text(TextRole::Secondary))
                 };
                 buf.set_string(x, y, label, style);
             }
@@ -346,9 +349,14 @@ impl StatefulWidget for DatePicker {
             state.field = Rect::new(area.x, area.y, area.width, 1);
             buf.set_style(
                 Rect::new(area.x, area.y, area.width, 1),
-                Style::new().bg(t.bg[2]),
+                Style::new().bg(t.surface(Surface::Hover)),
             );
-            buf.set_string(area.x, area.y, "▎", Style::new().fg(edge).bg(t.bg[2]));
+            buf.set_string(
+                area.x,
+                area.y,
+                "▎",
+                Style::new().fg(edge).bg(t.surface(Surface::Hover)),
+            );
             let d = state.cal.selected;
             let label = format!("{:04}-{:02}-{:02}", d.year(), u8::from(d.month()), d.day());
             buf.set_string(
@@ -356,15 +364,21 @@ impl StatefulWidget for DatePicker {
                 area.y,
                 &label,
                 Style::new()
-                    .fg(if self.disabled { t.fg[3] } else { t.fg[0] })
-                    .bg(t.bg[2]),
+                    .fg(if self.disabled {
+                        t.text(TextRole::Disabled)
+                    } else {
+                        t.text(TextRole::Primary)
+                    })
+                    .bg(t.surface(Surface::Hover)),
             );
             if area.width >= 3 {
                 buf.set_string(
                     area.x + area.width - 2,
                     area.y,
                     if state.open { "▴" } else { "▾" },
-                    Style::new().fg(t.fg[2]).bg(t.bg[2]),
+                    Style::new()
+                        .fg(t.text(TextRole::Tertiary))
+                        .bg(t.surface(Surface::Hover)),
                 );
             }
             if state.open && !self.disabled {
@@ -378,8 +392,12 @@ impl StatefulWidget for DatePicker {
                 if popup.height >= 5 {
                     Clear.render(popup, buf);
                     let block = Block::bordered()
-                        .border_style(Style::new().fg(t.border.strong).bg(t.bg[4]))
-                        .style(Style::new().bg(t.bg[4]));
+                        .border_style(
+                            Style::new()
+                                .fg(t.border.strong)
+                                .bg(t.surface(Surface::Popover)),
+                        )
+                        .style(Style::new().bg(t.surface(Surface::Popover)));
                     let inner = block.inner(popup);
                     block.render(popup, buf);
                     Calendar::new()

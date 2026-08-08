@@ -1,5 +1,6 @@
 use crate::event::{in_area, is_press, left_down, scroll_delta, Outcome};
 use crate::text;
+use crate::theme::{Surface, TextRole};
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
@@ -236,8 +237,8 @@ impl<'a> StatefulWidget for Table<'a> {
 
             // Header (sticky by construction).
             let header_style = Style::new()
-                .fg(t.fg[1])
-                .bg(t.bg[2])
+                .fg(t.text(TextRole::Secondary))
+                .bg(t.surface(Surface::Hover))
                 .add_modifier(Modifier::BOLD);
             buf.set_style(Rect::new(area.x, area.y, area.width, 1), header_style);
             let mut x = area.x;
@@ -277,12 +278,14 @@ impl<'a> StatefulWidget for Table<'a> {
                 let y = area.y + 1 + vis as u16;
                 let is_cursor = ri == state.cursor;
                 let is_selected = state.is_selected(ri);
-                let mut row_style = Style::new().fg(t.fg[1]);
+                let mut row_style = Style::new().fg(t.text(TextRole::Secondary));
                 if is_selected {
                     row_style = row_style.fg(t.accent.fg).bg(t.accent.bg);
                 }
                 if is_cursor {
-                    row_style = row_style.fg(t.fg[0]).bg(t.bg[3]);
+                    row_style = row_style
+                        .fg(t.text(TextRole::Primary))
+                        .bg(t.surface(Surface::Pressed));
                     if self.focused {
                         row_style = row_style.add_modifier(Modifier::BOLD);
                     }

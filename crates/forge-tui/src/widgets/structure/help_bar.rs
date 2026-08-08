@@ -1,5 +1,6 @@
 use crate::event::Keymap;
 use crate::text;
+use crate::theme::{Surface, TextRole};
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
@@ -32,12 +33,29 @@ impl Widget for HelpBar<'_> {
                     break;
                 }
                 if i > 0 {
-                    buf.set_string(x + 1, area.y, "·", Style::new().fg(t.fg[3]));
+                    buf.set_string(
+                        x + 1,
+                        area.y,
+                        "·",
+                        Style::new().fg(t.text(TextRole::Disabled)),
+                    );
                     x += sep;
                 }
-                buf.set_string(x, area.y, &combo, Style::new().fg(t.fg[1]).bg(t.bg[3]));
+                buf.set_string(
+                    x,
+                    area.y,
+                    &combo,
+                    Style::new()
+                        .fg(t.text(TextRole::Secondary))
+                        .bg(t.surface(Surface::Pressed)),
+                );
                 x += text::width(&combo) as u16 + 1;
-                buf.set_string(x, area.y, binding.help, Style::new().fg(t.fg[2]));
+                buf.set_string(
+                    x,
+                    area.y,
+                    binding.help,
+                    Style::new().fg(t.text(TextRole::Tertiary)),
+                );
                 x += text::width(binding.help) as u16;
             }
         });

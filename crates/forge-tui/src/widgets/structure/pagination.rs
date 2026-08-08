@@ -1,4 +1,5 @@
 use crate::event::{clicked, is_press, Outcome};
+use crate::theme::TextRole;
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
@@ -116,10 +117,10 @@ impl StatefulWidget for Pagination {
                     if self.focused {
                         t.accent.fg
                     } else {
-                        t.fg[1]
+                        t.text(TextRole::Secondary)
                     }
                 } else {
-                    t.fg[3]
+                    t.text(TextRole::Disabled)
                 })
             };
             state
@@ -133,7 +134,7 @@ impl StatefulWidget for Pagination {
                         if x + 2 > right {
                             break;
                         }
-                        buf.set_string(x, area.y, "…", Style::new().fg(t.fg[3]));
+                        buf.set_string(x, area.y, "…", Style::new().fg(t.text(TextRole::Disabled)));
                         x += 2;
                     }
                     Some(p) => {
@@ -145,7 +146,7 @@ impl StatefulWidget for Pagination {
                         let style = if p == state.page {
                             Style::new().fg(t.accent.contrast).bg(t.accent.base)
                         } else {
-                            Style::new().fg(t.fg[1])
+                            Style::new().fg(t.text(TextRole::Secondary))
                         };
                         state.targets.push((Rect::new(x, area.y, w, 1), p));
                         buf.set_style(Rect::new(x, area.y, w, 1), style);

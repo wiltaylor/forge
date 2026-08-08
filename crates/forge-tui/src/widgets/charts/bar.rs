@@ -1,3 +1,4 @@
+use crate::theme::{Surface, TextRole};
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
@@ -45,14 +46,14 @@ impl Widget for BarChart<'_> {
                         .value(*value)
                         .label(*label)
                         .style(Style::new().fg(color))
-                        .value_style(Style::new().fg(t.bg[0]).bg(color))
+                        .value_style(Style::new().fg(t.surface(Surface::Page)).bg(color))
                 })
                 .collect();
             ratatui::widgets::BarChart::default()
                 .data(BarGroup::default().bars(&bars))
                 .bar_width(self.bar_width)
                 .bar_gap(1)
-                .label_style(Style::new().fg(t.fg[2]))
+                .label_style(Style::new().fg(t.text(TextRole::Tertiary)))
                 .render(area, buf);
         });
     }

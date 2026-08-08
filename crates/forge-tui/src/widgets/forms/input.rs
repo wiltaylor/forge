@@ -1,6 +1,6 @@
 use crate::event::{is_press, left_down, mouse_pos, Outcome};
 use crate::text;
-use crate::theme::Theme;
+use crate::theme::{Surface, TextRole, Theme};
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent};
@@ -330,10 +330,14 @@ impl<'a> Input<'a> {
         if area.width == 0 {
             return;
         }
-        let bg = t.bg[2];
+        let bg = t.surface(Surface::Hover);
         buf.set_style(area, Style::new().bg(bg));
 
-        let fg = if self.disabled { t.fg[3] } else { t.fg[0] };
+        let fg = if self.disabled {
+            t.text(TextRole::Disabled)
+        } else {
+            t.text(TextRole::Primary)
+        };
 
         // Build display graphemes: (byte_offset, glyph, cell_width).
         let masked_dot = "•";
@@ -370,7 +374,7 @@ impl<'a> Input<'a> {
                 area.x,
                 area.y,
                 text::truncate(self.placeholder, view_w),
-                Style::new().fg(t.fg[3]).bg(bg),
+                Style::new().fg(t.text(TextRole::Disabled)).bg(bg),
             );
         } else {
             let selection = state.selection();
@@ -425,7 +429,12 @@ impl<'a> StatefulWidget for Input<'a> {
                 let line = Rect::new(inner.x + 1, inner.y, inner.width.saturating_sub(2), 1);
                 self.render_line(line, buf, t, state);
             } else {
-                buf.set_string(area.x, area.y, "▎", Style::new().fg(edge).bg(t.bg[2]));
+                buf.set_string(
+                    area.x,
+                    area.y,
+                    "▎",
+                    Style::new().fg(edge).bg(t.surface(Surface::Hover)),
+                );
                 let line = Rect::new(area.x + 1, area.y, area.width.saturating_sub(2), 1);
                 self.render_line(line, buf, t, state);
             }

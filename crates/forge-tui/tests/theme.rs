@@ -1,5 +1,6 @@
 use forge_tui::theme::{
-    ambient_theme, blend, chart_series, color::nearest_indexed, ColorMode, Severity, Theme,
+    ambient_theme, blend, chart_series, color::nearest_indexed, ColorMode, Severity, Surface,
+    TextRole, Theme,
 };
 use ratatui::style::Color;
 
@@ -42,9 +43,15 @@ fn chart_series_order_is_locked() {
             t.info.base,
         ]
     );
-    // Overflow folds into fg[2] "Other", never cycles.
-    assert_eq!(forge_tui::theme::series_color(&t, 5), t.fg[2]);
-    assert_eq!(forge_tui::theme::series_color(&t, 99), t.fg[2]);
+    // Overflow folds into the tertiary-text "Other" tone, never cycles.
+    assert_eq!(
+        forge_tui::theme::series_color(&t, 5),
+        t.text(TextRole::Tertiary)
+    );
+    assert_eq!(
+        forge_tui::theme::series_color(&t, 99),
+        t.text(TextRole::Tertiary)
+    );
 }
 
 #[test]
@@ -57,11 +64,15 @@ fn blend_composites_in_srgb() {
     assert_eq!(blend(Color::Red, Color::Rgb(0, 0, 0), 0.5), Color::Red);
 }
 
-/// The dark `*-bg` tints are the token alpha (0.14) pre-blended over bg[1].
+/// The dark `*-bg` tints are the token alpha (0.14) pre-blended over the
+/// card surface.
 #[test]
-fn dark_tints_are_preblended_over_bg1() {
+fn dark_tints_are_preblended_over_the_card_surface() {
     let t = Theme::dark();
-    assert_eq!(t.accent.bg, blend(t.accent.base, t.bg[1], 0.14));
+    assert_eq!(
+        t.accent.bg,
+        blend(t.accent.base, t.surface(Surface::Card), 0.14)
+    );
 }
 
 #[test]
@@ -76,7 +87,7 @@ fn ansi16_uses_semantic_mapping() {
     assert_eq!(q.danger.fg, Color::LightRed);
     assert_eq!(q.accent.fg, Color::LightBlue);
     // Page background stays the terminal default.
-    assert_eq!(q.bg[0], Color::Reset);
+    assert_eq!(q.surface(Surface::Page), Color::Reset);
 }
 
 #[test]
@@ -100,5 +111,5 @@ fn with_accent_rederives_dependent_tokens() {
     let t = Theme::dark().with_accent(brand);
     assert_eq!(t.accent.base, brand);
     assert_ne!(t.accent.hover, brand);
-    assert_eq!(t.accent.bg, blend(brand, t.bg[1], 0.14));
+    assert_eq!(t.accent.bg, blend(brand, t.surface(Surface::Card), 0.14));
 }

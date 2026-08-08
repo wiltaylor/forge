@@ -14,7 +14,7 @@ use ratatui::style::{Modifier, Style};
 use ratatui::widgets::Widget;
 
 use crate::text;
-use crate::theme::{series_color, Theme};
+use crate::theme::{series_color, Surface, TextRole, Theme};
 use crate::widgets::charts::{LineChart, LineSeries, PieChart, PieSlice};
 use crate::widgets::specialty::{FlowEdge, FlowNode, Flowchart};
 
@@ -260,14 +260,14 @@ fn paint_json_edit(
     let t = p.t;
     buf.set_style(
         Rect::new(GUTTER, 0, w.saturating_sub(GUTTER), h),
-        Style::new().bg(t.bg[1]),
+        Style::new().bg(t.surface(Surface::Card)),
     );
     let label = kind_label(kind);
     buf.set_string(
         GUTTER + 1,
         0,
         text::truncate(label, w.saturating_sub(GUTTER + 1) as usize),
-        Style::new().fg(t.fg[3]),
+        Style::new().fg(t.text(TextRole::Disabled)),
     );
     if let Some(err) = err {
         let x = GUTTER + 1 + text::width(label) as u16 + 2;
@@ -344,7 +344,9 @@ fn title_row(buf: &mut Buffer, area: Rect, t: &Theme, title: &str) {
         area.x,
         area.y,
         text::truncate(title, area.width as usize),
-        Style::new().fg(t.fg[1]).add_modifier(Modifier::BOLD),
+        Style::new()
+            .fg(t.text(TextRole::Secondary))
+            .add_modifier(Modifier::BOLD),
     );
 }
 
@@ -365,7 +367,7 @@ fn card(buf: &mut Buffer, area: Rect, t: &Theme, chip: &str, primary: &str, seco
             area.x + 2,
             area.y + 1,
             text::truncate(&label, wu.saturating_sub(4)),
-            Style::new().fg(t.fg[2]),
+            Style::new().fg(t.text(TextRole::Tertiary)),
         );
         buf.set_string(
             area.x,
@@ -377,8 +379,13 @@ fn card(buf: &mut Buffer, area: Rect, t: &Theme, chip: &str, primary: &str, seco
 }
 
 fn paint_math(buf: &mut Buffer, area: Rect, t: &Theme, tex: &str) {
-    buf.set_style(area, Style::new().bg(t.bg[1]));
-    buf.set_string(area.x + 1, area.y, "math", Style::new().fg(t.fg[3]));
+    buf.set_style(area, Style::new().bg(t.surface(Surface::Card)));
+    buf.set_string(
+        area.x + 1,
+        area.y,
+        "math",
+        Style::new().fg(t.text(TextRole::Disabled)),
+    );
     for (i, line) in tex.lines().enumerate() {
         let y = area.y + 1 + i as u16;
         if y >= area.y + area.height {
@@ -388,7 +395,7 @@ fn paint_math(buf: &mut Buffer, area: Rect, t: &Theme, tex: &str) {
             area.x + 1,
             y,
             text::truncate(line, area.width.saturating_sub(2) as usize),
-            Style::new().fg(t.fg[1]),
+            Style::new().fg(t.text(TextRole::Secondary)),
         );
     }
 }
@@ -446,11 +453,11 @@ fn paint_bars(
             }
             let mut x = area.x;
             if si == 0 {
-                buf.set_string(x, y, cat, Style::new().fg(t.fg[2]));
+                buf.set_string(x, y, cat, Style::new().fg(t.text(TextRole::Tertiary)));
             }
             x += (cat_w + 2) as u16;
             if multi {
-                buf.set_string(x, y, &s.name, Style::new().fg(t.fg[3]));
+                buf.set_string(x, y, &s.name, Style::new().fg(t.text(TextRole::Disabled)));
                 x += (name_w + 2) as u16;
             }
             let v = s.values.get(ci).copied().unwrap_or(0.0);
@@ -461,7 +468,7 @@ fn paint_bars(
                 x + bar_w as u16 + 1,
                 y,
                 fmt_val(v),
-                Style::new().fg(t.fg[2]),
+                Style::new().fg(t.text(TextRole::Tertiary)),
             );
             y += 1;
         }
@@ -475,7 +482,12 @@ fn paint_bars(
                 break;
             }
             buf.set_string(x, y, "■", Style::new().fg(series_color(t, si)));
-            buf.set_string(x + 2, y, &s.name, Style::new().fg(t.fg[2]));
+            buf.set_string(
+                x + 2,
+                y,
+                &s.name,
+                Style::new().fg(t.text(TextRole::Tertiary)),
+            );
             x += wch;
         }
     }
@@ -538,7 +550,12 @@ fn paint_line(
                     break;
                 }
                 buf.set_string(x, ly, "■", Style::new().fg(series_color(t, si)));
-                buf.set_string(x + 2, ly, &s.name, Style::new().fg(t.fg[2]));
+                buf.set_string(
+                    x + 2,
+                    ly,
+                    &s.name,
+                    Style::new().fg(t.text(TextRole::Tertiary)),
+                );
                 x += chip_w;
             }
         }
@@ -622,7 +639,9 @@ fn paint_sequence(
         let name = p.name.as_deref().unwrap_or(&p.id);
         let bw = (text::width(name) as u16 + 4).min(col_w);
         let bx = cx(i).saturating_sub(bw / 2).max(area.x);
-        let border = Style::new().fg(t.border.default).bg(t.bg[1]);
+        let border = Style::new()
+            .fg(t.border.default)
+            .bg(t.surface(Surface::Card));
         let wu = bw as usize;
         buf.set_string(bx, area.y, format!("┌{}┐", "─".repeat(wu - 2)), border);
         buf.set_string(bx, area.y + 1, "│", border);
@@ -632,8 +651,8 @@ fn paint_sequence(
             area.y + 1,
             text::truncate(name, wu.saturating_sub(4)),
             Style::new()
-                .fg(t.fg[0])
-                .bg(t.bg[1])
+                .fg(t.text(TextRole::Primary))
+                .bg(t.surface(Surface::Card))
                 .add_modifier(Modifier::BOLD),
         );
         buf.set_string(bx, area.y + 2, format!("└{}┘", "─".repeat(wu - 2)), border);
@@ -658,14 +677,14 @@ fn paint_sequence(
         let (lo, hi) = (x0.min(x1), x0.max(x1));
         let dashed = matches!(m.kind, Some(MessageKind::Async) | Some(MessageKind::Reply));
         let seg = if dashed { "╌" } else { "─" };
-        let arrow_style = Style::new().fg(t.fg[2]);
+        let arrow_style = Style::new().fg(t.text(TextRole::Tertiary));
         if let Some(text_) = &m.text {
             let label_x = lo + ((hi - lo) / 2).saturating_sub(text::width(text_) as u16 / 2);
             buf.set_string(
                 label_x.max(area.x),
                 y,
                 text::truncate(text_, (hi - lo).max(4) as usize),
-                Style::new().fg(t.fg[1]),
+                Style::new().fg(t.text(TextRole::Secondary)),
             );
         }
         let ay = y + 1;
@@ -689,7 +708,9 @@ fn paint_sequence(
                         &format!("▹ {}", note_iter[ni].1),
                         area.width.saturating_sub(2) as usize,
                     ),
-                    Style::new().fg(t.fg[3]).add_modifier(Modifier::ITALIC),
+                    Style::new()
+                        .fg(t.text(TextRole::Disabled))
+                        .add_modifier(Modifier::ITALIC),
                 );
                 y += 1;
             }
@@ -714,14 +735,17 @@ fn paint_node_table(
     if !title.is_empty() {
         buf.set_string(area.x, y, "│", border);
         buf.set_string(area.x + w - 1, y, "│", border);
-        buf.set_style(Rect::new(area.x + 1, y, w - 2, 1), Style::new().bg(t.bg[2]));
+        buf.set_style(
+            Rect::new(area.x + 1, y, w - 2, 1),
+            Style::new().bg(t.surface(Surface::Hover)),
+        );
         buf.set_string(
             area.x + 2,
             y,
             text::truncate(title, wu.saturating_sub(4)),
             Style::new()
-                .fg(t.fg[0])
-                .bg(t.bg[2])
+                .fg(t.text(TextRole::Primary))
+                .bg(t.surface(Surface::Hover))
                 .add_modifier(Modifier::BOLD),
         );
         y += 1;
@@ -736,7 +760,8 @@ fn paint_node_table(
         let mut x = area.x + 2;
         let maxx = area.x + w - 2;
         'row: for s in &spans {
-            let styled = super::render::style_span(s, Style::new().fg(t.fg[1]), t);
+            let styled =
+                super::render::style_span(s, Style::new().fg(t.text(TextRole::Secondary)), t);
             for g in unicode_segmentation::UnicodeSegmentation::graphemes(
                 s.text.replace('\n', " ").as_str(),
                 true,
@@ -773,10 +798,15 @@ fn paint_tree(
         }
         let last = i + 1 == nodes.len();
         let branch = format!("{prefix}{}", if last { "└─ " } else { "├─ " });
-        buf.set_string(area.x, *y, &branch, Style::new().fg(t.fg[3]));
+        buf.set_string(
+            area.x,
+            *y,
+            &branch,
+            Style::new().fg(t.text(TextRole::Disabled)),
+        );
         let mut x = area.x + text::width(&branch) as u16;
         if let Some(icon) = &node.icon {
-            buf.set_string(x, *y, icon, Style::new().fg(t.fg[2]));
+            buf.set_string(x, *y, icon, Style::new().fg(t.text(TextRole::Tertiary)));
             x += text::width(icon) as u16 + 1;
         }
         buf.set_string(
@@ -786,7 +816,7 @@ fn paint_tree(
                 &node.title,
                 (area.x + area.width).saturating_sub(x) as usize,
             ),
-            Style::new().fg(t.fg[1]),
+            Style::new().fg(t.text(TextRole::Secondary)),
         );
         *y += 1;
         if let Some(children) = &node.children {
@@ -818,7 +848,14 @@ fn paint_timeline(
                 if x + cw > area.x + area.width {
                     break;
                 }
-                buf.set_string(x, y, &chip, Style::new().fg(t.fg[2]).bg(t.bg[1]));
+                buf.set_string(
+                    x,
+                    y,
+                    &chip,
+                    Style::new()
+                        .fg(t.text(TextRole::Tertiary))
+                        .bg(t.surface(Surface::Card)),
+                );
                 x += cw;
             }
             y += 1;
@@ -834,7 +871,12 @@ fn paint_timeline(
             // Connector paints on the next row's dot column when there is one.
         }
         let label = format!(" {}  ", item.label);
-        buf.set_string(area.x + 1, y, &label, Style::new().fg(t.fg[1]));
+        buf.set_string(
+            area.x + 1,
+            y,
+            &label,
+            Style::new().fg(t.text(TextRole::Secondary)),
+        );
         let date_x = area.x + 1 + text::width(&label) as u16;
         buf.set_string(
             date_x,
@@ -843,7 +885,7 @@ fn paint_timeline(
                 &item.on,
                 (area.x + area.width).saturating_sub(date_x) as usize,
             ),
-            Style::new().fg(t.fg[3]),
+            Style::new().fg(t.text(TextRole::Disabled)),
         );
         y += 1;
     }
@@ -872,7 +914,7 @@ fn paint_chapter(
         y,
         text::truncate(title, area.width as usize),
         Style::new()
-            .fg(t.fg[0])
+            .fg(t.text(TextRole::Primary))
             .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
     );
     y += 1;
@@ -882,7 +924,7 @@ fn paint_chapter(
             area.x,
             y,
             text::truncate(&parts.join(" · "), area.width as usize),
-            Style::new().fg(t.fg[3]),
+            Style::new().fg(t.text(TextRole::Disabled)),
         );
     }
 }

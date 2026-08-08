@@ -1,4 +1,5 @@
 use crate::text;
+use crate::theme::TextRole;
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
@@ -49,7 +50,7 @@ impl Widget for Spinner<'_> {
                         area.x + 2,
                         area.y,
                         text::truncate(label, area.width as usize - 2),
-                        Style::new().fg(t.fg[1]),
+                        Style::new().fg(t.text(TextRole::Secondary)),
                     );
                 }
             }

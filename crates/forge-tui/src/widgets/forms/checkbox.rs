@@ -1,5 +1,6 @@
 use crate::event::{clicked, is_press, Outcome};
 use crate::text;
+use crate::theme::TextRole;
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
@@ -80,14 +81,14 @@ impl<'a> StatefulWidget for Checkbox<'a> {
         state.area = Rect::new(area.x, area.y, area.width, 1);
         paint(area, |t| {
             let bracket = Style::new().fg(if self.disabled {
-                t.fg[3]
+                t.text(TextRole::Disabled)
             } else if self.focused {
                 t.accent.base
             } else {
-                t.fg[2]
+                t.text(TextRole::Tertiary)
             });
             let mark_color = if self.disabled {
-                t.fg[3]
+                t.text(TextRole::Disabled)
             } else {
                 t.accent.base
             };
@@ -100,7 +101,11 @@ impl<'a> StatefulWidget for Checkbox<'a> {
             );
             buf.set_string(area.x + 2, area.y, "]", bracket);
             if area.width > 4 {
-                let mut style = Style::new().fg(if self.disabled { t.fg[3] } else { t.fg[0] });
+                let mut style = Style::new().fg(if self.disabled {
+                    t.text(TextRole::Disabled)
+                } else {
+                    t.text(TextRole::Primary)
+                });
                 if self.focused {
                     style = style.add_modifier(Modifier::UNDERLINED);
                 }

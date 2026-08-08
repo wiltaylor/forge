@@ -1,4 +1,5 @@
 use crate::text;
+use crate::theme::TextRole;
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
@@ -36,14 +37,14 @@ impl Widget for KeyValue<'_> {
                     area.x,
                     y,
                     text::truncate(k, key_w as usize),
-                    Style::new().fg(t.fg[2]),
+                    Style::new().fg(t.text(TextRole::Tertiary)),
                 );
                 if area.width > key_w + 2 {
                     buf.set_string(
                         area.x + key_w + 2,
                         y,
                         text::truncate(v, (area.width - key_w - 2) as usize),
-                        Style::new().fg(t.fg[0]),
+                        Style::new().fg(t.text(TextRole::Primary)),
                     );
                 }
             }

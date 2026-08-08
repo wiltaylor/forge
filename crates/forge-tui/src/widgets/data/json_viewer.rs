@@ -1,5 +1,6 @@
 use crate::event::{in_area, is_press, left_down, scroll_delta, Outcome};
 use crate::text;
+use crate::theme::{Surface, TextRole};
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
@@ -259,13 +260,17 @@ impl StatefulWidget for ValueViewer<'_> {
                 let y = area.y + vis as u16;
                 let is_cursor = ri == state.cursor;
                 if is_cursor {
-                    let mut s = Style::new().bg(t.bg[3]);
+                    let mut s = Style::new().bg(t.surface(Surface::Pressed));
                     if self.inner.focused {
                         s = s.add_modifier(Modifier::BOLD);
                     }
                     buf.set_style(Rect::new(area.x, y, area.width, 1), s);
                 }
-                let bg = if is_cursor { Some(t.bg[3]) } else { None };
+                let bg = if is_cursor {
+                    Some(t.surface(Surface::Pressed))
+                } else {
+                    None
+                };
                 let tint = |style: Style| match bg {
                     Some(b) => style.bg(b),
                     None => style,
@@ -284,14 +289,24 @@ impl StatefulWidget for ValueViewer<'_> {
                 } else {
                     "▸"
                 };
-                buf.set_string(x, y, marker, tint(Style::new().fg(t.fg[2])));
+                buf.set_string(
+                    x,
+                    y,
+                    marker,
+                    tint(Style::new().fg(t.text(TextRole::Tertiary))),
+                );
                 x += 2;
                 if let Some(key) = &row.key {
                     let k = text::truncate(key, (right - x) as usize);
                     buf.set_string(x, y, &k, tint(Style::new().fg(t.info.fg)));
                     x += text::width(&k) as u16;
                     if x + 2 <= right {
-                        buf.set_string(x, y, ": ", tint(Style::new().fg(t.fg[2])));
+                        buf.set_string(
+                            x,
+                            y,
+                            ": ",
+                            tint(Style::new().fg(t.text(TextRole::Tertiary))),
+                        );
                         x += 2;
                     }
                 }
@@ -300,7 +315,7 @@ impl StatefulWidget for ValueViewer<'_> {
                     let color = match row.value {
                         Value::String(_) => t.success.fg,
                         Value::Number(_) | Value::Bool(_) | Value::Null => t.info.fg,
-                        _ => t.fg[2],
+                        _ => t.text(TextRole::Tertiary),
                     };
                     buf.set_string(
                         x,

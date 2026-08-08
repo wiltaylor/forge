@@ -1,5 +1,5 @@
 use crate::text;
-use crate::theme::Severity;
+use crate::theme::{Severity, Surface, TextRole};
 use crate::widgets::paint;
 use crate::widgets::primitives::Glyph;
 use ratatui::buffer::Buffer;
@@ -41,8 +41,8 @@ impl Widget for ToastView<'_> {
         paint(area, |t| {
             let tri = t.severity(self.severity);
             let block = Block::bordered()
-                .border_style(Style::new().fg(tri.base).bg(t.bg[4]))
-                .style(Style::new().bg(t.bg[4]));
+                .border_style(Style::new().fg(tri.base).bg(t.surface(Surface::Popover)))
+                .style(Style::new().bg(t.surface(Surface::Popover)));
             let inner = block.inner(area);
             block.render(area, buf);
             if inner.is_empty() {
@@ -52,13 +52,15 @@ impl Widget for ToastView<'_> {
                 inner.x + 1,
                 inner.y,
                 self.glyph().as_str(),
-                Style::new().fg(tri.base).bg(t.bg[4]),
+                Style::new().fg(tri.base).bg(t.surface(Surface::Popover)),
             );
             buf.set_string(
                 inner.x + 3,
                 inner.y,
                 text::truncate(self.message, inner.width.saturating_sub(4) as usize),
-                Style::new().fg(t.fg[0]).bg(t.bg[4]),
+                Style::new()
+                    .fg(t.text(TextRole::Primary))
+                    .bg(t.surface(Surface::Popover)),
             );
         });
     }

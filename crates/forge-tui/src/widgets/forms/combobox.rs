@@ -1,5 +1,6 @@
 use crate::event::{in_area, is_press, left_down, scroll_delta, Outcome};
 use crate::text;
+use crate::theme::{Surface, TextRole};
 use crate::widgets::forms::{Input, InputState};
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
@@ -205,8 +206,12 @@ impl<'a> StatefulWidget for Combobox<'a> {
             }
             Clear.render(popup, buf);
             let block = Block::bordered()
-                .border_style(Style::new().fg(t.border.strong).bg(t.bg[4]))
-                .style(Style::new().bg(t.bg[4]));
+                .border_style(
+                    Style::new()
+                        .fg(t.border.strong)
+                        .bg(t.surface(Surface::Popover)),
+                )
+                .style(Style::new().bg(t.surface(Surface::Popover)));
             let inner = block.inner(popup);
             block.render(popup, buf);
             state.view_h = inner.height as usize;
@@ -223,11 +228,13 @@ impl<'a> StatefulWidget for Combobox<'a> {
                 };
                 let y = inner.y + vis as u16;
                 let is_cursor = fi == state.highlight;
-                let mut style = Style::new().fg(t.fg[1]).bg(t.bg[4]);
+                let mut style = Style::new()
+                    .fg(t.text(TextRole::Secondary))
+                    .bg(t.surface(Surface::Popover));
                 if is_cursor {
                     style = Style::new()
-                        .fg(t.fg[0])
-                        .bg(t.bg[3])
+                        .fg(t.text(TextRole::Primary))
+                        .bg(t.surface(Surface::Pressed))
                         .add_modifier(Modifier::BOLD);
                     buf.set_style(Rect::new(inner.x, y, inner.width, 1), style);
                 }

@@ -1,5 +1,6 @@
 use crate::event::{clicked, is_press, Outcome};
 use crate::text;
+use crate::theme::TextRole;
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
@@ -122,7 +123,11 @@ impl<'a> StatefulWidget for Tabs<'a> {
                 }
                 state.label_rects.push(Rect::new(x, area.y, lw, 1));
                 let active = i == state.selected;
-                let mut style = Style::new().fg(if active { t.fg[0] } else { t.fg[1] });
+                let mut style = Style::new().fg(if active {
+                    t.text(TextRole::Primary)
+                } else {
+                    t.text(TextRole::Secondary)
+                });
                 if active {
                     style = style.add_modifier(Modifier::BOLD);
                     if !two_rows {

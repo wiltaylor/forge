@@ -1,5 +1,5 @@
 use crate::text;
-use crate::theme::{series_color, Severity};
+use crate::theme::{series_color, Severity, TextRole};
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
@@ -100,7 +100,7 @@ impl Widget for Gantt<'_> {
                     area.x,
                     y,
                     text::truncate(task.label, label_w.saturating_sub(1) as usize),
-                    Style::new().fg(t.fg[1]),
+                    Style::new().fg(t.text(TextRole::Secondary)),
                 );
                 // Track.
                 buf.set_string(
@@ -133,14 +133,19 @@ impl Widget for Gantt<'_> {
                 );
                 let lo = format!("{min:.0}");
                 let hi = format!("{max:.0}");
-                buf.set_string(track_x, axis_y, &lo, Style::new().fg(t.fg[2]));
+                buf.set_string(
+                    track_x,
+                    axis_y,
+                    &lo,
+                    Style::new().fg(t.text(TextRole::Tertiary)),
+                );
                 let hw = text::width(&hi) as u16;
                 if track_w > hw {
                     buf.set_string(
                         track_x + track_w - hw,
                         axis_y,
                         &hi,
-                        Style::new().fg(t.fg[2]),
+                        Style::new().fg(t.text(TextRole::Tertiary)),
                     );
                 }
             }

@@ -1,5 +1,6 @@
 use crate::event::KeyCombo;
 use crate::text;
+use crate::theme::{Surface, TextRole};
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
@@ -35,7 +36,9 @@ impl<'a> Kbd<'a> {
 impl Widget for Kbd<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         paint(area, |t| {
-            let style = Style::new().fg(t.fg[1]).bg(t.bg[3]);
+            let style = Style::new()
+                .fg(t.text(TextRole::Secondary))
+                .bg(t.surface(Surface::Pressed));
             let label = text::truncate(&self.keys, area.width.saturating_sub(2) as usize);
             let w = (text::width(&label) as u16 + 2).min(area.width);
             buf.set_style(Rect::new(area.x, area.y, w, 1), style);

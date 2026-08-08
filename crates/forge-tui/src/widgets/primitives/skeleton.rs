@@ -1,3 +1,4 @@
+use crate::theme::Surface;
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
@@ -26,8 +27,12 @@ impl Skeleton {
 impl Widget for Skeleton {
     fn render(self, area: Rect, buf: &mut Buffer) {
         paint(area, |t| {
-            let base = Style::new().fg(t.bg[3]).bg(t.bg[1]);
-            let shine = Style::new().fg(t.bg[4]).bg(t.bg[1]);
+            let base = Style::new()
+                .fg(t.surface(Surface::Pressed))
+                .bg(t.surface(Surface::Card));
+            let shine = Style::new()
+                .fg(t.surface(Surface::Popover))
+                .bg(t.surface(Surface::Card));
             let sweep = (self.frame * 2) as i64;
             for dy in 0..area.height {
                 for dx in 0..area.width {

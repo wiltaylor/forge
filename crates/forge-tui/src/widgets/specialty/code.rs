@@ -9,7 +9,7 @@
 
 use crate::event::{in_area, is_press, scroll_delta, Outcome};
 use crate::text;
-use crate::theme::Theme;
+use crate::theme::{Surface, TextRole, Theme};
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
@@ -38,9 +38,10 @@ fn syn_color(c: Color) -> Option<SynColor> {
 
 /// Build a syntect theme from Forge tokens — the terminal mirror of the web
 /// CodeMirror theme: keyword→accent-fg, string→success-fg, number/atom→
-/// info-fg, comment→fg3, type→warning-fg, property→info-fg, punctuation→fg2.
+/// info-fg, comment→disabled text, type→warning-fg, property→info-fg,
+/// punctuation→tertiary text.
 fn forge_syn_theme(t: &Theme) -> Option<SynTheme> {
-    let fg = syn_color(t.fg[0])?;
+    let fg = syn_color(t.text(TextRole::Primary))?;
     let item = |scopes: &str, color: Color, bold: bool| -> Option<ThemeItem> {
         let selectors: ScopeSelectors = scopes.parse().ok()?;
         Some(ThemeItem {
@@ -56,12 +57,12 @@ fn forge_syn_theme(t: &Theme) -> Option<SynTheme> {
         ("keyword, storage.modifier, storage.type.function, storage.type.class", t.accent.fg, false),
         ("string, punctuation.definition.string", t.success.fg, false),
         ("constant.numeric, constant.language, constant.character", t.info.fg, false),
-        ("comment, punctuation.definition.comment", t.fg[3], false),
+        ("comment, punctuation.definition.comment", t.text(TextRole::Disabled), false),
         ("entity.name.type, entity.name.class, support.type, support.class, storage.type", t.warning.fg, false),
         ("entity.other.attribute-name, support.function, meta.property-name, variable.other.member", t.info.fg, false),
-        ("entity.name.function", t.fg[0], true),
-        ("punctuation, keyword.operator", t.fg[2], false),
-        ("variable", t.fg[0], false),
+        ("entity.name.function", t.text(TextRole::Primary), true),
+        ("punctuation, keyword.operator", t.text(TextRole::Tertiary), false),
+        ("variable", t.text(TextRole::Primary), false),
     ];
     let mut theme = SynTheme {
         settings: ThemeSettings {
@@ -172,7 +173,7 @@ impl<'a> StatefulWidget for CodeView<'a> {
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut CodeViewState) {
         paint(area, |t| {
-            buf.set_style(area, Style::new().bg(t.bg[1]));
+            buf.set_style(area, Style::new().bg(t.surface(Surface::Card)));
             let lines: Vec<&str> = self.source.lines().collect();
             state.total = lines.len();
             state.view_h = area.height as usize;
@@ -214,13 +215,15 @@ impl<'a> StatefulWidget for CodeView<'a> {
                                 if s.font_style.contains(FontStyle::BOLD) {
                                     style = style.add_modifier(ratatui::style::Modifier::BOLD);
                                 }
-                                (style.bg(t.bg[1]), txt.to_owned())
+                                (style.bg(t.surface(Surface::Card)), txt.to_owned())
                             })
                             .collect();
                         styled.push(spans);
                     }
                     None => styled.push(vec![(
-                        Style::new().fg(t.fg[1]).bg(t.bg[1]),
+                        Style::new()
+                            .fg(t.text(TextRole::Secondary))
+                            .bg(t.surface(Surface::Card)),
                         (*line).to_owned(),
                     )]),
                 }
@@ -238,7 +241,9 @@ impl<'a> StatefulWidget for CodeView<'a> {
                         area.x,
                         y,
                         format!("{:>w$} ", li + 1, w = gutter_w as usize - 2),
-                        Style::new().fg(t.fg[3]).bg(t.bg[1]),
+                        Style::new()
+                            .fg(t.text(TextRole::Disabled))
+                            .bg(t.surface(Surface::Card)),
                     );
                 }
                 if let Some((_, sev)) = self.marks.iter().find(|(l, _)| *l == li) {
@@ -246,7 +251,9 @@ impl<'a> StatefulWidget for CodeView<'a> {
                         area.x + gutter_w.saturating_sub(1),
                         y,
                         "▎",
-                        Style::new().fg(t.severity(*sev).base).bg(t.bg[1]),
+                        Style::new()
+                            .fg(t.severity(*sev).base)
+                            .bg(t.surface(Surface::Card)),
                     );
                 }
                 // Code with horizontal scroll.
@@ -339,7 +346,7 @@ impl<'a> StatefulWidget for DiffView<'a> {
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut CodeViewState) {
         paint(area, |t| {
-            buf.set_style(area, Style::new().bg(t.bg[1]));
+            buf.set_style(area, Style::new().bg(t.surface(Surface::Card)));
             let rows = diff_lines(self.old, self.new);
             state.total = rows.len();
             state.view_h = area.height as usize;
@@ -350,7 +357,13 @@ impl<'a> StatefulWidget for DiffView<'a> {
                 let Some(row) = rows.get(ri) else { break };
                 let y = area.y + vis as u16;
                 let (marker, line, style) = match row {
-                    DiffRow::Same(l) => (" ", l, Style::new().fg(t.fg[2]).bg(t.bg[1])),
+                    DiffRow::Same(l) => (
+                        " ",
+                        l,
+                        Style::new()
+                            .fg(t.text(TextRole::Tertiary))
+                            .bg(t.surface(Surface::Card)),
+                    ),
                     DiffRow::Del(l) => ("-", l, Style::new().fg(t.danger.fg).bg(t.danger.bg)),
                     DiffRow::Add(l) => ("+", l, Style::new().fg(t.success.fg).bg(t.success.bg)),
                 };

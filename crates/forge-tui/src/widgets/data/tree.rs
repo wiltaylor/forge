@@ -1,5 +1,6 @@
 use crate::event::{in_area, is_press, left_down, scroll_delta, Outcome};
 use crate::text;
+use crate::theme::{Surface, TextRole};
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
@@ -228,13 +229,17 @@ impl<'a> StatefulWidget for Tree<'a> {
                 let y = area.y + vis as u16;
                 let is_cursor = ri == state.cursor;
                 let indent = (depth * 2) as u16;
-                let mut style = Style::new().fg(if is_cursor { t.fg[0] } else { t.fg[1] });
+                let mut style = Style::new().fg(if is_cursor {
+                    t.text(TextRole::Primary)
+                } else {
+                    t.text(TextRole::Secondary)
+                });
                 if is_cursor {
                     buf.set_style(
                         Rect::new(area.x, y, area.width, 1),
-                        Style::new().bg(t.bg[3]),
+                        Style::new().bg(t.surface(Surface::Pressed)),
                     );
-                    style = style.bg(t.bg[3]);
+                    style = style.bg(t.surface(Surface::Pressed));
                     if self.focused {
                         style = style.add_modifier(Modifier::BOLD);
                     }
@@ -247,9 +252,9 @@ impl<'a> StatefulWidget for Tree<'a> {
                     "▸"
                 };
                 if indent + 2 < area.width {
-                    let mut marker_style = Style::new().fg(t.fg[2]);
+                    let mut marker_style = Style::new().fg(t.text(TextRole::Tertiary));
                     if is_cursor {
-                        marker_style = marker_style.bg(t.bg[3]);
+                        marker_style = marker_style.bg(t.surface(Surface::Pressed));
                     }
                     buf.set_string(area.x + indent, y, marker, marker_style);
                     buf.set_string(

@@ -1,5 +1,6 @@
 use crate::event::{clicked, is_press, Outcome};
 use crate::text;
+use crate::theme::{Surface, TextRole};
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent};
@@ -204,7 +205,7 @@ impl<'a> StatefulWidget for Kanban<'a> {
             for (ci, column) in self.columns.iter().enumerate() {
                 let x = area.x + ci as u16 * (col_w + gap);
                 let col_area = Rect::new(x, area.y, col_w, area.height);
-                buf.set_style(col_area, Style::new().bg(t.bg[1]));
+                buf.set_style(col_area, Style::new().bg(t.surface(Surface::Card)));
                 // Header: title + count (+ WIP badge when over).
                 let over = column.wip_limit.is_some_and(|l| column.cards.len() > l);
                 let count = match column.wip_limit {
@@ -217,8 +218,12 @@ impl<'a> StatefulWidget for Kanban<'a> {
                     area.y,
                     text::truncate(column.title, col_w.saturating_sub(2) as usize),
                     Style::new()
-                        .fg(if active_col { t.fg[0] } else { t.fg[1] })
-                        .bg(t.bg[1])
+                        .fg(if active_col {
+                            t.text(TextRole::Primary)
+                        } else {
+                            t.text(TextRole::Secondary)
+                        })
+                        .bg(t.surface(Surface::Card))
                         .add_modifier(Modifier::BOLD),
                 );
                 let cw = text::width(&count) as u16;
@@ -228,8 +233,12 @@ impl<'a> StatefulWidget for Kanban<'a> {
                         area.y,
                         &count,
                         Style::new()
-                            .fg(if over { t.danger.fg } else { t.fg[2] })
-                            .bg(t.bg[1]),
+                            .fg(if over {
+                                t.danger.fg
+                            } else {
+                                t.text(TextRole::Tertiary)
+                            })
+                            .bg(t.surface(Surface::Card)),
                     );
                 }
                 // Cards.
@@ -251,8 +260,8 @@ impl<'a> StatefulWidget for Kanban<'a> {
                         t.border.default
                     };
                     let block = Block::bordered()
-                        .border_style(Style::new().fg(border).bg(t.bg[2]))
-                        .style(Style::new().bg(t.bg[2]));
+                        .border_style(Style::new().fg(border).bg(t.surface(Surface::Hover)))
+                        .style(Style::new().bg(t.surface(Surface::Hover)));
                     let inner = block.inner(card_area);
                     block.render(card_area, buf);
                     buf.set_string(
@@ -260,8 +269,12 @@ impl<'a> StatefulWidget for Kanban<'a> {
                         inner.y,
                         text::truncate(card, inner.width.saturating_sub(2) as usize),
                         Style::new()
-                            .fg(if is_cursor { t.fg[0] } else { t.fg[1] })
-                            .bg(t.bg[2]),
+                            .fg(if is_cursor {
+                                t.text(TextRole::Primary)
+                            } else {
+                                t.text(TextRole::Secondary)
+                            })
+                            .bg(t.surface(Surface::Hover)),
                     );
                     y += 3;
                 }

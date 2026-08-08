@@ -1,4 +1,5 @@
 use crate::text;
+use crate::theme::TextRole;
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
@@ -34,14 +35,16 @@ impl Widget for PageHead<'_> {
                 area.x,
                 area.y,
                 text::truncate(self.title, area.width as usize),
-                Style::new().fg(t.fg[0]).add_modifier(Modifier::BOLD),
+                Style::new()
+                    .fg(t.text(TextRole::Primary))
+                    .add_modifier(Modifier::BOLD),
             );
             if let (Some(desc), true) = (self.description, area.height >= 2) {
                 buf.set_string(
                     area.x,
                     area.y + 1,
                     text::truncate(desc, area.width as usize),
-                    Style::new().fg(t.fg[2]),
+                    Style::new().fg(t.text(TextRole::Tertiary)),
                 );
             }
         });
