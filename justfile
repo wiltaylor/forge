@@ -69,7 +69,8 @@ generate-test:
 generate-check:
 	node scripts/generate.mjs --check
 
-# Run npm package tests
+# Run npm package tests (includes the block key corpus's web driver — see
+# block-corpus-test)
 [group('test')]
 frontend-test: frontend-install
 	pnpm test
@@ -92,12 +93,14 @@ corpus-test:
 
 # Run the block key corpus (contract/blocks/corpus.json) against every kit
 # that has a driver. Each driver builds the document the corpus describes, so
-# nothing here needs an app or a server.
+# nothing here needs an app or a server. The web driver mounts the editor in a
+# DOM, so it needs the workspace packages installed and built.
 [group('test')]
-block-corpus-test:
+block-corpus-test: frontend-install
 	cargo test -p forge-block-corpus
 	cargo test -p forge-tui --features blocks --test block_corpus
 	cargo test -p forge-egui --features blocks --test block_corpus
+	pnpm --filter @forge/blocks test:corpus
 
 # Run Python package tests (includes the contract corpus — see corpus-test)
 [group('test')]
