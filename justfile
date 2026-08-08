@@ -39,9 +39,28 @@ tauri-demo-build: frontend-install
 auth-build: frontend-build
 	cargo build --release -p forge-auth
 
+# Regenerate every file derived from the token source (packages/tokens/tokens.source.mjs)
+[group('build')]
+generate:
+	node scripts/generate.mjs
+
 # Build everything
 [group('build')]
 build: frontend-build rust-build
+
+# The fast invariants — Node only, no Rust, Python or browser toolchain
+[group('test')]
+check: generate-test generate-check
+
+# Test the generators themselves
+[group('test')]
+generate-test:
+	node --test 'scripts/**/*.test.mjs'
+
+# Fail when a generated file no longer matches the token source
+[group('test')]
+generate-check:
+	node scripts/generate.mjs --check
 
 # Run npm package tests
 [group('test')]
@@ -62,6 +81,11 @@ python-test:
 [group('test')]
 parity-test base_url='http://127.0.0.1:8765':
 	FORGE_TEST_BASE_URL={{base_url}} uv run --with 'httpx>=0.28' --with 'pytest>=9' --with 'websockets>=16' pytest examples/parity
+
+# Run the parity suite against a Python backend the recipe starts and stops itself
+[group('test')]
+parity-test-local:
+	uv run scripts/parity_test.py
 
 # Run forge-tauri tests (own workspace — heavy tauri tree, so not part of `just test`)
 [group('test')]
@@ -88,9 +112,9 @@ auth-test-devlogin:
 auth-e2e-test:
 	uv run scripts/oidc_flow_test.py
 
-# Run all test suites
+# Run all test suites (the fast `check` first, so a stale generated file fails in seconds)
 [group('test')]
-test: frontend-test rust-test python-test tui-test egui-test auth-test-devlogin auth-e2e-test
+test: check frontend-test rust-test python-test parity-test-local tui-test egui-test auth-test-devlogin auth-e2e-test
 
 # Run the Rust demo app (debug build reads gallery dist from disk).
 # Own port (8899, not the shared FORGE_PORT) so it can run beside python-demo;
