@@ -97,6 +97,62 @@ test('an arm states the fields its starter serializes, and only those', () => {
   }
 });
 
+const fieldTable = section('export const BLOCK_FIELDS', '\n};');
+
+/** The table text for one kind: from its key to the next kind's key. */
+function fieldRowsFor(type) {
+  const open = new RegExp(`^  ${type}: \\[`, 'm').exec(fieldTable);
+  assert.ok(open, `the field table omits ${type}`);
+  const rest = fieldTable.slice(open.index + 2 + type.length);
+  const next = /^  [a-z_]+: \[/m.exec(rest);
+  return rest.slice(0, next ? next.index : undefined);
+}
+
+test('the field table has one entry per kind, in registry order', () => {
+  const emitted = (fieldTable.match(/^  ([a-z_]+): \[/gm) ?? []).map((m) => m.trim().split(':')[0]);
+  assert.deepEqual(
+    emitted,
+    kinds.map((kind) => kind.type),
+  );
+});
+
+test('a field row states its name and the optionality serde gives it', () => {
+  for (const kind of kinds) {
+    const rows = fieldRowsFor(kind.type);
+    for (const field of kind.fields) {
+      const wanted = `{ name: '${field.name}', optional: ${field.optional}, shape: `;
+      assert.ok(rows.includes(wanted), `${kind.type}.${field.name} row does not open ${wanted}`);
+    }
+    const count = (rows.match(/name: '/g) ?? []).length;
+    assert.equal(count, kind.fields.length, `${kind.type} has a row the registry does not`);
+  }
+});
+
+test('a field checks as an array exactly when its wire type is one', () => {
+  for (const kind of kinds) {
+    const rows = fieldRowsFor(kind.type);
+    for (const field of kind.fields) {
+      const row = new RegExp(`name: '${field.name}',[^}]*shape: '([a-z]+)'`).exec(rows);
+      assert.ok(row, `${kind.type}.${field.name} has no shape`);
+      assert.equal(
+        row[1] === 'array',
+        field.ts.endsWith('[]'),
+        `${kind.type}.${field.name} (${field.ts}) checks as ${row[1]}`,
+      );
+    }
+  }
+});
+
+test('scalar helper types check as the strings they are on the wire', () => {
+  // ListStyle, AdmonitionTone, the direction enums: string unions in wire.ts.
+  assert.ok(fieldRowsFor('list_item').includes("{ name: 'style', optional: false, shape: 'string' }"));
+  assert.ok(fieldRowsFor('admonition').includes("{ name: 'tone', optional: false, shape: 'string' }"));
+});
+
+test('a custom payload stays unchecked', () => {
+  assert.ok(fieldRowsFor('custom').includes("{ name: 'data', optional: false, shape: 'unknown' }"));
+});
+
 test('a nested block gets a fresh id rather than the placeholder', () => {
   // The `columns` starter holds blocks. Committing the id the dump recorded
   // would give every document the same one.
