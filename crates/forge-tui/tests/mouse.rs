@@ -125,6 +125,42 @@ fn rect_cache_click_selects() {
 }
 
 #[test]
+fn split_divider_grabbable_where_painted_when_min_clamps() {
+    // ratio 0.05 on a 40-wide pane puts the raw divider at x=2, but
+    // min(10) paints it at x=10. The grab must land where the paint is.
+    let mut s = SplitState::new(0.05);
+    let area = Rect::new(0, 0, 40, 5);
+    let mut buf = Buffer::empty(area);
+    // Before the first render there is no geometry: clicks miss.
+    assert_eq!(s.handle_mouse(&click(10, 2)), Outcome::Ignored);
+    SplitPane::new().min(10).render(area, &mut buf, &mut s);
+    let painted_x = (0..40u16)
+        .find(|&x| buf[(x, 2)].symbol() == "│")
+        .expect("divider painted");
+    assert_eq!(painted_x, 10, "min must clamp the painted divider");
+    // The raw (unclamped) ratio position is empty space: ignored.
+    assert_eq!(s.handle_mouse(&click(2, 2)), Outcome::Ignored);
+    // The painted position grabs the divider.
+    assert_eq!(s.handle_mouse(&click(painted_x, 2)), Outcome::Consumed);
+    // Drag moves the ratio; release ends the drag.
+    let drag = MouseEvent {
+        kind: MouseEventKind::Drag(MouseButton::Left),
+        column: 30,
+        row: 2,
+        modifiers: KeyModifiers::NONE,
+    };
+    assert_eq!(s.handle_mouse(&drag), Outcome::Changed);
+    assert!((s.ratio - 0.75).abs() < 1e-9);
+    let up = MouseEvent {
+        kind: MouseEventKind::Up(MouseButton::Left),
+        column: 30,
+        row: 2,
+        modifiers: KeyModifiers::NONE,
+    };
+    assert_eq!(s.handle_mouse(&up), Outcome::Consumed);
+}
+
+#[test]
 fn pagination_click() {
     let mut pages = PaginationState::new(0, 5);
     let mut buf = Buffer::empty(Rect::new(0, 0, 40, 1));

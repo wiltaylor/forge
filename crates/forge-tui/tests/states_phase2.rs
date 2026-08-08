@@ -54,6 +54,20 @@ fn split_resizes_within_bounds() {
 }
 
 #[test]
+fn split_pane_default_matches_new() {
+    // Both constructors must paint the divider at the same column: one
+    // `min` default, however the widget is built.
+    let area = Rect::new(0, 0, 40, 3);
+    let painted_x = |pane: SplitPane| {
+        let mut s = SplitState::new(0.05);
+        let mut buf = Buffer::empty(area);
+        pane.render(area, &mut buf, &mut s);
+        (0..40u16).find(|&x| buf[(x, 0)].symbol() == "│")
+    };
+    assert_eq!(painted_x(SplitPane::default()), painted_x(SplitPane::new()));
+}
+
+#[test]
 fn listbox_selection_modes() {
     let items = ["a", "b", "c", "d"];
     let mut single = ListBoxState::new();

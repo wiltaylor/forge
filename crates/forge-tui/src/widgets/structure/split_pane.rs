@@ -11,6 +11,10 @@ pub struct SplitState {
     /// First-pane share of the split axis (0.0..=1.0).
     pub ratio: f64,
     last_area: Rect,
+    /// Absolute column the divider was painted at, captured by the view on
+    /// render — the view's `min` clamp is invisible here, so hit-testing
+    /// must use where the divider actually went, not recompute from ratio.
+    divider_x: u16,
     dragging: bool,
 }
 
@@ -19,6 +23,7 @@ impl Default for SplitState {
         SplitState {
             ratio: 0.5,
             last_area: Rect::ZERO,
+            divider_x: 0,
             dragging: false,
         }
     }
@@ -30,6 +35,13 @@ impl SplitState {
             ratio: ratio.clamp(0.05, 0.95),
             ..Default::default()
         }
+    }
+
+    /// The view calls this wherever it lays out: both paint and hit-test
+    /// then agree on one divider column.
+    fn capture(&mut self, area: Rect, divider_x: u16) {
+        self.last_area = area;
+        self.divider_x = divider_x;
     }
 
     fn nudge(&mut self, delta: f64) -> Outcome {
@@ -65,10 +77,9 @@ impl SplitState {
         if area.is_empty() {
             return Outcome::Ignored;
         }
-        let divider_x = area.x + (area.width as f64 * self.ratio) as u16;
         match ev.kind {
             MouseEventKind::Down(_)
-                if ev.column.abs_diff(divider_x) <= 1
+                if ev.column.abs_diff(self.divider_x) <= 1
                     && (area.y..area.y + area.height).contains(&ev.row) =>
             {
                 self.dragging = true;
@@ -91,10 +102,16 @@ impl SplitState {
 /// Two-pane split with a draggable/keyboard-resizable divider. Call
 /// [`SplitPane::areas`] for the pane rects, render your content, then render
 /// the `SplitPane` itself to paint the divider.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct SplitPane {
     focused: bool,
     min: u16,
+}
+
+impl Default for SplitPane {
+    fn default() -> SplitPane {
+        SplitPane::new()
+    }
 }
 
 impl SplitPane {
@@ -126,8 +143,8 @@ impl SplitPane {
 
     /// The two pane rects (left, right) for the current state.
     pub fn areas(&self, area: Rect, state: &mut SplitState) -> (Rect, Rect) {
-        state.last_area = area;
         let dx = self.divider_x(area, state);
+        state.capture(area, area.x + dx);
         let left = Rect::new(area.x, area.y, dx, area.height);
         let right = Rect::new(
             area.x + dx + 1,
@@ -144,15 +161,15 @@ impl StatefulWidget for SplitPane {
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut SplitState) {
         paint(area, |t| {
-            state.last_area = area;
-            let dx = area.x + self.divider_x(area, state);
+            let divider_x = area.x + self.divider_x(area, state);
+            state.capture(area, divider_x);
             let color = if self.focused {
                 t.accent.base
             } else {
                 t.border.default
             };
             for dy in 0..area.height {
-                buf.set_string(dx, area.y + dy, "│", Style::new().fg(color));
+                buf.set_string(divider_x, area.y + dy, "│", Style::new().fg(color));
             }
         });
     }
