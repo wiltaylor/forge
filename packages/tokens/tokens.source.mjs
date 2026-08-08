@@ -2,8 +2,8 @@
  * The authored Forge token source — the one place a token value changes.
  *
  * A generator makes each palette from this file, and the tree holds the result.
- * Today that is the CSS custom properties in `css/tokens.css`. The typed theme
- * and the Rust kit palettes follow as their generators land. Run
+ * Today that is the CSS custom properties in `css/tokens.css` and both Rust kit
+ * palettes. The typed theme follows as its generator lands. Run
  * `just generate` after you edit this file. `just check` fails while a
  * generated file is stale.
  *
@@ -28,9 +28,10 @@
  *
  * `alpha` and `over` are the derivation metadata for the tints. `alpha` is the
  * opacity the web paints the tint at. `over` names the token whose surface the
- * tint flattens over, for a target that has no alpha. The terminal kit
- * pre-composites each tint over the card surface when it builds its palette.
- * That rule lives here, not in a comment in the kit.
+ * tint flattens over, for a target that has no alpha — the terminal kit, which
+ * takes each tint already composited over the card. The desktop kit takes the
+ * same tint with `alpha` quantised to a byte. Both rules are declared here and
+ * run in `scripts/generate/oklch.mjs`, not in a comment in either kit.
  */
 
 /** Repo-relative path of this file, for the "do not edit" header of every generated artifact. */
@@ -240,6 +241,15 @@ export const tokens = groups.flatMap((group) => group.tokens ?? []);
 
 /** True when the token is declared per scheme rather than once for both. */
 export const isSchemeToken = (token) => token.dark !== undefined;
+
+const byName = new Map(tokens.map((token) => [token.name, token]));
+
+/** The token of that name. Throws rather than emitting a palette with a hole in it. */
+export function tokenNamed(name) {
+  const token = byName.get(name);
+  if (!token) throw new Error(`no token named "${name}" in ${SOURCE_PATH}`);
+  return token;
+}
 
 /** The value a token takes in a scheme. */
 export const valueFor = (token, scheme) => (isSchemeToken(token) ? token[scheme] : token.value);

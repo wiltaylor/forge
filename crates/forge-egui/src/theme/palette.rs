@@ -1,22 +1,27 @@
-//! Forge token palette. Neutral ramps are the literal hex values from
-//! `packages/tokens/css/tokens.css`; accent/semantic tokens are authored in
-//! OKLCH there and converted to sRGB (each annotated with its source).
+//! GENERATED FILE — do not edit by hand.
+//! Source:     packages/tokens/tokens.source.mjs
+//! Regenerate: just generate   (`just check` fails while this file is stale)
 //!
-//! Unlike forge-tui — which pre-composites the translucent `*-bg` tints over
-//! the card surface because terminals have no alpha — these tints carry REAL
-//! alpha, exactly like the web (`oklch(... / 0.14)`), so they composite
-//! correctly over any surface. In the dark scheme the web tint source is the
-//! token's own base color; in the light scheme it is a slightly lighter OKLCH
-//! variant (values below recovered from the web-rendered composites).
+//! Forge token palette.
+//!
+//! The neutral ramps are the sRGB literals the source authors. The accent
+//! and semantic tokens are authored in OKLCH. The generator converts them,
+//! and each states the expression it came from.
+//!
+//! forge-tui pre-composites its translucent `*-bg` tints over the card
+//! surface, because a terminal has no alpha channel. These tints instead
+//! carry REAL alpha, exactly like the web. Thus they composite correctly
+//! over any surface. Both kits derive their tints from the same source
+//! entry, so the two cannot disagree about what a tint is.
 
 use super::color::{rgb, with_alpha};
 use super::{Accent, BorderTokens, Scheme, SemanticTriple, Theme};
 
-/// 14% alpha (0.14 × 255).
+/// 14% alpha, quantised to a byte.
 const A14: u8 = 36;
-/// 16% alpha.
+/// 16% alpha, quantised to a byte.
 const A16: u8 = 41;
-/// 20% alpha.
+/// 20% alpha, quantised to a byte.
 const A20: u8 = 51;
 
 pub fn dark() -> Theme {
@@ -88,7 +93,12 @@ pub fn light() -> Theme {
             rgb(0xEAECEF), // pressed / active row
             rgb(0xFFFFFF), // popover, dropdown
         ],
-        fg: [rgb(0x0C0F14), rgb(0x3D4654), rgb(0x6B7383), rgb(0xA0A6B2)],
+        fg: [
+            rgb(0x0C0F14), // primary text
+            rgb(0x3D4654), // secondary text
+            rgb(0x6B7383), // tertiary, captions
+            rgb(0xA0A6B2), // disabled, placeholder
+        ],
         border: BorderTokens {
             subtle: rgb(0xEEF0F3),
             default: rgb(0xDCDFE4),
@@ -98,28 +108,28 @@ pub fn light() -> Theme {
             base: rgb(0x006BB9),                // oklch(0.52 0.18 250)
             hover: rgb(0x005A9D),               // oklch(0.46 0.19 250)
             press: rgb(0x004981),               // oklch(0.40 0.19 250)
-            bg: with_alpha(rgb(0x0077C6), A14), // oklch(0.55 0.17 250 / 0.14)
+            bg: with_alpha(rgb(0x0074C8), A14), // oklch(0.55 0.17 250 / 0.14)
             fg: rgb(0x004479),                  // oklch(0.38 0.19 250)
-            contrast: rgb(0xFFFFFF),
+            contrast: rgb(0xFFFFFF),            // text on solid accent
         },
         success: SemanticTriple {
             base: rgb(0x007835),                // oklch(0.50 0.15 150)
-            bg: with_alpha(rgb(0x05883D), A16), // oklch(0.55 0.15 150 / 0.16)
+            bg: with_alpha(rgb(0x05893E), A16), // oklch(0.55 0.15 150 / 0.16)
             fg: rgb(0x004B1E),                  // oklch(0.36 0.14 150)
         },
         warning: SemanticTriple {
             base: rgb(0xB97500),                // oklch(0.62 0.16 70)
-            bg: with_alpha(rgb(0xC37D00), A20), // oklch(0.65 0.16 70 / 0.20)
+            bg: with_alpha(rgb(0xC57D00), A20), // oklch(0.65 0.16 70 / 0.20)
             fg: rgb(0x6B3900),                  // oklch(0.40 0.14 60)
         },
         danger: SemanticTriple {
             base: rgb(0xC6001F),                // oklch(0.52 0.22 25)
-            bg: with_alpha(rgb(0xCD1A29), A14), // oklch(0.55 0.21 25 / 0.14)
+            bg: with_alpha(rgb(0xD01C29), A14), // oklch(0.55 0.21 25 / 0.14)
             fg: rgb(0x940015),                  // oklch(0.42 0.20 25)
         },
         info: SemanticTriple {
             base: rgb(0x006D91),                // oklch(0.50 0.14 230)
-            bg: with_alpha(rgb(0x007CA8), A16), // oklch(0.55 0.14 230 / 0.16)
+            bg: with_alpha(rgb(0x007CA5), A16), // oklch(0.55 0.14 230 / 0.16)
             fg: rgb(0x00435B),                  // oklch(0.36 0.13 230)
         },
         radius: Default::default(),
