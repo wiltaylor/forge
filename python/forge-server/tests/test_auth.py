@@ -4,7 +4,7 @@ import jwt
 import pytest
 from fastapi.testclient import TestClient
 
-from forge_server import ForgeApp
+from forge_server import ForgeApp, config
 from conftest import SECRET, login
 
 
@@ -143,6 +143,47 @@ def test_users_string_parsing_first_colon_wins():
     app = ForgeApp("parse").auth(secret=SECRET, users="admin:pa:ss,ops:hunter2")
     auth = app.fastapi.state.forge_auth
     assert auth.users == {"admin": "pa:ss", "ops": "hunter2"}
+
+
+# A real `python -m forge_server.hash` hash: the params carry commas, which
+# `FORGE_AUTH_USERS` also uses as its entry separator.
+PHC_HASH = "$argon2id$v=19$m=19456,t=2,p=1$c29tZXNhbHQ$YWJjZGVmZ2g"
+
+
+def test_users_string_parsing_keeps_commas_inside_a_phc_hash():
+    users = config.parse_users(f"overseer:{PHC_HASH},admin:pw")
+    assert users == {"overseer": PHC_HASH, "admin": "pw"}
+
+
+def test_users_string_parsing_rejects_a_colonless_first_entry():
+    with pytest.raises(ValueError):
+        config.parse_users("admin")
+
+
+def test_login_with_a_hash_from_the_users_string(monkeypatch):
+    """The documented workflow end to end: hash a password, put it in the
+    variable, log in. The hash's commas used to shred the entry."""
+    from forge_server.hash import hash_password
+
+    hashed = hash_password("hunter2")
+    assert "," in hashed, "an argon2 PHC hash carries commas in its params"
+
+    monkeypatch.setenv("FORGE_JWT_SECRET", SECRET)
+    monkeypatch.setenv("FORGE_AUTH_USERS", f"ops:{hashed}")
+    app = ForgeApp("phc-env").auth_from_env()
+    client = TestClient(app.fastapi)
+    assert (
+        client.post(
+            "/api/auth/login", json={"username": "ops", "password": "hunter2"}
+        ).status_code
+        == 200
+    )
+    assert (
+        client.post(
+            "/api/auth/login", json={"username": "ops", "password": "wrong"}
+        ).status_code
+        == 401
+    )
 
 
 def test_health_reports_auth_state(auth_app, open_app):
