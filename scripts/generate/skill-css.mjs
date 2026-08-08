@@ -18,7 +18,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { bannerLines } from './banner.mjs';
+import { bannerLines, boxedCssComment } from './banner.mjs';
 
 const REPO = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 
@@ -63,17 +63,13 @@ export const BUNDLES = [
   },
 ];
 
-const RULE = '='.repeat(73);
-
-/** The banner, with every source listed under the first `Source:` line. */
+/** The banner, listing every source and where the app entry imports the bundle. */
 function banner(bundle) {
-  const [first, ...rest] = bundle.sources;
-  const lines = bannerLines(first);
-  const sourceAt = lines.findIndex((l) => l.startsWith('Source:'));
-  lines.splice(sourceAt + 1, 0, ...rest.map((s) => `            ${s}`));
-  lines.push('Concatenated in the import order the source headers document.');
-  lines.push(bundle.note);
-  return [`/* ${RULE}`, ...lines.map((l) => `   ${l}`), `   ${RULE} */`].join('\n');
+  return boxedCssComment([
+    ...bannerLines(bundle.sources),
+    'Concatenated in the import order the source headers document.',
+    bundle.note,
+  ]).join('\n');
 }
 
 /** The ruled line that opens each source's section of a bundle. */
@@ -82,13 +78,9 @@ export function sectionMarker(source) {
 }
 
 /** Render one bundle: banner, then each source verbatim under its marker. */
-function renderBundle(bundle) {
+export function renderBundle(bundle) {
   const sections = bundle.sources.map(
     (source) => `${sectionMarker(source)}\n\n${readFileSync(join(REPO, source), 'utf8')}`,
   );
   return `${banner(bundle)}\n\n${sections.join('\n')}`;
 }
-
-export const renderSkillColorsAndType = () => renderBundle(BUNDLES[0]);
-export const renderSkillConsole = () => renderBundle(BUNDLES[1]);
-export const renderSkillChat = () => renderBundle(BUNDLES[2]);

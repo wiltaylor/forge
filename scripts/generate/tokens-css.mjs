@@ -7,9 +7,8 @@
  * same source entry, so the repeated ramps cannot drift apart.
  */
 import { CSS_TITLE, groups, inKit, isSchemeToken, valueFor } from '../../packages/tokens/tokens.source.mjs';
-import { bannerLines } from './banner.mjs';
+import { bannerLines, boxedCssComment } from './banner.mjs';
 
-const RULE = '='.repeat(73);
 
 /** Count the decimals the author wrote. */
 const authoredDecimals = (n) => (String(n).split('.')[1] ?? '').length;
@@ -26,8 +25,6 @@ export function formatValue(value) {
   return `oklch(${number(l, 2)} ${number(c, 2)} ${number(h, 0)}${alpha})`;
 }
 
-/** Wrap lines in the ruled box comment the stylesheet opens its sections with. */
-const boxed = (lines) => [`/* ${RULE}`, ...lines.map((l) => `   ${l}`), `   ${RULE} */`];
 
 function comment(lines, indent) {
   if (lines.length === 1) return [`${indent}/* ${lines[0]} */`];
@@ -86,8 +83,8 @@ function block(selector, scheme, { indent = '  ', wholeSet = false } = {}) {
 /** @returns {string} the full text of `packages/tokens/css/tokens.css`. */
 export function renderTokensCss() {
   return [
-    ...boxed(bannerLines()),
-    ...boxed(CSS_TITLE),
+    ...boxedCssComment(bannerLines()),
+    ...boxedCssComment(CSS_TITLE),
     '/* -------- DARK (default) -------------------------------------------------- */',
     block(':root', 'dark', { wholeSet: true }),
     '',

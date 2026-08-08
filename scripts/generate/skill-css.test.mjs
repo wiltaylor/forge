@@ -10,18 +10,12 @@
  */
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import test from 'node:test';
 import { dirname, join } from 'node:path';
+import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { bannerLines } from './banner.mjs';
-import {
-  BUNDLES,
-  renderSkillChat,
-  renderSkillColorsAndType,
-  renderSkillConsole,
-  sectionMarker,
-} from './skill-css.mjs';
+import { BUNDLES, renderBundle, sectionMarker } from './skill-css.mjs';
 
 const REPO = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 
@@ -38,49 +32,44 @@ const position = (bundle, source) => {
   return at;
 };
 
-const [colors, console_, chat] = BUNDLES;
+const [colorsBundle, consoleBundle, chatBundle] = BUNDLES;
 
 test('fonts.css documents "import FIRST" and the manifest puts it first', () => {
   assert.match(header('packages/tokens/css/fonts.css'), /import FIRST/);
-  assert.equal(position(colors, 'packages/tokens/css/fonts.css'), 0);
+  assert.equal(position(colorsBundle, 'packages/tokens/css/fonts.css'), 0);
 });
 
 test('base.css documents "Import after tokens.css" and the manifest obeys', () => {
   assert.match(header('packages/tokens/css/base.css'), /Import after tokens\.css/);
   assert.ok(
-    position(colors, 'packages/tokens/css/base.css') >
-      position(colors, 'packages/tokens/css/tokens.css'),
+    position(colorsBundle, 'packages/tokens/css/base.css') >
+      position(colorsBundle, 'packages/tokens/css/tokens.css'),
   );
 });
 
 test('the extracted stylesheets follow the console core they were cut from', () => {
-  const core = position(console_, 'packages/ui/styles/console.css');
+  const core = position(consoleBundle, 'packages/ui/styles/console.css');
   assert.equal(core, 0);
   for (const pkg of ['charts', 'graph', 'code']) {
     const source = `packages/${pkg}/styles/${pkg}.css`;
     assert.match(header(source), /Extracted from console\.css/);
-    assert.ok(position(console_, source) > core);
+    assert.ok(position(consoleBundle, source) > core);
   }
 });
 
 test('chat.css documents its place after the ui styles, and its bundle says so', () => {
   assert.match(header('packages/chat/styles/chat.css'), /Import after @forge\/ui\/styles\.css/);
-  assert.match(chat.note, /after console\.css/);
+  assert.match(chatBundle.note, /after console\.css/);
 });
 
-const rendered = [
-  [colors, renderSkillColorsAndType()],
-  [console_, renderSkillConsole()],
-  [chat, renderSkillChat()],
-];
+const rendered = BUNDLES.map((bundle) => [bundle, renderBundle(bundle)]);
 
 test('each bundle opens with the generated banner naming every source', () => {
   for (const [bundle, css] of rendered) {
     const head = css.slice(0, css.indexOf('*/'));
-    for (const line of bannerLines(bundle.sources[0])) {
+    for (const line of bannerLines(bundle.sources)) {
       assert.ok(head.includes(line), `${bundle.path} banner is missing: ${line}`);
     }
-    for (const source of bundle.sources) assert.ok(head.includes(source));
   }
 });
 
