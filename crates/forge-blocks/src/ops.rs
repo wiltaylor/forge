@@ -104,10 +104,13 @@ pub fn split(doc: &mut Document, addr: Address, caret: usize) -> Option<Address>
 
 /// Backspace at offset 0 between two text blocks: append this block's `md`
 /// to the previous sibling's and remove this block. If the previous sibling
-/// is a divider, the divider is deleted instead (caret stays at 0). Only
-/// paragraphs merge *into* other blocks — callers convert non-paragraph text
-/// blocks to paragraphs first (the shared keyboard rule). Returns `None`
-/// when there is nothing to merge with (first block of its list).
+/// is a divider, the divider is deleted instead (caret stays at 0). Returns
+/// `None` when there is nothing to merge with (first block of its list).
+///
+/// Only paragraphs merge *into* other blocks. Nothing else has to: the
+/// demote-before-merge rule sits in front of this op in
+/// [`crate::resolve_key`], which turns the first Backspace on a non-paragraph
+/// text block into [`crate::Op::Demote`] and only the second into a merge.
 pub fn merge_with_previous(doc: &mut Document, addr: Address) -> Option<MergeResult> {
     let index = Document::index_in_siblings(addr);
     if index == 0 {

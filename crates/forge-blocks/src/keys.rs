@@ -2,7 +2,7 @@
 //!
 //! A kit measures and paints. It does not decide what a key means. It hands
 //! [`resolve_key`] a keypress in the normalised [`Key`] shape, the address of
-//! the focused block, what it is doing with that block ([`Focus`]), and the
+//! the focused block, what it is doing with that block ([`Mode`]), and the
 //! document — and gets back the [`Op`] to perform.
 //!
 //! `None` is not "unbound": it means the key belongs to the kit's own text
@@ -177,7 +177,7 @@ fn code_for_char(c: char) -> Option<(&'static str, bool)> {
 
 /// What the editor is doing with the block at the address when a key arrives.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Focus {
+pub enum Mode {
     /// Block-selected: structural keys, no text caret.
     Select,
     /// A text caret at a byte offset into the block's markdown source.
@@ -251,12 +251,12 @@ pub enum Op {
 /// `None` hands the key back to the kit: caret movement, buffer editing, or a
 /// key the editor does not bind. Every op that touches the document comes out
 /// of here, so two kits cannot answer the same keypress differently.
-pub fn resolve_key(doc: &Document, addr: Address, focus: Focus, key: &Key) -> Option<Op> {
-    match focus {
-        Focus::Text { caret } => text_key(doc, addr, caret, key),
-        Focus::Cell { row, col } => cell_key(doc, addr, row, col, key),
-        Focus::Select => select_key(doc, addr, key),
-        Focus::Buffer => buffer_key(addr, key),
+pub fn resolve_key(doc: &Document, addr: Address, mode: Mode, key: &Key) -> Option<Op> {
+    match mode {
+        Mode::Text { caret } => text_key(doc, addr, caret, key),
+        Mode::Cell { row, col } => cell_key(doc, addr, row, col, key),
+        Mode::Select => select_key(doc, addr, key),
+        Mode::Buffer => buffer_key(addr, key),
     }
 }
 
@@ -273,12 +273,18 @@ fn buffer_key(addr: Address, key: &Key) -> Option<Op> {
 
 /* ---------------- text caret -------------------------------------------- */
 
+/// Keys with a text caret in the block's markdown source. Everything the
+/// caret itself does — moving it, deleting either side of it — is the kit's,
+/// because only the kit knows where the text wrapped.
 fn text_key(doc: &Document, addr: Address, caret: usize, key: &Key) -> Option<Op> {
+    // Escape leaves the text whatever the block turns out to hold.
+    if key.code == "Escape" {
+        return Some(Op::Select { addr });
+    }
     let kind = &doc.block(addr)?.kind;
     let md = kind.md()?;
     let caret = clamp(md, caret);
     match key.code.as_str() {
-        "Escape" => Some(Op::Select { addr }),
         "Enter" | "NumpadEnter" if key.shift || key.alt => Some(Op::Insert('\n')),
         "Enter" | "NumpadEnter" => Some(Op::Split { caret }),
         // Backspace inside the text is the kit's; at offset 0 it is a merge —
@@ -338,7 +344,13 @@ fn clamp(s: &str, byte: usize) -> usize {
 
 /* ---------------- table cell -------------------------------------------- */
 
+/// Keys with the caret in one table cell. Walking the cells and growing the
+/// table are the table's business; the text inside a cell is the kit's.
 fn cell_key(doc: &Document, addr: Address, row: usize, col: usize, key: &Key) -> Option<Op> {
+    // Escape leaves the cell whatever the block turns out to be.
+    if key.code == "Escape" {
+        return Some(Op::Select { addr });
+    }
     let BlockKind::Table { header, rows } = &doc.block(addr)?.kind else {
         return None;
     };
@@ -346,7 +358,6 @@ fn cell_key(doc: &Document, addr: Address, row: usize, col: usize, key: &Key) ->
     // `rows.len()` and a table with no body rows is still one row deep.
     let (ncols, nrows) = (header.len().max(1), rows.len());
     match key.code.as_str() {
-        "Escape" => Some(Op::Select { addr }),
         "Tab" if key.shift => Some(if col > 0 {
             Op::FocusCell { row, col: col - 1 }
         } else if row > 0 {
@@ -400,6 +411,7 @@ fn cell_key(doc: &Document, addr: Address, row: usize, col: usize, key: &Key) ->
 
 /* ---------------- block selection --------------------------------------- */
 
+/// Keys with the block selected and no caret anywhere: the structural ones.
 fn select_key(doc: &Document, addr: Address, key: &Key) -> Option<Op> {
     match key.code.as_str() {
         "ArrowUp" if key.alt => Some(Op::MoveBlock { dir: -1 }),

@@ -39,15 +39,15 @@ fn table() -> Block {
 
 /// Resolve `key` against block `i` with a text caret at `caret`.
 fn at_text(d: &Document, i: usize, caret: usize, key: Key) -> Option<Op> {
-    resolve_key(d, Address::Root(i), Focus::Text { caret }, &key)
+    resolve_key(d, Address::Root(i), Mode::Text { caret }, &key)
 }
 
 fn at_cell(d: &Document, i: usize, row: usize, col: usize, key: Key) -> Option<Op> {
-    resolve_key(d, Address::Root(i), Focus::Cell { row, col }, &key)
+    resolve_key(d, Address::Root(i), Mode::Cell { row, col }, &key)
 }
 
 fn selected(d: &Document, i: usize, key: Key) -> Option<Op> {
-    resolve_key(d, Address::Root(i), Focus::Select, &key)
+    resolve_key(d, Address::Root(i), Mode::Select, &key)
 }
 
 /* ---------------- the key shape ----------------------------------------- */
@@ -322,7 +322,7 @@ fn a_buffer_keeps_its_keys_but_not_the_block_ones() {
         lang: "rust".into(),
         code: "fn main() {}".into(),
     })]);
-    let buffer = |key: Key| resolve_key(&d, Address::Root(0), Focus::Buffer, &key);
+    let buffer = |key: Key| resolve_key(&d, Address::Root(0), Mode::Buffer, &key);
     assert_eq!(
         buffer(Key::new("Escape")),
         Some(Op::Select {
@@ -366,7 +366,7 @@ fn escape_leaves_a_column_cell_before_it_leaves_the_editor() {
     let mut d = doc(vec![p("one")]);
     let cell = wrap_in_columns(&mut d, Address::Root(0), 2).unwrap();
     assert_eq!(
-        resolve_key(&d, cell, Focus::Select, &Key::new("Escape")),
+        resolve_key(&d, cell, Mode::Select, &Key::new("Escape")),
         Some(Op::Select {
             addr: Address::Root(0)
         })

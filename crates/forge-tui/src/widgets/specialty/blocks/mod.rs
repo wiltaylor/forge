@@ -30,7 +30,7 @@ use std::collections::HashMap;
 use forge_blocks::{
     flatten_addresses, indent_list, insert_after, merge_with_previous, move_block, next_address,
     prev_address, remove, resolve_key, set_kind, split, table_insert_col, table_insert_row,
-    table_remove_col, wrap_in_columns, Address, BlockKind, Document, Focus, Key, ListStyle, Op,
+    table_remove_col, wrap_in_columns, Address, BlockKind, Document, Key, ListStyle, Mode, Op,
     PaletteAction, Tone,
 };
 use ratatui::buffer::Buffer;
@@ -113,7 +113,6 @@ fn normalize(ev: KeyEvent) -> Option<Key> {
         KeyCode::Enter => Key::new("Enter"),
         KeyCode::Backspace => Key::new("Backspace"),
         KeyCode::Delete => Key::new("Delete"),
-        KeyCode::Insert => Key::new("Insert"),
         KeyCode::Esc => Key::new("Escape"),
         KeyCode::Tab => Key::new("Tab"),
         KeyCode::BackTab => Key::new("Tab").shift(),
@@ -722,12 +721,7 @@ impl BlockEditorState {
         if let Some(BlockKind::Admonition { tone, .. }) =
             self.doc.block_mut(addr).map(|b| &mut b.kind)
         {
-            *tone = match tone {
-                Tone::Info => Tone::Success,
-                Tone::Success => Tone::Warning,
-                Tone::Warning => Tone::Danger,
-                Tone::Danger => Tone::Info,
-            };
+            *tone = tone.next();
             return Outcome::Changed;
         }
         Outcome::Ignored
@@ -738,22 +732,22 @@ impl BlockEditorState {
             return Outcome::Ignored;
         };
         let caret = self.caret().unwrap_or(0);
-        let focus = Focus::Text { caret };
-        match normalize(key).and_then(|k| resolve_key(&self.doc, addr, focus, &k)) {
+        let mode = Mode::Text { caret };
+        match normalize(key).and_then(|k| resolve_key(&self.doc, addr, mode, &k)) {
             Some(op) => self.apply_op(addr, op),
-            None => self.text_caret_key(key),
+            None => self.caret_key(key),
         }
     }
 
-    /// The keys the resolver leaves to the kit while a text caret is up:
-    /// editing the buffer and moving the caret, both of which need the
-    /// wrapped geometry only [`WrapEdit`] has.
-    fn text_caret_key(&mut self, key: KeyEvent) -> Outcome {
+    /// The keys the resolver leaves to the kit while a caret is up, in a text
+    /// block or a table cell: editing the buffer and moving the caret, both of
+    /// which need the wrapped geometry only [`WrapEdit`] has.
+    fn caret_key(&mut self, key: KeyEvent) -> Outcome {
         match key.code {
             KeyCode::Backspace | KeyCode::Delete => {
                 let back = key.code == KeyCode::Backspace;
                 let deleted = match &mut self.editing {
-                    Editing::Text(we) => {
+                    Editing::Text(we) | Editing::Cell(we) => {
                         if back {
                             we.backspace()
                         } else {
@@ -762,13 +756,19 @@ impl BlockEditorState {
                     }
                     _ => false,
                 };
-                if !deleted {
-                    return Outcome::Consumed;
-                }
                 self.sync_source();
                 self.refresh_emoji();
-                Outcome::Changed
+                if deleted {
+                    Outcome::Changed
+                } else {
+                    // Nothing to delete: the caret is at an edge the resolver
+                    // has no merge for (a cell's), so the key stops here.
+                    Outcome::Consumed
+                }
             }
+            // Only a text block leaves itself by arrow: a cell's own arrows
+            // come back from the resolver, and a cell with a modifier held is
+            // not the editor's key at all.
             KeyCode::Up | KeyCode::Down => {
                 let up = key.code == KeyCode::Up;
                 let (moved, desired) = match &mut self.editing {
@@ -776,7 +776,7 @@ impl BlockEditorState {
                         let moved = if up { we.up() } else { we.down() };
                         (moved, we.desired())
                     }
-                    _ => (false, 0),
+                    _ => return Outcome::Ignored,
                 };
                 if moved {
                     Outcome::Consumed
@@ -785,7 +785,7 @@ impl BlockEditorState {
                 }
             }
             KeyCode::Left | KeyCode::Right | KeyCode::Home | KeyCode::End => {
-                if let Editing::Text(we) = &mut self.editing {
+                if let Editing::Text(we) | Editing::Cell(we) = &mut self.editing {
                     match key.code {
                         KeyCode::Left => we.left(),
                         KeyCode::Right => we.right(),
@@ -811,7 +811,8 @@ impl BlockEditorState {
                 let mut b = [0u8; 4];
                 match &mut self.editing {
                     Editing::Text(we) | Editing::Cell(we) => we.insert(c.encode_utf8(&mut b)),
-                    _ => return Outcome::Ignored,
+                    // No buffer to type into: the key was bound all the same.
+                    _ => return Outcome::Consumed,
                 }
                 self.sync_source();
                 self.refresh_emoji();
@@ -827,6 +828,8 @@ impl BlockEditorState {
                     None => Outcome::Consumed,
                 }
             }
+            // The markdown comes off the document, not the buffer: every edit
+            // writes through (`sync_source`), so they are the same string.
             Op::Demote { addr } => {
                 let md = self
                     .doc
@@ -845,24 +848,24 @@ impl BlockEditorState {
                 None => Outcome::Consumed,
             },
             Op::Convert { kind, caret } => {
-                let width = self.active_width();
+                let to_code = matches!(kind, BlockKind::Code { .. });
+                let takes_caret = kind.is_text();
                 if !set_kind(&mut self.doc, addr, kind) {
                     return Outcome::Consumed;
                 }
                 self.popup = Popup::None;
-                match self.doc.block(addr).map(|b| &b.kind) {
-                    Some(BlockKind::Code { code, .. }) => {
-                        self.editing = Editing::Code(TextareaState::with_value(code));
-                    }
-                    Some(kind) if kind.is_text() => {
-                        let mut we =
-                            WrapEdit::new(kind.md().unwrap_or_default().to_string(), caret);
-                        we.set_width(width);
-                        self.editing = Editing::Text(we);
-                    }
-                    // A divider (or anything else with no caret) leaves the
-                    // block selected.
-                    _ => self.editing = Editing::None,
+                if to_code {
+                    let code = match self.doc.block(addr).map(|b| &b.kind) {
+                        Some(BlockKind::Code { code, .. }) => code.clone(),
+                        _ => String::new(),
+                    };
+                    self.editing = Editing::Code(TextareaState::with_value(&code));
+                } else if takes_caret {
+                    self.enter_text(addr, caret);
+                } else {
+                    // A divider has no caret of any sort: the block stays
+                    // selected instead.
+                    self.editing = Editing::None;
                 }
                 Outcome::Changed
             }
@@ -972,7 +975,7 @@ impl BlockEditorState {
             return Outcome::Ignored;
         };
         if let Some(op) =
-            normalize(key).and_then(|k| resolve_key(&self.doc, addr, Focus::Buffer, &k))
+            normalize(key).and_then(|k| resolve_key(&self.doc, addr, Mode::Buffer, &k))
         {
             return self.apply_op(addr, op);
         }
@@ -1017,7 +1020,7 @@ impl BlockEditorState {
         // second press — so that one key never reaches the block key model.
         if key.code != KeyCode::Esc {
             if let Some(op) =
-                normalize(key).and_then(|k| resolve_key(&self.doc, addr, Focus::Buffer, &k))
+                normalize(key).and_then(|k| resolve_key(&self.doc, addr, Mode::Buffer, &k))
             {
                 return self.apply_op(addr, op);
             }
@@ -1078,51 +1081,10 @@ impl BlockEditorState {
         let Some((row, col)) = self.table_cell else {
             return Outcome::Ignored;
         };
-        let focus = Focus::Cell { row, col };
-        match normalize(key).and_then(|k| resolve_key(&self.doc, addr, focus, &k)) {
+        let mode = Mode::Cell { row, col };
+        match normalize(key).and_then(|k| resolve_key(&self.doc, addr, mode, &k)) {
             Some(op) => self.apply_op(addr, op),
-            None => self.cell_caret_key(key),
-        }
-    }
-
-    /// The keys the resolver leaves to the kit inside a table cell: the cell
-    /// buffer and its caret.
-    fn cell_caret_key(&mut self, key: KeyEvent) -> Outcome {
-        match key.code {
-            KeyCode::Backspace | KeyCode::Delete => {
-                let back = key.code == KeyCode::Backspace;
-                let deleted = match &mut self.editing {
-                    Editing::Cell(we) => {
-                        if back {
-                            we.backspace()
-                        } else {
-                            we.delete()
-                        }
-                    }
-                    _ => false,
-                };
-                self.sync_source();
-                if back {
-                    self.refresh_emoji();
-                }
-                if deleted {
-                    Outcome::Changed
-                } else {
-                    Outcome::Consumed
-                }
-            }
-            KeyCode::Left | KeyCode::Right | KeyCode::Home | KeyCode::End => {
-                if let Editing::Cell(we) = &mut self.editing {
-                    match key.code {
-                        KeyCode::Left => we.left(),
-                        KeyCode::Right => we.right(),
-                        KeyCode::Home => we.home(),
-                        _ => we.end(),
-                    }
-                }
-                Outcome::Consumed
-            }
-            _ => Outcome::Ignored,
+            None => self.caret_key(key),
         }
     }
 
@@ -1161,7 +1123,7 @@ impl BlockEditorState {
             };
         }
         let addr = self.focus.expect("checked above");
-        match normalize(key).and_then(|k| resolve_key(&self.doc, addr, Focus::Select, &k)) {
+        match normalize(key).and_then(|k| resolve_key(&self.doc, addr, Mode::Select, &k)) {
             Some(op) => self.apply_op(addr, op),
             None => Outcome::Ignored,
         }
