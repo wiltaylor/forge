@@ -4,7 +4,7 @@
 //! category labels under the axis.
 
 use crate::response::{ForgeResponse, Outcome};
-use crate::theme::{color::with_alpha, series_color, Theme};
+use crate::theme::{color::with_alpha, series_color, Surface, TextRole, Theme};
 use crate::widgets::charts::{self, nice_ticks, TipRow};
 use egui::epaint::{Mesh, Vertex, WHITE_UV};
 use egui::{Pos2, Sense, Shape, Stroke, Ui, Vec2};
@@ -103,11 +103,13 @@ impl<'a> LineChart<'a> {
                 } else {
                     t.font(ui.ctx(), crate::theme::FontWeight::Regular, t.type_scale.xs)
                 };
-                let g = ui.painter().layout_no_wrap(text.to_owned(), font, t.fg[2]);
+                let g =
+                    ui.painter()
+                        .layout_no_wrap(text.to_owned(), font, t.text(TextRole::Tertiary));
                 ui.painter().galley(
                     egui::pos2(x_of(i) - g.size().x / 2.0, rect.max.y - g.size().y - 3.0),
                     g,
-                    t.fg[2],
+                    t.text(TextRole::Tertiary),
                 );
             };
             if let Some(labels) = self.x_labels {
@@ -184,8 +186,11 @@ impl<'a> LineChart<'a> {
                         outcome = Outcome::Consumed;
                         let color = series_color(&t, si);
                         ui.painter().circle_filled(p, 3.5, color);
-                        ui.painter()
-                            .circle_stroke(p, 3.5, Stroke::new(1.5, t.bg[1]));
+                        ui.painter().circle_stroke(
+                            p,
+                            3.5,
+                            Stroke::new(1.5, t.surface(Surface::Card)),
+                        );
                         let title = self
                             .x_labels
                             .and_then(|l| l.get(i).copied())

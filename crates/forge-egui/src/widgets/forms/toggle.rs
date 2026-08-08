@@ -2,7 +2,7 @@
 //! `Context::animate_bool_with_time` (`t.motion.base`).
 
 use crate::response::{ForgeResponse, Outcome};
-use crate::theme::{blend, FontWeight, Theme};
+use crate::theme::{blend, FontWeight, Surface, TextRole, Theme};
 use crate::widgets::util;
 use egui::{Rect, Sense, Stroke, StrokeKind, Ui, Vec2, WidgetInfo, WidgetType};
 
@@ -37,7 +37,11 @@ impl<'a> Toggle<'a> {
 
     pub fn show(self, ui: &mut Ui) -> ForgeResponse {
         let t = Theme::of(ui.ctx());
-        let text_color = if self.disabled { t.fg[3] } else { t.fg[0] };
+        let text_color = if self.disabled {
+            t.text(TextRole::Disabled)
+        } else {
+            t.text(TextRole::Primary)
+        };
         let galley = self.label.map(|l| {
             util::galley(
                 ui,
@@ -82,9 +86,9 @@ impl<'a> Toggle<'a> {
             );
             let pill = TRACK.y / 2.0;
             let fill = if self.disabled {
-                t.bg[2]
+                t.surface(Surface::Hover)
             } else {
-                blend(t.accent.base, t.bg[3], k)
+                blend(t.accent.base, t.surface(Surface::Pressed), k)
             };
             ui.painter().rect_filled(track, pill, fill);
             ui.painter().rect_stroke(
@@ -105,9 +109,9 @@ impl<'a> Toggle<'a> {
             let x0 = track.min.x + 2.0 + THUMB_R;
             let x1 = track.max.x - 2.0 - THUMB_R;
             let thumb = if self.disabled {
-                t.fg[3]
+                t.text(TextRole::Disabled)
             } else {
-                blend(t.accent.contrast, t.fg[1], k)
+                blend(t.accent.contrast, t.text(TextRole::Secondary), k)
             };
             ui.painter().circle_filled(
                 egui::pos2(x0 + (x1 - x0) * k, track.center().y),

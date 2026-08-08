@@ -3,7 +3,7 @@
 //! design system's contract.
 
 use egui::Color32;
-use forge_egui::theme::{chart_series, series_color, Scheme, Severity, Theme};
+use forge_egui::theme::{chart_series, series_color, Scheme, Severity, Surface, TextRole, Theme};
 
 fn hex(c: Color32) -> String {
     format!("#{:02X}{:02X}{:02X}", c.r(), c.g(), c.b())
@@ -13,13 +13,13 @@ fn hex(c: Color32) -> String {
 fn dark_palette_is_token_exact() {
     let t = Theme::dark();
     assert_eq!(t.scheme, Scheme::Dark);
-    assert_eq!(hex(t.bg[0]), "#0B0D10");
-    assert_eq!(hex(t.bg[1]), "#11141A");
-    assert_eq!(hex(t.bg[2]), "#171B22");
-    assert_eq!(hex(t.bg[3]), "#1E232C");
-    assert_eq!(hex(t.bg[4]), "#252B36");
-    assert_eq!(hex(t.fg[0]), "#ECEEF2");
-    assert_eq!(hex(t.fg[3]), "#4E5664");
+    assert_eq!(hex(t.surface(Surface::Page)), "#0B0D10");
+    assert_eq!(hex(t.surface(Surface::Card)), "#11141A");
+    assert_eq!(hex(t.surface(Surface::Hover)), "#171B22");
+    assert_eq!(hex(t.surface(Surface::Pressed)), "#1E232C");
+    assert_eq!(hex(t.surface(Surface::Popover)), "#252B36");
+    assert_eq!(hex(t.text(TextRole::Primary)), "#ECEEF2");
+    assert_eq!(hex(t.text(TextRole::Disabled)), "#4E5664");
     assert_eq!(hex(t.border.subtle), "#1A1F27");
     assert_eq!(hex(t.border.default), "#262C36");
     assert_eq!(hex(t.border.strong), "#3A4250");
@@ -38,8 +38,8 @@ fn dark_palette_is_token_exact() {
 fn light_palette_is_token_exact() {
     let t = Theme::light();
     assert_eq!(t.scheme, Scheme::Light);
-    assert_eq!(hex(t.bg[0]), "#FAFAFA");
-    assert_eq!(hex(t.fg[0]), "#0C0F14");
+    assert_eq!(hex(t.surface(Surface::Page)), "#FAFAFA");
+    assert_eq!(hex(t.text(TextRole::Primary)), "#0C0F14");
     assert_eq!(hex(t.accent.base), "#006BB9");
     assert_eq!(hex(t.danger.base), "#C6001F");
 }
@@ -93,6 +93,6 @@ fn chart_palette_order_is_locked() {
         ]
     );
     // Overflow folds into "Other" — never cycles.
-    assert_eq!(series_color(&t, 5), t.fg[2]);
-    assert_eq!(series_color(&t, 99), t.fg[2]);
+    assert_eq!(series_color(&t, 5), t.text(TextRole::Tertiary));
+    assert_eq!(series_color(&t, 99), t.text(TextRole::Tertiary));
 }

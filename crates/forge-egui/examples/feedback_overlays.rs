@@ -155,13 +155,14 @@ impl Demo {
                 let t = Theme::of(ui.ctx());
                 let (rect, response) =
                     ui.allocate_exact_size(egui::vec2(220.0, 32.0), egui::Sense::click());
-                ui.painter().rect_filled(rect, t.radius.md, t.bg[2]);
+                ui.painter()
+                    .rect_filled(rect, t.radius.md, t.surface(Surface::Hover));
                 ui.painter().text(
                     rect.center(),
                     egui::Align2::CENTER_CENTER,
                     "Right-click zone",
                     t.mono(t.type_scale.sm),
-                    t.fg[2],
+                    t.text(TextRole::Tertiary),
                 );
                 if let Some(index) = context_menu(&response, &items) {
                     ctx.toast().info(format!("Context: {}", items[index].label));

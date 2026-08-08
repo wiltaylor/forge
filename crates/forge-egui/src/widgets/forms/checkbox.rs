@@ -2,7 +2,7 @@
 //! states.
 
 use crate::response::{ForgeResponse, Outcome};
-use crate::theme::{FontWeight, Theme};
+use crate::theme::{FontWeight, Surface, TextRole, Theme};
 use crate::widgets::primitives::Glyph;
 use crate::widgets::util;
 use egui::{CornerRadius, Rect, Sense, Stroke, StrokeKind, Ui, Vec2, WidgetInfo, WidgetType};
@@ -42,7 +42,11 @@ impl<'a> Checkbox<'a> {
     pub fn show(self, ui: &mut Ui) -> ForgeResponse {
         let t = Theme::of(ui.ctx());
         let font = t.font(ui.ctx(), FontWeight::Regular, t.type_scale.base);
-        let text_color = if self.disabled { t.fg[3] } else { t.fg[0] };
+        let text_color = if self.disabled {
+            t.text(TextRole::Disabled)
+        } else {
+            t.text(TextRole::Primary)
+        };
         let galley = util::galley(ui, self.label, font, text_color);
 
         let size = Vec2::new(
@@ -74,7 +78,7 @@ impl<'a> Checkbox<'a> {
             let radius = CornerRadius::same(t.radius.sm as u8);
             let filled = checked || self.indeterminate;
             let (fill, border) = if self.disabled {
-                (t.bg[2], Some(t.border.subtle))
+                (t.surface(Surface::Hover), Some(t.border.subtle))
             } else if filled {
                 (t.accent.base, None)
             } else {
@@ -83,7 +87,7 @@ impl<'a> Checkbox<'a> {
                 } else {
                     t.border.strong
                 };
-                (t.bg[2], Some(b))
+                (t.surface(Surface::Hover), Some(b))
             };
             ui.painter().rect_filled(box_rect, radius, fill);
             if let Some(border) = border {
@@ -102,7 +106,7 @@ impl<'a> Checkbox<'a> {
                     Glyph::Check
                 };
                 let mark = if self.disabled {
-                    t.fg[3]
+                    t.text(TextRole::Disabled)
                 } else {
                     t.accent.contrast
                 };

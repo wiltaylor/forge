@@ -3,7 +3,7 @@
 //! keyboard highlight cursor lives in egui temp memory keyed by the field id.
 
 use crate::response::{ForgeResponse, Outcome};
-use crate::theme::{FontWeight, Theme};
+use crate::theme::{FontWeight, TextRole, Theme};
 use crate::widgets::forms::field;
 use crate::widgets::util;
 use egui::{Key, Popup, PopupCloseBehavior, Sense, Ui, Vec2, WidgetInfo, WidgetType};
@@ -143,9 +143,17 @@ impl<'a> Select<'a> {
                     field::well_border(&t, false, focused, disabled),
                 );
                 util::focus_ring(ui, &response, rect, t.radius.md, &t);
+                let dim = t.text(TextRole::Disabled);
                 let (text, color) = match display {
-                    Some(text) => (text, if disabled { t.fg[3] } else { t.fg[0] }),
-                    None => (placeholder.unwrap_or(""), t.fg[3]),
+                    Some(text) => (
+                        text,
+                        if disabled {
+                            dim
+                        } else {
+                            t.text(TextRole::Primary)
+                        },
+                    ),
+                    None => (placeholder.unwrap_or(""), dim),
                 };
                 let g = util::galley(
                     ui,
@@ -158,7 +166,12 @@ impl<'a> Select<'a> {
                     g,
                     color,
                 );
-                field::chevron(ui, &t, rect, if disabled { t.fg[3] } else { t.fg[2] });
+                let chevron = if disabled {
+                    dim
+                } else {
+                    t.text(TextRole::Tertiary)
+                };
+                field::chevron(ui, &t, rect, chevron);
             }
 
             // Flyout.

@@ -3,7 +3,7 @@
 //! "Follow" chip (or scrolling back to the bottom) re-pins.
 
 use crate::response::{ForgeResponse, Outcome};
-use crate::theme::{FontWeight, Theme};
+use crate::theme::{FontWeight, Surface, TextRole, Theme};
 use crate::widgets::util;
 use crate::widgets::Tone;
 use egui::{CornerRadius, Rect, Sense, Stroke, Ui, Vec2, WidgetInfo, WidgetType};
@@ -136,7 +136,7 @@ impl<'a> Logs<'a> {
             .collect();
 
         let frame = egui::Frame::new()
-            .fill(t.bg[1])
+            .fill(t.surface(Surface::Card))
             .stroke(Stroke::new(1.0, t.border.subtle))
             .corner_radius(CornerRadius::same(t.radius.md as u8))
             .inner_margin(egui::Margin::same(4));
@@ -163,10 +163,14 @@ impl<'a> Logs<'a> {
                         }
                         let mut x = rect.min.x + 4.0;
                         let cy = rect.center().y;
-                        // time — fg[3]
-                        let g = util::galley(ui, &line.time, mono.clone(), t.fg[3]);
-                        ui.painter()
-                            .galley(egui::pos2(x, cy - g.size().y / 2.0), g, t.fg[3]);
+                        // time — disabled text
+                        let g =
+                            util::galley(ui, &line.time, mono.clone(), t.text(TextRole::Disabled));
+                        ui.painter().galley(
+                            egui::pos2(x, cy - g.size().y / 2.0),
+                            g,
+                            t.text(TextRole::Disabled),
+                        );
                         x += 74.0;
                         // level badge
                         let (base, bg, _fg) = line.level.tone().triple(&t);
@@ -181,10 +185,19 @@ impl<'a> Logs<'a> {
                         ui.painter()
                             .galley(egui::pos2(x + 5.0, cy - g.size().y / 2.0), g, base);
                         x += bw + 8.0;
-                        // message — fg[1]
-                        let g = util::galley(ui, &line.message, mono.clone(), t.fg[1]);
+                        // message — secondary text
+                        let g = util::galley(
+                            ui,
+                            &line.message,
+                            mono.clone(),
+                            t.text(TextRole::Secondary),
+                        );
                         let clip = ui.painter().with_clip_rect(rect.intersect(ui.clip_rect()));
-                        clip.galley(egui::pos2(x, cy - g.size().y / 2.0), g, t.fg[1]);
+                        clip.galley(
+                            egui::pos2(x, cy - g.size().y / 2.0),
+                            g,
+                            t.text(TextRole::Secondary),
+                        );
                     }
                 });
             out
@@ -217,7 +230,7 @@ fn follow_chip(ui: &mut Ui, t: &Theme, pinned: bool) -> egui::Response {
     } else {
         "○ Follow"
     };
-    let g = util::galley(ui, label, font, t.fg[1]);
+    let g = util::galley(ui, label, font, t.text(TextRole::Secondary));
     let size = Vec2::new(g.size().x + 20.0, t.control.sm - 6.0);
     let (rect, resp) = ui.allocate_exact_size(size, Sense::click());
     resp.widget_info(|| WidgetInfo::selected(WidgetType::Button, true, pinned, "Follow"));
@@ -226,9 +239,9 @@ fn follow_chip(ui: &mut Ui, t: &Theme, pinned: bool) -> egui::Response {
         let (fill, color) = if pinned {
             (t.accent.bg, t.accent.fg)
         } else if resp.hovered() {
-            (t.bg[3], t.fg[0])
+            (t.surface(Surface::Pressed), t.text(TextRole::Primary))
         } else {
-            (t.bg[2], t.fg[1])
+            (t.surface(Surface::Hover), t.text(TextRole::Secondary))
         };
         ui.painter().rect_filled(rect, radius, fill);
         let label = if pinned {

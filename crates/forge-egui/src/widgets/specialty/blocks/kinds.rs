@@ -4,7 +4,7 @@
 
 use super::inline::{inline_job, text_style, InlineStyle};
 use super::{render_block, text, Action, BlockEditorState, CaretHint, Ecx};
-use crate::theme::{FontWeight, Severity};
+use crate::theme::{FontWeight, Severity, Surface, TextRole};
 use crate::widgets::specialty::code::highlight_job;
 use egui::{
     Align, CornerRadius, Frame, Key, Layout, Margin, Modifiers, Pos2, Rect, Sense, Stroke, Ui, Vec2,
@@ -91,7 +91,7 @@ pub(super) fn code_block(
     let mut copy_requested = false;
 
     Frame::new()
-        .fill(t.bg[1])
+        .fill(t.surface(Surface::Card))
         .stroke(Stroke::new(1.0, t.border.subtle))
         .corner_radius(CornerRadius::same(t.radius.md as u8))
         .inner_margin(Margin::same(8))
@@ -106,7 +106,7 @@ pub(super) fn code_block(
                             lang.as_str()
                         })
                         .font(t.mono(t.type_scale.xs))
-                        .color(t.fg[2]),
+                        .color(t.text(TextRole::Tertiary)),
                     );
                 } else {
                     let resp = ui.add(
@@ -114,8 +114,10 @@ pub(super) fn code_block(
                             .id(id.with("code-lang"))
                             .frame(egui::Frame::NONE)
                             .font(t.mono(t.type_scale.xs))
-                            .text_color(t.fg[2])
-                            .hint_text(egui::RichText::new("lang").color(t.fg[3]))
+                            .text_color(t.text(TextRole::Tertiary))
+                            .hint_text(
+                                egui::RichText::new("lang").color(t.text(TextRole::Disabled)),
+                            )
                             .desired_width(90.0),
                     );
                     if resp.changed() {
@@ -135,7 +137,11 @@ pub(super) fn code_block(
                             Sense::click()
                         },
                     );
-                    let color = if resp.hovered() { t.fg[0] } else { t.fg[2] };
+                    let color = if resp.hovered() {
+                        t.text(TextRole::Primary)
+                    } else {
+                        t.text(TextRole::Tertiary)
+                    };
                     let g = ui.painter().layout_no_wrap(
                         "copy".to_owned(),
                         t.mono(t.type_scale.xs),
@@ -235,7 +241,7 @@ pub(super) fn table_block(
 }
 
 /// Unfocused table: a light grid of inline-markdown labels, header row on
-/// `bg[2]` — click anywhere to enter cell editing.
+/// [`Surface::Hover`] — click anywhere to enter cell editing.
 fn table_static(ui: &mut Ui, ecx: &mut Ecx, doc: &Document, addr: Address) {
     let Some(BlockKind::Table { header, rows }) = doc.block(addr).map(|b| &b.kind) else {
         return;
@@ -248,13 +254,13 @@ fn table_static(ui: &mut Ui, ecx: &mut Ecx, doc: &Document, addr: Address) {
     let head_style = InlineStyle {
         size: t.type_scale.sm,
         weight: FontWeight::Medium,
-        color: t.fg[0],
+        color: t.text(TextRole::Primary),
         italics: false,
     };
     let cell_style = InlineStyle {
         size: t.type_scale.sm,
         weight: FontWeight::Regular,
-        color: t.fg[1],
+        color: t.text(TextRole::Secondary),
         italics: false,
     };
 
@@ -269,7 +275,11 @@ fn table_static(ui: &mut Ui, ecx: &mut Ecx, doc: &Document, addr: Address) {
         let painter = ui.painter();
         // Header band.
         let head_rect = Rect::from_min_size(rect.min, Vec2::new(rect.width(), row_h));
-        painter.rect_filled(head_rect, CornerRadius::same(t.radius.sm as u8), t.bg[2]);
+        painter.rect_filled(
+            head_rect,
+            CornerRadius::same(t.radius.sm as u8),
+            t.surface(Surface::Hover),
+        );
         let paint_row = |r: usize, cells: &[String], style: InlineStyle| {
             let y = rect.min.y + r as f32 * row_h;
             for (c, cell) in cells.iter().enumerate().take(ncols) {
@@ -367,7 +377,7 @@ fn table_edit(
             return;
         };
         Frame::new()
-            .fill(t.bg[1])
+            .fill(t.surface(Surface::Card))
             .stroke(Stroke::new(1.0, t.border.subtle))
             .corner_radius(CornerRadius::same(t.radius.md as u8))
             .inner_margin(Margin::same(6))
@@ -390,7 +400,11 @@ fn table_edit(
                             .id(cell_id)
                             .frame(egui::Frame::NONE)
                             .font(t.font(ui.ctx(), weight, t.type_scale.sm))
-                            .text_color(if header { t.fg[0] } else { t.fg[1] })
+                            .text_color(if header {
+                                t.text(TextRole::Primary)
+                            } else {
+                                t.text(TextRole::Secondary)
+                            })
                             .desired_width(col_w)
                             .lock_focus(true),
                     );
@@ -547,8 +561,10 @@ pub(super) fn admonition(
                             .id(id.with("adm-title"))
                             .frame(egui::Frame::NONE)
                             .font(t.font(ui.ctx(), FontWeight::Medium, t.type_scale.base))
-                            .text_color(t.fg[0])
-                            .hint_text(egui::RichText::new("Title").color(t.fg[3]))
+                            .text_color(t.text(TextRole::Primary))
+                            .hint_text(
+                                egui::RichText::new("Title").color(t.text(TextRole::Disabled)),
+                            )
                             .desired_width(ui.available_width()),
                     );
                     title_changed = resp.changed();
@@ -567,7 +583,7 @@ pub(super) fn admonition(
                         egui::Label::new(
                             egui::RichText::new(shown)
                                 .font(t.font(ui.ctx(), FontWeight::Medium, t.type_scale.base))
-                                .color(t.fg[0]),
+                                .color(t.text(TextRole::Primary)),
                         )
                         .sense(if ecx.read_only {
                             Sense::hover()
@@ -656,7 +672,7 @@ pub(super) fn custom_block(
                 ui.label(
                     egui::RichText::new(format!("Custom block: {kind}"))
                         .font(t.mono(t.type_scale.sm))
-                        .color(t.fg[2]),
+                        .color(t.text(TextRole::Tertiary)),
                 );
             });
             let rect = inner.response.rect;

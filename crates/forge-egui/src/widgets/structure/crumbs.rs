@@ -1,8 +1,8 @@
-//! Breadcrumb path. The last item is the current page (fg[0]); earlier items
-//! are clickable.
+//! Breadcrumb path. The last item is the current page
+//! ([`TextRole::Primary`]); earlier items are clickable.
 
 use crate::response::{ForgeResponse, Outcome};
-use crate::theme::Theme;
+use crate::theme::{TextRole, Theme};
 use egui::Ui;
 
 pub struct Crumbs<'a> {
@@ -29,13 +29,14 @@ impl<'a> Crumbs<'a> {
                 let last = self.items.len().saturating_sub(1);
                 for (i, item) in self.items.iter().enumerate() {
                     if i == last {
-                        ui.label(egui::RichText::new(*item).color(t.fg[0]));
+                        ui.label(egui::RichText::new(*item).color(t.text(TextRole::Primary)));
                     } else {
-                        let r = ui.link(egui::RichText::new(*item).color(t.fg[2]));
+                        let r =
+                            ui.link(egui::RichText::new(*item).color(t.text(TextRole::Tertiary)));
                         if r.clicked() {
                             clicked = Some(i);
                         }
-                        ui.label(egui::RichText::new("/").color(t.fg[3]));
+                        ui.label(egui::RichText::new("/").color(t.text(TextRole::Disabled)));
                     }
                 }
             })

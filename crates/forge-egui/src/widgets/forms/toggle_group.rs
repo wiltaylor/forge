@@ -1,7 +1,7 @@
 //! Segmented control: one row of connected segments bound to a `usize` index.
 
 use crate::response::{ForgeResponse, Outcome};
-use crate::theme::{FontWeight, Theme};
+use crate::theme::{FontWeight, Surface, TextRole, Theme};
 use crate::widgets::util;
 use egui::{
     CornerRadius, Rect, Response, Sense, Stroke, StrokeKind, Ui, Vec2, WidgetInfo, WidgetType,
@@ -52,7 +52,7 @@ impl<'a> ToggleGroup<'a> {
 
             for (i, option) in options.iter().enumerate() {
                 let font = t.font(ui.ctx(), FontWeight::Medium, t.type_scale.sm);
-                let galley = util::galley(ui, option, font, t.fg[1]);
+                let galley = util::galley(ui, option, font, t.text(TextRole::Secondary));
                 let w = galley.size().x + PAD_X * 2.0;
                 let (rect, response) = ui.allocate_exact_size(Vec2::new(w, height), sense);
                 if response.clicked() && !disabled && *value != i {
@@ -69,17 +69,17 @@ impl<'a> ToggleGroup<'a> {
                     let fill = if selected {
                         t.accent.bg
                     } else if response.hovered() && !disabled {
-                        t.bg[3]
+                        t.surface(Surface::Pressed)
                     } else {
-                        t.bg[2]
+                        t.surface(Surface::Hover)
                     };
                     ui.painter().rect_filled(rect, radius, fill);
                     let text = if disabled {
-                        t.fg[3]
+                        t.text(TextRole::Disabled)
                     } else if selected {
                         t.accent.fg
                     } else {
-                        t.fg[1]
+                        t.text(TextRole::Secondary)
                     };
                     let g = util::galley(
                         ui,

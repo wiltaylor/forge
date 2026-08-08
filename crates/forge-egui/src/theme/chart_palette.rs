@@ -2,9 +2,10 @@
 //!
 //! The order is CVD-validated and load-bearing: adjacent series stay
 //! distinguishable under the common color-vision deficiencies. NEVER reorder
-//! or cycle it; series beyond the fifth fold into a `fg[2]` "Other" bucket.
+//! or cycle it; series beyond the fifth fold into a [`TextRole::Tertiary`]
+//! "Other" bucket.
 
-use super::Theme;
+use super::{TextRole, Theme};
 use egui::Color32;
 
 /// Number of distinct chart series before overflow folds into "Other".
@@ -21,12 +22,12 @@ pub fn chart_series(theme: &Theme) -> [Color32; CHART_SERIES_LEN] {
     ]
 }
 
-/// Color for series `i`; indices past the palette fold into the `fg[2]`
-/// "Other" tone rather than cycling.
+/// Color for series `i`; indices past the palette fold into the
+/// [`TextRole::Tertiary`] "Other" tone rather than cycling.
 pub fn series_color(theme: &Theme, i: usize) -> Color32 {
     if i < CHART_SERIES_LEN {
         chart_series(theme)[i]
     } else {
-        theme.fg[2]
+        theme.text(TextRole::Tertiary)
     }
 }

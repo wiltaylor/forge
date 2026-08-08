@@ -2,7 +2,7 @@
 //! icon-font dependency — these are plain text glyphs covered by the bundled
 //! fonts plus egui's built-in symbol fallback.
 
-use crate::theme::Theme;
+use crate::theme::{TextRole, Theme};
 use egui::{Color32, Ui};
 
 /// Curated glyph set shared across the kit (chevrons, status marks, …).
@@ -87,7 +87,7 @@ impl Icon {
 
     pub fn show(self, ui: &mut Ui) -> egui::Response {
         let t = Theme::of(ui.ctx());
-        let color = self.color.unwrap_or(t.fg[1]);
+        let color = self.color.unwrap_or(t.text(TextRole::Secondary));
         let size = self.size.unwrap_or(t.type_scale.base);
         ui.label(
             egui::RichText::new(self.glyph.as_str())

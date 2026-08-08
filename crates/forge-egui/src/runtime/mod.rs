@@ -13,7 +13,7 @@ pub use fx::{FxHandle, Motion};
 pub use shell::{NavItem, NavSection, Shell, ShellState};
 pub use toaster::ToastHandle;
 
-use crate::theme::Theme;
+use crate::theme::{Surface, Theme};
 
 /// A forge-egui application. `ui` runs every frame inside the themed root;
 /// `tick` runs first with the frame's delta time (animations, polling
@@ -149,7 +149,7 @@ impl<A: App> eframe::App for Runner<A> {
 
         // Root background, then the app.
         ui.painter()
-            .rect_filled(ui.max_rect(), 0.0, self.ctx.theme.bg[0]);
+            .rect_filled(ui.max_rect(), 0.0, self.ctx.theme.surface(Surface::Page));
         self.app.ui(ui, &mut self.ctx);
 
         // Chrome above the app: fx under dialogs, toasts topmost.

@@ -2,7 +2,7 @@
 //! the user answers through buttons / radio / checkboxes / a select. Buttons
 //! submit immediately; the other controls pair with a Submit button.
 
-use crate::theme::{FontWeight, Theme};
+use crate::theme::{FontWeight, Surface, TextRole, Theme};
 use crate::widgets::forms::{Checkbox, RadioGroup, Select, SelectState};
 use crate::widgets::primitives::{Button, Variant};
 use egui::{CornerRadius, Frame, Margin, RichText, Stroke, Ui};
@@ -67,7 +67,7 @@ impl<'a> ChatPrompt<'a> {
         let t = Theme::of(ui.ctx());
         let mut answer = None;
         Frame::new()
-            .fill(t.bg[1])
+            .fill(t.surface(Surface::Card))
             .stroke(Stroke::new(1.0, t.border.default))
             .corner_radius(CornerRadius::same(t.radius.md as u8))
             .inner_margin(Margin::same(12))
@@ -76,7 +76,7 @@ impl<'a> ChatPrompt<'a> {
                 ui.label(
                     RichText::new(&self.data.question)
                         .font(t.font(ui.ctx(), FontWeight::Medium, t.type_scale.base))
-                        .color(t.fg[0]),
+                        .color(t.text(TextRole::Primary)),
                 );
                 ui.add_space(t.space.x(2.0));
                 match &self.data.control {

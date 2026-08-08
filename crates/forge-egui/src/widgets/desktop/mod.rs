@@ -40,7 +40,7 @@ use forge_core::widgets::{DesktopConfig, WidgetMsg};
 use tokio::sync::mpsc::error::{TryRecvError, TrySendError};
 
 use crate::response::{ForgeResponse, Outcome};
-use crate::theme::{scrim, Theme};
+use crate::theme::{scrim, Surface, TextRole, Theme};
 use crate::widgets::primitives::Button;
 use crate::widgets::stream::{self, SessionChannels};
 
@@ -340,7 +340,7 @@ impl DesktopState {
             return;
         }
         let t = Theme::of(ctx);
-        let image = ColorImage::filled([width as usize, height as usize], t.bg[1]);
+        let image = ColorImage::filled([width as usize, height as usize], t.surface(Surface::Card));
         self.texture = Some(ctx.load_texture("forge-desktop", image, self.options));
         self.fb_size = Some((width, height));
         self.status = DesktopStatus::Ready;
@@ -716,7 +716,7 @@ fn paint(
 ) {
     let radius = CornerRadius::same(t.radius.md as u8);
     let painter = ui.painter();
-    painter.rect_filled(rect, radius, t.bg[1]);
+    painter.rect_filled(rect, radius, t.surface(Surface::Card));
     let border = if focused {
         t.accent.base
     } else {
@@ -734,16 +734,23 @@ fn paint(
     // Capture badge: how to get the keyboard back.
     if focused {
         let font = t.mono(t.type_scale.xs);
-        let galley =
-            painter.layout_no_wrap("▣ captured · Ctrl+Shift+Q releases".into(), font, t.fg[2]);
+        let galley = painter.layout_no_wrap(
+            "▣ captured · Ctrl+Shift+Q releases".into(),
+            font,
+            t.text(TextRole::Tertiary),
+        );
         let pad = Vec2::new(6.0, 3.0);
         let size = galley.size() + pad * 2.0;
         let chip = Rect::from_min_size(
             egui::pos2(rect.max.x - size.x - 6.0, rect.min.y + 6.0),
             size,
         );
-        painter.rect_filled(chip, CornerRadius::same(t.radius.sm as u8), t.bg[3]);
-        painter.galley(chip.min + pad, galley, t.fg[2]);
+        painter.rect_filled(
+            chip,
+            CornerRadius::same(t.radius.sm as u8),
+            t.surface(Surface::Pressed),
+        );
+        painter.galley(chip.min + pad, galley, t.text(TextRole::Tertiary));
     }
 
     // Status overlays inside the well.
@@ -755,7 +762,7 @@ fn paint(
                 Align2::CENTER_CENTER,
                 "connecting…",
                 t.mono(t.type_scale.sm),
-                t.fg[2],
+                t.text(TextRole::Tertiary),
             );
             // Keep frames coming while we wait for the engine.
             ui.ctx().request_repaint_after(Duration::from_millis(120));
@@ -767,7 +774,7 @@ fn paint(
                 Align2::CENTER_CENTER,
                 "session closed",
                 t.mono(t.type_scale.sm),
-                t.fg[1],
+                t.text(TextRole::Secondary),
             );
         }
         DesktopStatus::Error(message) => {

@@ -4,7 +4,7 @@
 //! before the `TextEdit` sees them).
 
 use super::{byte_of_char, Action, BlockEditorState, Ecx};
-use crate::theme::{FontWeight, Theme};
+use crate::theme::{FontWeight, Surface, TextRole, Theme};
 use egui::text::{CCursor, CCursorRange};
 use egui::{CornerRadius, Frame, Margin, Popup, PopupAnchor, Pos2, Rect, Sense, Stroke, Ui, Vec2};
 use forge_blocks::{search_emoji, Address, BlockKind, Document, ListStyle, Tone};
@@ -156,7 +156,7 @@ pub(super) fn slash_choices(
 
 fn popup_frame(t: &Theme) -> Frame {
     Frame::new()
-        .fill(t.bg[4])
+        .fill(t.surface(Surface::Popover))
         .stroke(Stroke::new(1.0, t.border.default))
         .corner_radius(CornerRadius::same(t.radius.md as u8))
         .inner_margin(Margin::same(4))
@@ -169,13 +169,16 @@ fn popup_row(ui: &mut Ui, t: &Theme, label: &str, highlighted: bool) -> egui::Re
     );
     if ui.is_rect_visible(rect) {
         if response.hovered() || highlighted {
-            ui.painter()
-                .rect_filled(rect, CornerRadius::same(t.radius.sm as u8), t.bg[2]);
+            ui.painter().rect_filled(
+                rect,
+                CornerRadius::same(t.radius.sm as u8),
+                t.surface(Surface::Hover),
+            );
         }
         let color = if response.hovered() || highlighted {
-            t.fg[0]
+            t.text(TextRole::Primary)
         } else {
-            t.fg[1]
+            t.text(TextRole::Secondary)
         };
         let g = ui.painter().layout_no_wrap(
             label.to_owned(),
@@ -235,7 +238,7 @@ pub(super) fn slash_popup(
             ui.label(
                 egui::RichText::new("No matching block")
                     .font(t.font(ui.ctx(), FontWeight::Regular, t.type_scale.sm))
-                    .color(t.fg[2]),
+                    .color(t.text(TextRole::Tertiary)),
             );
             return;
         }

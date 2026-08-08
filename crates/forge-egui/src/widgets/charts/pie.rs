@@ -1,10 +1,10 @@
 //! Donut/pie chart. Slices take the locked palette in order; anything past
-//! the fifth slice folds into a single `fg[2]` "Other" slice (the palette
-//! contract — never cycle). Hover expands a slice by 2pt and shows a
+//! the fifth slice folds into a single [`TextRole::Tertiary`] "Other" slice
+//! (the palette contract — never cycle). Hover expands a slice by 2pt and shows a
 //! percentage tooltip; a swatch legend renders at the right.
 
 use crate::response::{ForgeResponse, Outcome};
-use crate::theme::{series_color, FontWeight, Theme};
+use crate::theme::{series_color, FontWeight, Surface, TextRole, Theme};
 use crate::widgets::charts::{self, TipRow};
 use egui::epaint::{Mesh, Vertex, WHITE_UV};
 use egui::{Color32, Pos2, Sense, Shape, Stroke, Ui, Vec2};
@@ -140,7 +140,7 @@ impl<'a> PieChart<'a> {
                     let dir = Vec2::new(a.cos(), a.sin());
                     ui.painter().line_segment(
                         [center + dir * inner_r, center + dir * (radius + 2.0)],
-                        Stroke::new(2.0, t.bg[1]),
+                        Stroke::new(2.0, t.surface(Surface::Card)),
                     );
                 }
             }
@@ -150,9 +150,10 @@ impl<'a> PieChart<'a> {
                     let g = ui.painter().layout_no_wrap(
                         text.to_owned(),
                         t.font(ui.ctx(), FontWeight::SemiBold, t.type_scale.base),
-                        t.fg[0],
+                        t.text(TextRole::Primary),
                     );
-                    ui.painter().galley(center - g.size() / 2.0, g, t.fg[0]);
+                    ui.painter()
+                        .galley(center - g.size() / 2.0, g, t.text(TextRole::Primary));
                 }
             }
 
@@ -165,7 +166,11 @@ impl<'a> PieChart<'a> {
                     .iter()
                     .map(|(label, _)| {
                         ui.painter()
-                            .layout_no_wrap(label.clone(), font.clone(), t.fg[1])
+                            .layout_no_wrap(
+                                label.clone(),
+                                font.clone(),
+                                t.text(TextRole::Secondary),
+                            )
                             .size()
                             .x
                     })
@@ -176,17 +181,24 @@ impl<'a> PieChart<'a> {
                     let cy = y + row_h / 2.0;
                     ui.painter()
                         .circle_filled(Pos2::new(x + 4.0, cy), 4.0, series_color(&t, i));
-                    let g = ui
-                        .painter()
-                        .layout_no_wrap(label.clone(), font.clone(), t.fg[1]);
-                    ui.painter()
-                        .galley(Pos2::new(x + 14.0, cy - g.size().y / 2.0), g, t.fg[1]);
+                    let g = ui.painter().layout_no_wrap(
+                        label.clone(),
+                        font.clone(),
+                        t.text(TextRole::Secondary),
+                    );
+                    ui.painter().galley(
+                        Pos2::new(x + 14.0, cy - g.size().y / 2.0),
+                        g,
+                        t.text(TextRole::Secondary),
+                    );
                     let pct = format!("{:>2.0} %", value / total * 100.0);
-                    let g = ui.painter().layout_no_wrap(pct, mono.clone(), t.fg[2]);
+                    let g =
+                        ui.painter()
+                            .layout_no_wrap(pct, mono.clone(), t.text(TextRole::Tertiary));
                     ui.painter().galley(
                         Pos2::new(x + 14.0 + pct_col, cy - g.size().y / 2.0),
                         g,
-                        t.fg[2],
+                        t.text(TextRole::Tertiary),
                     );
                     y += row_h;
                 }

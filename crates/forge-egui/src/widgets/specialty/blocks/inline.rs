@@ -1,9 +1,10 @@
 //! Inline-markdown rendering for unfocused text blocks: `parse_inline` spans
 //! mapped onto one [`egui::text::LayoutJob`] with Forge tokens (strong →
-//! SemiBold, emphasis → italics, strike, code chips on `bg[3]`, links in the
-//! accent tone). Emoji shortcodes are already resolved by the parser.
+//! SemiBold, emphasis → italics, strike, code chips on [`Surface::Pressed`],
+//! links in the accent tone). Emoji shortcodes are already resolved by the
+//! parser.
 
-use crate::theme::{FontWeight, Theme};
+use crate::theme::{FontWeight, Surface, TextRole, Theme};
 use egui::text::{LayoutJob, TextFormat};
 use egui::{Color32, Stroke, Ui};
 use forge_blocks::{parse_inline, BlockKind};
@@ -29,19 +30,19 @@ pub(super) fn text_style(t: &Theme, kind: &BlockKind) -> InlineStyle {
                 _ => t.type_scale.lg,
             },
             weight: FontWeight::SemiBold,
-            color: t.fg[0],
+            color: t.text(TextRole::Primary),
             italics: false,
         },
         BlockKind::Quote { .. } => InlineStyle {
             size: t.type_scale.base,
             weight: FontWeight::Regular,
-            color: t.fg[2],
+            color: t.text(TextRole::Tertiary),
             italics: true,
         },
         _ => InlineStyle {
             size: t.type_scale.base,
             weight: FontWeight::Regular,
-            color: t.fg[1],
+            color: t.text(TextRole::Secondary),
             italics: false,
         },
     }
@@ -78,7 +79,7 @@ pub(super) fn inline_job(
                 TextFormat {
                     font_id: t.mono(base.size - 1.0),
                     color: t.accent.fg,
-                    background: t.bg[3],
+                    background: t.surface(Surface::Pressed),
                     ..Default::default()
                 },
             );
@@ -92,7 +93,7 @@ pub(super) fn inline_job(
         let color = if span.link.is_some() {
             t.accent.base
         } else if span.strong {
-            t.fg[0]
+            t.text(TextRole::Primary)
         } else {
             base.color
         };

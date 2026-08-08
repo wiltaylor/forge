@@ -2,7 +2,7 @@
 //! ISO `YYYY-MM-DD` value strings, min/max clamping, ‹ › month nav.
 
 use crate::response::{ForgeResponse, Outcome};
-use crate::theme::{FontWeight, Theme};
+use crate::theme::{FontWeight, Surface, TextRole, Theme};
 use crate::widgets::primitives::Glyph;
 use egui::{
     CornerRadius, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, Vec2, WidgetInfo, WidgetType,
@@ -166,16 +166,22 @@ impl<'a> Calendar<'a> {
             resp.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, label));
             if visible {
                 if resp.hovered() {
-                    ui.painter()
-                        .rect_filled(btn, CornerRadius::same(t.radius.md as u8), t.bg[2]);
+                    ui.painter().rect_filled(
+                        btn,
+                        CornerRadius::same(t.radius.md as u8),
+                        t.surface(Surface::Hover),
+                    );
                 }
                 let g = ui.painter().layout_no_wrap(
                     glyph.as_str().to_owned(),
                     t.font(ui.ctx(), FontWeight::Regular, t.type_scale.base),
-                    t.fg[1],
+                    t.text(TextRole::Secondary),
                 );
-                ui.painter()
-                    .galley(btn.center() - g.size() / 2.0, g, t.fg[1]);
+                ui.painter().galley(
+                    btn.center() - g.size() / 2.0,
+                    g,
+                    t.text(TextRole::Secondary),
+                );
             }
             if resp.clicked() {
                 self.state.month = add_months(self.state.month, delta);
@@ -188,25 +194,27 @@ impl<'a> Calendar<'a> {
             let g = ui.painter().layout_no_wrap(
                 title,
                 t.font(ui.ctx(), FontWeight::Medium, t.type_scale.base),
-                t.fg[0],
+                t.text(TextRole::Primary),
             );
             ui.painter()
-                .galley(head.center() - g.size() / 2.0, g, t.fg[0]);
+                .galley(head.center() - g.size() / 2.0, g, t.text(TextRole::Primary));
 
             // Weekday header.
             let dow_font = t.font(ui.ctx(), FontWeight::Regular, t.type_scale.xs);
             for (c, dow) in DOW.iter().enumerate() {
                 let cx = rect.min.x + c as f32 * (CELL_W + GAP) + CELL_W / 2.0;
-                let g = ui
-                    .painter()
-                    .layout_no_wrap((*dow).to_owned(), dow_font.clone(), t.fg[2]);
+                let g = ui.painter().layout_no_wrap(
+                    (*dow).to_owned(),
+                    dow_font.clone(),
+                    t.text(TextRole::Tertiary),
+                );
                 ui.painter().galley(
                     Pos2::new(
                         cx - g.size().x / 2.0,
                         head.max.y + 6.0 + (DOW_H - g.size().y) / 2.0,
                     ),
                     g,
-                    t.fg[2],
+                    t.text(TextRole::Tertiary),
                 );
             }
         }
@@ -247,7 +255,8 @@ impl<'a> Calendar<'a> {
                 if is_selected {
                     ui.painter().rect_filled(cell, radius, t.accent.base);
                 } else if resp.hovered() && !disabled {
-                    ui.painter().rect_filled(cell, radius, t.bg[2]);
+                    ui.painter()
+                        .rect_filled(cell, radius, t.surface(Surface::Hover));
                 }
                 if is_today && !is_selected {
                     ui.painter().rect_stroke(
@@ -260,9 +269,9 @@ impl<'a> Calendar<'a> {
                 let color = if is_selected {
                     t.accent.contrast
                 } else if disabled || out {
-                    t.fg[3]
+                    t.text(TextRole::Disabled)
                 } else {
-                    t.fg[1]
+                    t.text(TextRole::Secondary)
                 };
                 let font = if is_selected || is_today {
                     day_font_med.clone()

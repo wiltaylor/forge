@@ -47,7 +47,7 @@ impl TermPage {
                 ui.label(
                     egui::RichText::new("click to capture · Ctrl+Shift+Q releases")
                         .font(t.mono(t.type_scale.xs))
-                        .color(t.fg[2]),
+                        .color(t.text(TextRole::Tertiary)),
                 );
             });
         });

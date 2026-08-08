@@ -1,7 +1,7 @@
 //! Shared field chrome: the label row, help/error line, well border rules,
 //! and the flyout frame + option row used by Select/Combobox.
 
-use crate::theme::{FontWeight, Theme};
+use crate::theme::{FontWeight, Surface, TextRole, Theme};
 use crate::widgets::primitives::Glyph;
 use crate::widgets::util;
 use egui::{
@@ -13,7 +13,7 @@ pub(super) fn label_row(ui: &mut Ui, t: &Theme, label: &str) {
     ui.label(
         egui::RichText::new(label)
             .font(t.font(ui.ctx(), FontWeight::Medium, t.type_scale.sm))
-            .color(t.fg[1]),
+            .color(t.text(TextRole::Secondary)),
     );
     ui.add_space(t.space.x(1.0));
 }
@@ -39,10 +39,11 @@ pub(super) fn well_border(t: &Theme, error: bool, focused: bool, disabled: bool)
     }
 }
 
-/// Popover surface for Select/Combobox flyouts: bg\[4\] over a 1pt border.
+/// Popover surface for Select/Combobox flyouts: [`Surface::Popover`] over a
+/// 1pt border.
 pub(super) fn flyout_frame(t: &Theme) -> egui::Frame {
     egui::Frame::new()
-        .fill(t.bg[4])
+        .fill(t.surface(Surface::Popover))
         .stroke(Stroke::new(1.0, t.border.default))
         .corner_radius(CornerRadius::same(t.radius.md as u8))
         .inner_margin(Margin::same(4))
@@ -64,14 +65,15 @@ pub(super) fn option_row(
     if ui.is_rect_visible(rect) {
         let radius = CornerRadius::same(t.radius.sm as u8);
         if response.hovered() || highlighted {
-            ui.painter().rect_filled(rect, radius, t.bg[2]);
+            ui.painter()
+                .rect_filled(rect, radius, t.surface(Surface::Hover));
         }
         let color = if selected {
             t.accent.fg
         } else if response.hovered() {
-            t.fg[0]
+            t.text(TextRole::Primary)
         } else {
-            t.fg[1]
+            t.text(TextRole::Secondary)
         };
         let font = t.font(ui.ctx(), FontWeight::Regular, t.type_scale.base);
         let g = util::galley(ui, text, font.clone(), color);
@@ -122,7 +124,8 @@ pub(super) fn chevron(ui: &Ui, t: &Theme, rect: Rect, color: Color32) {
 /// Paint a picker field well (fill + state border).
 pub(super) fn well(ui: &Ui, t: &Theme, rect: Rect, border: Color32) {
     let radius = CornerRadius::same(t.radius.md as u8);
-    ui.painter().rect_filled(rect, radius, t.bg[1]);
+    ui.painter()
+        .rect_filled(rect, radius, t.surface(Surface::Card));
     ui.painter()
         .rect_stroke(rect, radius, Stroke::new(1.0, border), StrokeKind::Inside);
 }

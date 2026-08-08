@@ -1,7 +1,7 @@
 //! Page title block: eyebrow, h1 title, sub line, and an actions row on the
 //! right.
 
-use crate::theme::{FontWeight, Theme};
+use crate::theme::{FontWeight, TextRole, Theme};
 use egui::Ui;
 
 pub struct PageHead<'a> {
@@ -51,13 +51,13 @@ impl<'a> PageHead<'a> {
                     ui.label(
                         egui::RichText::new(self.title)
                             .font(t.font(ui.ctx(), FontWeight::SemiBold, t.type_scale.h3))
-                            .color(t.fg[0]),
+                            .color(t.text(TextRole::Primary)),
                     );
                     if let Some(sub) = self.sub {
                         ui.label(
                             egui::RichText::new(sub)
                                 .size(t.type_scale.sm)
-                                .color(t.fg[2]),
+                                .color(t.text(TextRole::Tertiary)),
                         );
                     }
                 });

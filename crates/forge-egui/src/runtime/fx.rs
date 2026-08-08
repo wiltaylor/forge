@@ -9,7 +9,7 @@
 //! sample rendered pixels, so each request carries an [`FxColors`] source —
 //! theme-derived by default, or explicit colors from the caller.
 
-use crate::theme::Theme;
+use crate::theme::{TextRole, Theme};
 use egui::{Color32, Pos2, Rect, Vec2};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc;
@@ -203,7 +203,7 @@ impl FxEngine {
             _ => vec![
                 theme.accent.base,
                 theme.accent.fg,
-                theme.fg[1],
+                theme.text(TextRole::Secondary),
                 theme.info.base,
                 theme.success.base,
             ],

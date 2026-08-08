@@ -1,6 +1,6 @@
 //! Settings page scaffolding: a titled section of label/control rows.
 
-use crate::theme::{FontWeight, Theme};
+use crate::theme::{FontWeight, Surface, TextRole, Theme};
 use egui::Ui;
 
 pub struct SettingsSection<'a> {
@@ -25,18 +25,18 @@ impl<'a> SettingsSection<'a> {
         ui.label(
             egui::RichText::new(self.title)
                 .font(t.font(ui.ctx(), FontWeight::Medium, t.type_scale.md))
-                .color(t.fg[0]),
+                .color(t.text(TextRole::Primary)),
         );
         if let Some(sub) = self.sub {
             ui.label(
                 egui::RichText::new(sub)
                     .size(t.type_scale.sm)
-                    .color(t.fg[2]),
+                    .color(t.text(TextRole::Tertiary)),
             );
         }
         ui.add_space(t.space.x(2.0));
         let inner = egui::Frame::new()
-            .fill(t.bg[1])
+            .fill(t.surface(Surface::Card))
             .stroke(egui::Stroke::new(1.0, t.border.subtle))
             .corner_radius(egui::CornerRadius::same(t.radius.lg as u8))
             .show(ui, |ui| {
@@ -72,12 +72,12 @@ impl<'a> SettingsRow<'a> {
                 ui.set_min_width(ui.available_width());
                 ui.horizontal(|ui| {
                     ui.vertical(|ui| {
-                        ui.label(egui::RichText::new(self.label).color(t.fg[0]));
+                        ui.label(egui::RichText::new(self.label).color(t.text(TextRole::Primary)));
                         if let Some(help) = self.help {
                             ui.label(
                                 egui::RichText::new(help)
                                     .size(t.type_scale.sm)
-                                    .color(t.fg[2]),
+                                    .color(t.text(TextRole::Tertiary)),
                             );
                         }
                     });

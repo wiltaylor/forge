@@ -3,7 +3,7 @@
 //! value updates. The root starts expanded.
 
 use crate::response::{ForgeResponse, Outcome};
-use crate::theme::Theme;
+use crate::theme::{Surface, TextRole, Theme};
 use crate::widgets::util;
 use egui::{Color32, FontId, Response, Sense, Ui, Vec2, WidgetInfo, WidgetType};
 use serde_json::Value;
@@ -110,13 +110,16 @@ impl RowPainter<'_> {
         let key_owned = key.map(|k| format!("\"{k}\""));
         let mut segs: Vec<Seg> = Vec::new();
         if expandable {
-            segs.push(Seg(if open { "▾ " } else { "▸ " }, t.fg[3]));
+            segs.push(Seg(
+                if open { "▾ " } else { "▸ " },
+                t.text(TextRole::Disabled),
+            ));
         } else {
-            segs.push(Seg("  ", t.fg[3]));
+            segs.push(Seg("  ", t.text(TextRole::Disabled)));
         }
         if let Some(k) = &key_owned {
             segs.push(Seg(k, t.accent.fg));
-            segs.push(Seg(": ", t.fg[3]));
+            segs.push(Seg(": ", t.text(TextRole::Disabled)));
         }
         let preview = match value {
             Value::Object(_) if open => "{".to_owned(),
@@ -135,7 +138,7 @@ impl RowPainter<'_> {
             other => other.to_string(),
         };
         let color = match value {
-            Value::Object(_) | Value::Array(_) => t.fg[3],
+            Value::Object(_) | Value::Array(_) => t.text(TextRole::Disabled),
             Value::String(_) => t.success.base,
             Value::Number(_) => t.warning.base,
             Value::Bool(_) | Value::Null => t.info.base,
@@ -157,7 +160,10 @@ impl RowPainter<'_> {
                         let cp = child_path(&path, k);
                         self.value_ui(ui, state, v, Some(k), cp, depth + 1);
                     }
-                    let close = [Seg("  ", t.fg[3]), Seg("}", t.fg[3])];
+                    let close = [
+                        Seg("  ", t.text(TextRole::Disabled)),
+                        Seg("}", t.text(TextRole::Disabled)),
+                    ];
                     let r = self.row(ui, &close, depth, false, &path);
                     self.merge_union(r);
                 }
@@ -167,7 +173,10 @@ impl RowPainter<'_> {
                         let cp = child_path(&path, &key);
                         self.value_ui(ui, state, v, None, cp, depth + 1);
                     }
-                    let close = [Seg("  ", t.fg[3]), Seg("]", t.fg[3])];
+                    let close = [
+                        Seg("  ", t.text(TextRole::Disabled)),
+                        Seg("]", t.text(TextRole::Disabled)),
+                    ];
                     let r = self.row(ui, &close, depth, false, &path);
                     self.merge_union(r);
                 }
@@ -201,7 +210,7 @@ impl RowPainter<'_> {
                 ui.painter().rect_filled(
                     rect,
                     egui::CornerRadius::same(t.radius.sm as u8),
-                    t.bg[2],
+                    t.surface(Surface::Hover),
                 );
             }
             let mut x = rect.min.x + depth as f32 * INDENT + 4.0;

@@ -1,6 +1,6 @@
 //! Bordered surface container with an optional title row.
 
-use crate::theme::{FontWeight, Theme};
+use crate::theme::{FontWeight, Surface, TextRole, Theme};
 use egui::{CornerRadius, Frame, InnerResponse, Margin, Stroke, Ui};
 
 pub struct Card<'a> {
@@ -34,7 +34,7 @@ impl<'a> Card<'a> {
             Margin::ZERO
         };
         Frame::new()
-            .fill(t.bg[1])
+            .fill(t.surface(Surface::Card))
             .stroke(Stroke::new(1.0, t.border.subtle))
             .corner_radius(CornerRadius::same(t.radius.lg as u8))
             .inner_margin(margin)
@@ -44,7 +44,7 @@ impl<'a> Card<'a> {
                     ui.label(
                         egui::RichText::new(title)
                             .font(t.font(ui.ctx(), FontWeight::Medium, t.type_scale.base))
-                            .color(t.fg[0]),
+                            .color(t.text(TextRole::Primary)),
                     );
                     ui.add_space(t.space.x(2.0));
                 }

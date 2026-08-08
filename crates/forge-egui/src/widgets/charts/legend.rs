@@ -2,7 +2,7 @@
 //! shares the series ordering.
 
 use crate::response::{ForgeResponse, Outcome};
-use crate::theme::{series_color, FontWeight, Theme};
+use crate::theme::{series_color, FontWeight, TextRole, Theme};
 use egui::{Sense, Ui, Vec2};
 
 pub struct Legend<'a> {
@@ -37,7 +37,7 @@ impl<'a> Legend<'a> {
                     ui.label(
                         egui::RichText::new(*label)
                             .font(t.font(ui.ctx(), FontWeight::Regular, t.type_scale.sm))
-                            .color(t.fg[1]),
+                            .color(t.text(TextRole::Secondary)),
                     );
                 });
             }

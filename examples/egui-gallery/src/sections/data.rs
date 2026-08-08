@@ -239,7 +239,7 @@ pub fn draw(ui: &mut egui::Ui, state: &mut DataState) {
                 ui.label(
                     egui::RichText::new(format!("selected row: {i}"))
                         .font(t.mono(t.type_scale.sm))
-                        .color(t.fg[2]),
+                        .color(t.text(TextRole::Tertiary)),
                 );
             }
         });
@@ -263,7 +263,7 @@ pub fn draw(ui: &mut egui::Ui, state: &mut DataState) {
                 ui.label(
                     egui::RichText::new(format!("selected: {id}"))
                         .font(t.mono(t.type_scale.sm))
-                        .color(t.fg[2]),
+                        .color(t.text(TextRole::Tertiary)),
                 );
             }
         });
@@ -305,7 +305,7 @@ pub fn draw(ui: &mut egui::Ui, state: &mut DataState) {
                         forge_egui::theme::FontWeight::Regular,
                         t.type_scale.sm,
                     ))
-                    .color(t.fg[2]),
+                    .color(t.text(TextRole::Tertiary)),
             );
         });
         ui.add_space(10.0);
@@ -315,7 +315,7 @@ pub fn draw(ui: &mut egui::Ui, state: &mut DataState) {
                 let t = Theme::of(ui.ctx());
                 ui.label(
                     egui::RichText::new("A single disclosure with its own open flag.")
-                        .color(t.fg[2]),
+                        .color(t.text(TextRole::Tertiary)),
                 );
             });
     });

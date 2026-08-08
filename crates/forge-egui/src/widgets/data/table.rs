@@ -6,7 +6,7 @@
 //! before calling [`Table::show`] (see the gallery's data section).
 
 use crate::response::{ForgeResponse, Outcome};
-use crate::theme::{FontWeight, Theme};
+use crate::theme::{FontWeight, Surface, TextRole, Theme};
 use crate::widgets::util;
 use egui::{
     Align, Color32, CornerRadius, Rect, Response, Sense, Ui, UiBuilder, Vec2, WidgetInfo,
@@ -240,8 +240,11 @@ impl<'a> Table<'a> {
             ui.allocate_exact_size(Vec2::new(table_w, row_h), Sense::hover());
         let mut union: Response = head_resp;
         if ui.is_rect_visible(head_rect) {
-            ui.painter()
-                .rect_filled(head_rect, CornerRadius::same(t.radius.sm as u8), t.bg[1]);
+            ui.painter().rect_filled(
+                head_rect,
+                CornerRadius::same(t.radius.sm as u8),
+                t.surface(Surface::Card),
+            );
             ui.painter().hline(
                 head_rect.x_range(),
                 head_rect.max.y - 0.5,
@@ -267,9 +270,9 @@ impl<'a> Table<'a> {
                 let color = if sorted {
                     t.accent.fg
                 } else if resp.hovered() {
-                    t.fg[1]
+                    t.text(TextRole::Secondary)
                 } else {
-                    t.fg[2]
+                    t.text(TextRole::Tertiary)
                 };
                 let caret = match state.sort {
                     Some((c, SortDir::Asc)) if c == i => " ▴",
@@ -305,14 +308,22 @@ impl<'a> Table<'a> {
                     outcome = outcome.merge(Outcome::Changed);
                 }
                 let selected = state.selected == Some(ri);
-                let text_color = if selected { t.fg[0] } else { t.fg[1] };
+                let text_color = if selected {
+                    t.text(TextRole::Primary)
+                } else {
+                    t.text(TextRole::Secondary)
+                };
                 if ui.is_rect_visible(rect) {
                     if striped && ri % 2 == 1 {
-                        ui.painter()
-                            .rect_filled(rect, 0.0, t.bg[2].gamma_multiply(0.45));
+                        ui.painter().rect_filled(
+                            rect,
+                            0.0,
+                            t.surface(Surface::Hover).gamma_multiply(0.45),
+                        );
                     }
                     if resp.hovered() && !selected {
-                        ui.painter().rect_filled(rect, 0.0, t.bg[2]);
+                        ui.painter()
+                            .rect_filled(rect, 0.0, t.surface(Surface::Hover));
                     }
                     if selected {
                         ui.painter().rect_filled(rect, 0.0, t.accent.bg);

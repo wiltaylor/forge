@@ -35,7 +35,7 @@ use forge_core::widgets::{TermConfig, WidgetMsg};
 use tokio::sync::mpsc::error::{TryRecvError, TrySendError};
 
 use crate::response::{ForgeResponse, Outcome};
-use crate::theme::{scrim, Theme};
+use crate::theme::{scrim, Surface, TextRole, Theme};
 use crate::widgets::stream::{self, SessionChannels};
 
 /// vt100 scrollback lines (forge-tui parity; no scrollback UI in v1).
@@ -736,7 +736,7 @@ fn push_utf8(out: &mut Vec<u8>, v: u16) {
 fn paint(ui: &Ui, t: &Theme, state: &TermState, rect: Rect, m: &Metrics, focused: bool) {
     let radius = CornerRadius::same(t.radius.md as u8);
     let painter = ui.painter();
-    painter.rect_filled(rect, radius, t.bg[1]);
+    painter.rect_filled(rect, radius, t.surface(Surface::Card));
     let border = if focused {
         t.accent.base
     } else {
@@ -789,7 +789,7 @@ fn paint(ui: &Ui, t: &Theme, state: &TermState, rect: Rect, m: &Metrics, focused
             let mut fg = palette::fg(cell.fgcolor(), t);
             let mut bg = palette::bg(cell.bgcolor(), t);
             if cell.inverse() {
-                let inv_fg = bg.unwrap_or(t.bg[1]);
+                let inv_fg = bg.unwrap_or(t.surface(Surface::Card));
                 bg = Some(fg);
                 fg = inv_fg;
             }
@@ -844,7 +844,7 @@ fn paint(ui: &Ui, t: &Theme, state: &TermState, rect: Rect, m: &Metrics, focused
         }
         if !job.is_empty() {
             let galley = ui.ctx().fonts_mut(|f| f.layout_job(job));
-            grid.galley(egui::pos2(origin.x, y), galley, t.fg[0]);
+            grid.galley(egui::pos2(origin.x, y), galley, t.text(TextRole::Primary));
         }
     }
 
@@ -861,11 +861,17 @@ fn paint(ui: &Ui, t: &Theme, state: &TermState, rect: Rect, m: &Metrics, focused
                     ),
                     Vec2::new(m.cell_w, m.cell_h),
                 );
-                grid.rect_filled(cursor, 0.0, t.fg[0]);
+                grid.rect_filled(cursor, 0.0, t.text(TextRole::Primary));
                 if let Some(cell) = screen.cell(crow, ccol) {
                     let ch = cell.contents();
                     if !ch.is_empty() {
-                        grid.text(cursor.min, Align2::LEFT_TOP, ch, m.mono.clone(), t.bg[1]);
+                        grid.text(
+                            cursor.min,
+                            Align2::LEFT_TOP,
+                            ch,
+                            m.mono.clone(),
+                            t.surface(Surface::Card),
+                        );
                     }
                 }
             }
@@ -878,16 +884,23 @@ fn paint(ui: &Ui, t: &Theme, state: &TermState, rect: Rect, m: &Metrics, focused
     // Capture badge: how to get the keyboard back.
     if focused {
         let font = t.mono(t.type_scale.xs);
-        let galley =
-            painter.layout_no_wrap("▣ captured · Ctrl+Shift+Q releases".into(), font, t.fg[2]);
+        let galley = painter.layout_no_wrap(
+            "▣ captured · Ctrl+Shift+Q releases".into(),
+            font,
+            t.text(TextRole::Tertiary),
+        );
         let pad = Vec2::new(6.0, 3.0);
         let size = galley.size() + pad * 2.0;
         let chip = Rect::from_min_size(
             egui::pos2(rect.max.x - size.x - 6.0, rect.min.y + 6.0),
             size,
         );
-        painter.rect_filled(chip, CornerRadius::same(t.radius.sm as u8), t.bg[3]);
-        painter.galley(chip.min + pad, galley, t.fg[2]);
+        painter.rect_filled(
+            chip,
+            CornerRadius::same(t.radius.sm as u8),
+            t.surface(Surface::Pressed),
+        );
+        painter.galley(chip.min + pad, galley, t.text(TextRole::Tertiary));
     }
 
     // Status overlays inside the well.
@@ -899,7 +912,7 @@ fn paint(ui: &Ui, t: &Theme, state: &TermState, rect: Rect, m: &Metrics, focused
                 Align2::CENTER_CENTER,
                 "connecting…",
                 t.mono(t.type_scale.sm),
-                t.fg[2],
+                t.text(TextRole::Tertiary),
             );
         }
         TermStatus::Exited(code) => {
@@ -941,7 +954,7 @@ fn end_overlay(painter: &egui::Painter, rect: Rect, t: &Theme, radius: CornerRad
         Align2::CENTER_CENTER,
         msg,
         t.mono(t.type_scale.sm),
-        t.fg[1],
+        t.text(TextRole::Secondary),
     );
 }
 
@@ -1017,13 +1030,13 @@ fn key_char(key: Key) -> Option<char> {
 /// Forge palette (the port of forge-tui's `map_color`, which deferred to the
 /// host terminal's ANSI palette — here we ARE the terminal).
 mod palette {
-    use crate::theme::{blend, Theme};
+    use crate::theme::{blend, Surface, TextRole, Theme};
     use egui::Color32;
 
     /// Foreground: default ink is the theme's primary text.
     pub(super) fn fg(c: vt100::Color, t: &Theme) -> Color32 {
         match c {
-            vt100::Color::Default => t.fg[0],
+            vt100::Color::Default => t.text(TextRole::Primary),
             vt100::Color::Idx(i) => indexed(i, t),
             vt100::Color::Rgb(r, g, b) => Color32::from_rgb(r, g, b),
         }
@@ -1042,22 +1055,22 @@ mod palette {
     /// 6×6×6 cube and gray ramp (xterm component values).
     pub(super) fn indexed(i: u8, t: &Theme) -> Color32 {
         match i {
-            0 => t.bg[3],                                  // black
+            0 => t.surface(Surface::Pressed),              // black
             1 => t.danger.base,                            // red
             2 => t.success.base,                           // green
             3 => t.warning.base,                           // yellow
             4 => t.accent.base,                            // blue
             5 => blend(t.danger.base, t.accent.base, 0.5), // magenta (violet blend)
             6 => t.info.base,                              // cyan
-            7 => t.fg[1],                                  // white
-            8 => t.fg[2],                                  // bright black
+            7 => t.text(TextRole::Secondary),              // white
+            8 => t.text(TextRole::Tertiary),               // bright black
             9 => t.danger.fg,                              // bright red
             10 => t.success.fg,                            // bright green
             11 => t.warning.fg,                            // bright yellow
             12 => t.accent.fg,                             // bright blue
             13 => blend(t.danger.fg, t.accent.fg, 0.5),    // bright magenta
             14 => t.info.fg,                               // bright cyan
-            15 => t.fg[0],                                 // bright white
+            15 => t.text(TextRole::Primary),               // bright white
             16..=231 => {
                 let n = i - 16;
                 let comp = |v: u8| if v == 0 { 0 } else { 55 + 40 * v };
@@ -1079,17 +1092,20 @@ mod tests {
     #[test]
     fn ansi16_maps_to_theme_tokens() {
         let t = Theme::dark();
-        assert_eq!(palette::indexed(0, &t), t.bg[3]);
+        assert_eq!(palette::indexed(0, &t), t.surface(Surface::Pressed));
         assert_eq!(palette::indexed(1, &t), t.danger.base);
         assert_eq!(palette::indexed(2, &t), t.success.base);
         assert_eq!(palette::indexed(3, &t), t.warning.base);
         assert_eq!(palette::indexed(4, &t), t.accent.base);
         assert_eq!(palette::indexed(6, &t), t.info.base);
-        assert_eq!(palette::indexed(7, &t), t.fg[1]);
+        assert_eq!(palette::indexed(7, &t), t.text(TextRole::Secondary));
         assert_eq!(palette::indexed(9, &t), t.danger.fg);
-        assert_eq!(palette::indexed(15, &t), t.fg[0]);
+        assert_eq!(palette::indexed(15, &t), t.text(TextRole::Primary));
         // Default fg is primary text; default bg is transparent (the well).
-        assert_eq!(palette::fg(vt100::Color::Default, &t), t.fg[0]);
+        assert_eq!(
+            palette::fg(vt100::Color::Default, &t),
+            t.text(TextRole::Primary)
+        );
         assert_eq!(palette::bg(vt100::Color::Default, &t), None);
         assert_eq!(
             palette::fg(vt100::Color::Rgb(1, 2, 3), &t),

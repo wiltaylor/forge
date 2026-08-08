@@ -56,7 +56,7 @@ pub fn draw(ui: &mut egui::Ui, state: &mut StructureState) {
         ui.label(
             egui::RichText::new(format!("active tab: {}", state.tab))
                 .font(t.mono(t.type_scale.sm))
-                .color(t.fg[2]),
+                .color(t.text(TextRole::Tertiary)),
         );
         ui.add_space(12.0);
         let _ = Pagination::new(&mut state.page, 20).show(ui);

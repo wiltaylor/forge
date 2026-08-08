@@ -55,7 +55,7 @@ pub fn draw(ui: &mut egui::Ui, state: &mut TermSectionState) {
                 ui.label(
                     egui::RichText::new(status_line(term.status()))
                         .font(t.mono(t.type_scale.sm))
-                        .color(t.fg[2]),
+                        .color(t.text(TextRole::Tertiary)),
                 );
             }
             None => {
@@ -65,7 +65,7 @@ pub fn draw(ui: &mut egui::Ui, state: &mut TermSectionState) {
                         "Spawns $SHELL on a PTY via the forge-core engine. \
                          Click the well to type; Ctrl+Shift+Q releases the keyboard.",
                     )
-                    .color(t.fg[2]),
+                    .color(t.text(TextRole::Tertiary)),
                 );
             }
         }

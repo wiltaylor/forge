@@ -3,7 +3,7 @@
 //! first). State transitions live in `show`; `ComboboxState` stays plain data.
 
 use crate::response::{ForgeResponse, Outcome};
-use crate::theme::{FontWeight, Theme};
+use crate::theme::{FontWeight, Surface, TextRole, Theme};
 use crate::widgets::forms::field;
 use crate::widgets::util;
 use egui::{
@@ -95,7 +95,7 @@ impl<'a> Combobox<'a> {
             // The field: a click target while closed, a text edit while open.
             let response = if *open {
                 let mut prepared = egui::Frame::new()
-                    .fill(t.bg[1])
+                    .fill(t.surface(Surface::Card))
                     .stroke(Stroke::new(1.0, t.accent.base))
                     .corner_radius(CornerRadius::same(t.radius.md as u8))
                     .inner_margin(Margin::symmetric(10, 0))
@@ -108,8 +108,8 @@ impl<'a> Combobox<'a> {
                         egui::TextEdit::singleline(query)
                             .frame(egui::Frame::NONE)
                             .font(t.font(ui.ctx(), FontWeight::Regular, t.type_scale.base))
-                            .text_color(t.fg[0])
-                            .hint_text(egui::RichText::new(hint).color(t.fg[3]))
+                            .text_color(t.text(TextRole::Primary))
+                            .hint_text(egui::RichText::new(hint).color(t.text(TextRole::Disabled)))
                             .vertical_align(egui::Align::Center)
                             .min_size(Vec2::new(0.0, t.control.md))
                             .desired_width(ui.available_width() - 16.0),
@@ -158,9 +158,17 @@ impl<'a> Combobox<'a> {
                     let border = field::well_border(&t, false, response.has_focus(), disabled);
                     field::well(ui, &t, rect, border);
                     util::focus_ring(ui, &response, rect, t.radius.md, &t);
+                    let dim = t.text(TextRole::Disabled);
                     let (text, color) = match display {
-                        Some(text) => (text, if disabled { t.fg[3] } else { t.fg[0] }),
-                        None => (placeholder.unwrap_or(""), t.fg[3]),
+                        Some(text) => (
+                            text,
+                            if disabled {
+                                dim
+                            } else {
+                                t.text(TextRole::Primary)
+                            },
+                        ),
+                        None => (placeholder.unwrap_or(""), dim),
                     };
                     let g = util::galley(
                         ui,
@@ -173,7 +181,12 @@ impl<'a> Combobox<'a> {
                         g,
                         color,
                     );
-                    field::chevron(ui, &t, rect, if disabled { t.fg[3] } else { t.fg[2] });
+                    let chevron = if disabled {
+                        dim
+                    } else {
+                        t.text(TextRole::Tertiary)
+                    };
+                    field::chevron(ui, &t, rect, chevron);
                 }
                 response
             };
@@ -222,7 +235,7 @@ impl<'a> Combobox<'a> {
                             ui.label(
                                 egui::RichText::new(empty_text)
                                     .font(t.font(ui.ctx(), FontWeight::Regular, t.type_scale.sm))
-                                    .color(t.fg[3]),
+                                    .color(t.text(TextRole::Disabled)),
                             );
                         }
                         for (row, &idx) in filtered.iter().enumerate() {

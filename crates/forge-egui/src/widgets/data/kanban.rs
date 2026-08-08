@@ -7,7 +7,7 @@
 //! first and decrement `index` if it was above the removal point (see the
 //! gallery's board section).
 
-use crate::theme::{FontWeight, Theme};
+use crate::theme::{FontWeight, Surface, TextRole, Theme};
 use crate::widgets::util;
 use crate::widgets::Tone;
 use egui::{CornerRadius, DragAndDrop, Frame, Margin, Sense, Stroke, StrokeKind, Ui, Vec2};
@@ -141,7 +141,7 @@ impl<'a> Kanban<'a> {
             ui.spacing_mut().item_spacing.x = gap;
             for (ci, column) in columns.iter().enumerate() {
                 let well = Frame::new()
-                    .fill(t.bg[1])
+                    .fill(t.surface(Surface::Card))
                     .stroke(Stroke::new(1.0, t.border.subtle))
                     .corner_radius(CornerRadius::same(t.radius.lg as u8))
                     .inner_margin(Margin::same(t.space.x(2.0) as i8));
@@ -155,7 +155,7 @@ impl<'a> Kanban<'a> {
                             ui.label(
                                 egui::RichText::new(&column.title)
                                     .font(t.font(ui.ctx(), FontWeight::Medium, t.type_scale.sm))
-                                    .color(t.fg[1]),
+                                    .color(t.text(TextRole::Secondary)),
                             );
                             ui.with_layout(
                                 egui::Layout::right_to_left(egui::Align::Center),
@@ -229,7 +229,7 @@ impl<'a> Kanban<'a> {
 
 fn card_ui(ui: &mut Ui, t: &Theme, card: &KanbanCard) {
     let frame = Frame::new()
-        .fill(t.bg[2])
+        .fill(t.surface(Surface::Hover))
         .stroke(Stroke::new(1.0, t.border.default))
         .corner_radius(CornerRadius::same(t.radius.md as u8))
         .inner_margin(Margin::same(t.space.x(2.0) as i8));
@@ -238,7 +238,7 @@ fn card_ui(ui: &mut Ui, t: &Theme, card: &KanbanCard) {
         ui.label(
             egui::RichText::new(&card.title)
                 .font(t.font(ui.ctx(), FontWeight::Regular, t.type_scale.base))
-                .color(t.fg[0]),
+                .color(t.text(TextRole::Primary)),
         );
         if let Some((label, tone)) = &card.badge {
             ui.add_space(t.space.x(1.0));
@@ -252,20 +252,23 @@ fn card_ui(ui: &mut Ui, t: &Theme, card: &KanbanCard) {
 fn count_badge(ui: &mut Ui, t: &Theme, count: usize) {
     let font = t.font(ui.ctx(), FontWeight::Medium, t.type_scale.xs);
     let text = count.to_string();
-    let g = util::galley(ui, &text, font, t.fg[2]);
+    let g = util::galley(ui, &text, font, t.text(TextRole::Tertiary));
     let size = Vec2::new((g.size().x + 12.0).max(18.0), 16.0);
     let (rect, _r) = ui.allocate_exact_size(size, Sense::hover());
     if ui.is_rect_visible(rect) {
         ui.painter()
-            .rect_filled(rect, CornerRadius::same(8), t.bg[3]);
+            .rect_filled(rect, CornerRadius::same(8), t.surface(Surface::Pressed));
         ui.painter().rect_stroke(
             rect,
             CornerRadius::same(8),
             Stroke::new(1.0, t.border.subtle),
             StrokeKind::Inside,
         );
-        ui.painter()
-            .galley(rect.center() - g.size() / 2.0, g, t.fg[2]);
+        ui.painter().galley(
+            rect.center() - g.size() / 2.0,
+            g,
+            t.text(TextRole::Tertiary),
+        );
     }
 }
 

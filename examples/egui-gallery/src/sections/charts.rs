@@ -109,7 +109,7 @@ pub fn draw(ui: &mut egui::Ui) {
                         egui::Label::new(
                             egui::RichText::new(label)
                                 .size(t.type_scale.sm)
-                                .color(t.fg[1]),
+                                .color(t.text(TextRole::Secondary)),
                         ),
                     );
                     let _ = Sparkline::new(points).size(140.0, 28.0).tone(tone).show(ui);

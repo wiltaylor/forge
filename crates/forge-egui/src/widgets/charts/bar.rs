@@ -2,7 +2,7 @@
 //! (band layout, 24pt max bar width, rounded bar tops).
 
 use crate::response::{ForgeResponse, Outcome};
-use crate::theme::{series_color, shift, FontWeight, Theme};
+use crate::theme::{series_color, shift, FontWeight, Surface, TextRole, Theme};
 use crate::widgets::charts::{self, nice_ticks, TipRow};
 use egui::{CornerRadius, Rect, Sense, Stroke, StrokeKind, Ui, Vec2};
 
@@ -100,13 +100,15 @@ impl<'a> BarChart<'a> {
             let label_font = t.font(ui.ctx(), FontWeight::Regular, t.type_scale.xs);
             for (ci, group) in self.groups.iter().enumerate() {
                 let cx = plot.min.x + band * ci as f32 + band / 2.0;
-                let g =
-                    ui.painter()
-                        .layout_no_wrap(group.label.clone(), label_font.clone(), t.fg[2]);
+                let g = ui.painter().layout_no_wrap(
+                    group.label.clone(),
+                    label_font.clone(),
+                    t.text(TextRole::Tertiary),
+                );
                 ui.painter().galley(
                     egui::pos2(cx - g.size().x / 2.0, rect.max.y - g.size().y - 3.0),
                     g,
-                    t.fg[2],
+                    t.text(TextRole::Tertiary),
                 );
 
                 if self.stacked {
@@ -133,7 +135,7 @@ impl<'a> BarChart<'a> {
                         ui.painter().rect_stroke(
                             bar,
                             CornerRadius::ZERO,
-                            Stroke::new(1.0, t.bg[1]),
+                            Stroke::new(1.0, t.surface(Surface::Card)),
                             StrokeKind::Inside,
                         );
                     }

@@ -85,7 +85,7 @@ impl EventsPage {
                             ui.label(
                                 egui::RichText::new(&entry.json)
                                     .font(t.mono(t.type_scale.sm))
-                                    .color(t.fg[1]),
+                                    .color(t.text(TextRole::Secondary)),
                             );
                         });
                     }

@@ -2,7 +2,7 @@
 //! with `…` beyond 7 pages).
 
 use crate::response::{ForgeResponse, Outcome};
-use crate::theme::Theme;
+use crate::theme::{TextRole, Theme};
 use crate::widgets::{Button, Variant};
 use egui::Ui;
 
@@ -76,7 +76,7 @@ impl<'a> Pagination<'a> {
                             }
                         }
                         None => {
-                            ui.label(egui::RichText::new("…").color(t.fg[3]));
+                            ui.label(egui::RichText::new("…").color(t.text(TextRole::Disabled)));
                         }
                     }
                 }

@@ -1,7 +1,7 @@
 //! Always-visible option list, single- or multi-select, in a scrollable well.
 
 use crate::response::{ForgeResponse, Outcome};
-use crate::theme::{FontWeight, Theme};
+use crate::theme::{FontWeight, Surface, TextRole, Theme};
 use crate::widgets::primitives::Glyph;
 use crate::widgets::util;
 use egui::{CornerRadius, Key, Margin, Response, Sense, Stroke, Ui, Vec2, WidgetInfo, WidgetType};
@@ -53,7 +53,7 @@ impl<'a> ListBox<'a> {
         let height = height.unwrap_or(row_h * 5.0);
 
         let inner = egui::Frame::new()
-            .fill(t.bg[1])
+            .fill(t.surface(Surface::Card))
             .stroke(Stroke::new(1.0, t.border.default))
             .corner_radius(CornerRadius::same(t.radius.md as u8))
             .inner_margin(Margin::same(4))
@@ -162,14 +162,15 @@ fn row_ui(
         if selected {
             ui.painter().rect_filled(rect, radius, t.accent.bg);
         } else if response.hovered() || highlighted || response.has_focus() {
-            ui.painter().rect_filled(rect, radius, t.bg[2]);
+            ui.painter()
+                .rect_filled(rect, radius, t.surface(Surface::Hover));
         }
         let color = if selected {
             t.accent.fg
         } else if response.hovered() {
-            t.fg[0]
+            t.text(TextRole::Primary)
         } else {
-            t.fg[1]
+            t.text(TextRole::Secondary)
         };
         let g = util::galley(
             ui,

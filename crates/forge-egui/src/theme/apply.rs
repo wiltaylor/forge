@@ -7,7 +7,7 @@
 //! tokens egui can't express (bg ramp levels, semantic triples, accent
 //! hover/press split, control heights).
 
-use super::{fonts, Scheme, Theme};
+use super::{fonts, Scheme, Surface, TextRole, Theme};
 use egui::{Color32, CornerRadius, Margin, Shadow, Stroke, Vec2};
 
 fn theme_key() -> egui::Id {
@@ -81,11 +81,11 @@ impl Theme {
             Scheme::Light => egui::Visuals::light(),
         };
 
-        v.panel_fill = self.bg[0];
-        v.window_fill = self.bg[4];
-        v.extreme_bg_color = self.bg[1]; // text-edit wells
-        v.faint_bg_color = self.bg[2]; // striped rows, subtle fills
-        v.code_bg_color = self.bg[2];
+        v.panel_fill = self.surface(Surface::Page);
+        v.window_fill = self.surface(Surface::Popover);
+        v.extreme_bg_color = self.surface(Surface::Card); // text-edit wells
+        v.faint_bg_color = self.surface(Surface::Hover); // striped rows, subtle fills
+        v.code_bg_color = self.surface(Surface::Hover);
 
         // Flat aesthetic: no shadows anywhere.
         v.window_shadow = Shadow::NONE;
@@ -103,36 +103,41 @@ impl Theme {
         let radius = CornerRadius::same(self.radius.md as u8);
         let w = &mut v.widgets;
 
-        w.noninteractive.bg_fill = self.bg[1];
-        w.noninteractive.weak_bg_fill = self.bg[1];
+        // egui's state names sit one step below the Forge surface of the same
+        // name: an `inactive` control rests on `Hover`, and `hovered`/`active`
+        // both go to `Pressed`. The offset is deliberate — egui calls a resting
+        // interactive control "inactive", which Forge paints as a raised
+        // surface. Do not "correct" these to the matching role name.
+        w.noninteractive.bg_fill = self.surface(Surface::Card);
+        w.noninteractive.weak_bg_fill = self.surface(Surface::Card);
         w.noninteractive.bg_stroke = Stroke::new(1.0, self.border.subtle);
-        w.noninteractive.fg_stroke = Stroke::new(1.0, self.fg[1]);
+        w.noninteractive.fg_stroke = Stroke::new(1.0, self.text(TextRole::Secondary));
         w.noninteractive.corner_radius = radius;
 
-        w.inactive.bg_fill = self.bg[2];
-        w.inactive.weak_bg_fill = self.bg[2];
+        w.inactive.bg_fill = self.surface(Surface::Hover);
+        w.inactive.weak_bg_fill = self.surface(Surface::Hover);
         w.inactive.bg_stroke = Stroke::new(1.0, self.border.default);
-        w.inactive.fg_stroke = Stroke::new(1.0, self.fg[0]);
+        w.inactive.fg_stroke = Stroke::new(1.0, self.text(TextRole::Primary));
         w.inactive.corner_radius = radius;
 
-        w.hovered.bg_fill = self.bg[3];
-        w.hovered.weak_bg_fill = self.bg[3];
+        w.hovered.bg_fill = self.surface(Surface::Pressed);
+        w.hovered.weak_bg_fill = self.surface(Surface::Pressed);
         w.hovered.bg_stroke = Stroke::new(1.0, self.border.strong);
-        w.hovered.fg_stroke = Stroke::new(1.0, self.fg[0]);
+        w.hovered.fg_stroke = Stroke::new(1.0, self.text(TextRole::Primary));
         w.hovered.corner_radius = radius;
         w.hovered.expansion = 0.0;
 
-        w.active.bg_fill = self.bg[3];
-        w.active.weak_bg_fill = self.bg[3];
+        w.active.bg_fill = self.surface(Surface::Pressed);
+        w.active.weak_bg_fill = self.surface(Surface::Pressed);
         w.active.bg_stroke = Stroke::new(1.0, self.accent.base);
-        w.active.fg_stroke = Stroke::new(1.0, self.fg[0]);
+        w.active.fg_stroke = Stroke::new(1.0, self.text(TextRole::Primary));
         w.active.corner_radius = radius;
         w.active.expansion = 0.0;
 
-        w.open.bg_fill = self.bg[3];
-        w.open.weak_bg_fill = self.bg[3];
+        w.open.bg_fill = self.surface(Surface::Pressed);
+        w.open.weak_bg_fill = self.surface(Surface::Pressed);
         w.open.bg_stroke = Stroke::new(1.0, self.border.strong);
-        w.open.fg_stroke = Stroke::new(1.0, self.fg[0]);
+        w.open.fg_stroke = Stroke::new(1.0, self.text(TextRole::Primary));
         w.open.corner_radius = radius;
 
         v
@@ -142,5 +147,5 @@ impl Theme {
 /// A translucent scrim color for overlays (modal backdrops, sheet scrims):
 /// the page background at 60% alpha.
 pub fn scrim(theme: &Theme) -> Color32 {
-    super::color::with_alpha(theme.bg[0], 153)
+    super::color::with_alpha(theme.surface(Surface::Page), 153)
 }

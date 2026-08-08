@@ -5,7 +5,7 @@
 //! editing belong to the (later) NodeGraph widget.
 
 use crate::response::{ForgeResponse, Outcome};
-use crate::theme::{FontWeight, Theme};
+use crate::theme::{FontWeight, Surface, TextRole, Theme};
 use crate::widgets::Tone;
 use egui::{CornerRadius, Pos2, Rect, Sense, Stroke, StrokeKind, Ui, Vec2};
 use std::collections::HashMap;
@@ -231,11 +231,23 @@ impl<'a> Flowchart<'a> {
             ));
             // Edge label — a small chip at the elbow midpoint.
             if let Some(label) = &e.label {
-                let g = painter.layout_no_wrap(label.clone(), label_font.clone(), t.fg[2]);
+                let g = painter.layout_no_wrap(
+                    label.clone(),
+                    label_font.clone(),
+                    t.text(TextRole::Tertiary),
+                );
                 let at = Pos2::new(mid, (y0 + y1) / 2.0);
                 let chip = Rect::from_center_size(at, g.size() + Vec2::new(8.0, 4.0));
-                painter.rect_filled(chip, CornerRadius::same(t.radius.sm as u8), t.bg[0]);
-                painter.galley(chip.min + Vec2::new(4.0, 2.0), g, t.fg[2]);
+                painter.rect_filled(
+                    chip,
+                    CornerRadius::same(t.radius.sm as u8),
+                    t.surface(Surface::Page),
+                );
+                painter.galley(
+                    chip.min + Vec2::new(4.0, 2.0),
+                    g,
+                    t.text(TextRole::Tertiary),
+                );
             }
         }
 
@@ -243,7 +255,7 @@ impl<'a> Flowchart<'a> {
         for (i, node) in self.nodes.iter().enumerate() {
             let r = rects[i].translate(origin);
             let radius = CornerRadius::same(t.radius.md as u8);
-            painter.rect_filled(r, radius, t.bg[2]);
+            painter.rect_filled(r, radius, t.surface(Surface::Hover));
             painter.rect_stroke(
                 r,
                 radius,
@@ -258,8 +270,9 @@ impl<'a> Flowchart<'a> {
                 );
                 painter.rect_filled(bar, CornerRadius::same(1), base);
             }
-            let g = painter.layout_no_wrap(node.label.clone(), font.clone(), t.fg[0]);
-            painter.galley(r.center() - g.size() / 2.0, g, t.fg[0]);
+            let g =
+                painter.layout_no_wrap(node.label.clone(), font.clone(), t.text(TextRole::Primary));
+            painter.galley(r.center() - g.size() / 2.0, g, t.text(TextRole::Primary));
         }
 
         ForgeResponse::new(response, Outcome::Ignored)

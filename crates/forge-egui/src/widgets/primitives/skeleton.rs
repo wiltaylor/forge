@@ -1,7 +1,7 @@
 //! Shimmer loading placeholder. The moving highlight band is a vertex-colored
 //! mesh; animation requests its own repaints.
 
-use crate::theme::Theme;
+use crate::theme::{Surface, Theme};
 use egui::epaint::{Mesh, Vertex};
 use egui::{Color32, CornerRadius, Sense, Ui, Vec2};
 
@@ -35,15 +35,18 @@ impl Skeleton {
             ui.allocate_exact_size(Vec2::new(width, self.height), Sense::hover());
 
         if ui.is_rect_visible(rect) {
-            ui.painter()
-                .rect_filled(rect, CornerRadius::same(t.radius.sm as u8), t.bg[2]);
+            ui.painter().rect_filled(
+                rect,
+                CornerRadius::same(t.radius.sm as u8),
+                t.surface(Surface::Hover),
+            );
 
             // Moving highlight band: 1.2s cycle, band 40% of width.
             let cycle = 1.2;
             let phase = (ui.input(|i| i.time) % cycle / cycle) as f32;
             let band_w = rect.width() * 0.4;
             let x0 = rect.min.x - band_w + phase * (rect.width() + band_w);
-            let highlight = crate::theme::color::with_alpha(t.bg[4], 160);
+            let highlight = crate::theme::color::with_alpha(t.surface(Surface::Popover), 160);
             let clear = Color32::TRANSPARENT;
 
             let mut mesh = Mesh::default();
