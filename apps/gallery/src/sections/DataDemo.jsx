@@ -14,7 +14,7 @@ export default function DataDemo() {
       toast(`Saved ${name()}`, { tone: 'success' });
       refetch();
     } catch (e) {
-      toast(`Save failed: ${e.message}`, { tone: 'danger' });
+      toast(`Save failed: ${e instanceof Error ? e.message : e}`, { tone: 'danger' });
     }
   };
   const load = async (n) => {

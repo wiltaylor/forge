@@ -6,7 +6,8 @@ import { NodeGraph } from '@forge/graph';
 let nextId = 1;
 
 export default function GraphDemo() {
-  const [graph, setGraph] = createStore({
+  const [graph, setGraph] = createStore(
+    /** @type {{ nodes: import('@forge/graph').GraphNode[], edges: import('@forge/graph').GraphEdge[] }} */ ({
     nodes: [
       { id: 'trigger', x: 30, y: 40, title: 'Webhook trigger',
         inputs: [], outputs: [{ id: 'event', type: 'trigger', label: 'event' }] },
@@ -25,7 +26,7 @@ export default function GraphDemo() {
       { id: 'e2', from: { node: 'fetch', port: 'body' }, to: { node: 'parse', port: 'raw' } },
       { id: 'e3', from: { node: 'fetch', port: 'status' }, to: { node: 'alert', port: 'code' }, state: 'broken' },
     ],
-  });
+  }));
   const [selected, setSelected] = createSignal(null);
 
   const moveNode = (id, x, y) => {

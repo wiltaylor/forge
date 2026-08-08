@@ -15,4 +15,6 @@ import '@forge/desktop/styles.css';
 import App from './App';
 
 document.body.style.margin = '0';
-render(() => <App />, document.getElementById('root'));
+const root = document.getElementById('root');
+if (!root) throw new Error('gallery: index.html has no #root element');
+render(() => <App />, root);

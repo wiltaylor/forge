@@ -1,4 +1,4 @@
-import { For, Match, Switch, createResource, createSignal } from 'solid-js';
+import { For, Match, Show, Switch, createResource, createSignal } from 'solid-js';
 import { PageHead, Card, Grid, Alert, Badge, Logs, LogLine } from '@forge/ui';
 import { loadRemote, Remote } from '@forge/remote';
 import { api } from '../api';
@@ -8,7 +8,8 @@ import { api } from '../api';
    Toggle the theme in the top bar — the remotes recolor live because design
    tokens inherit through the shadow boundary. */
 export default function RemoteDemo() {
-  const [events, setEvents] = createSignal([]);
+  const [events, setEvents] = createSignal(
+    /** @type {{ time: string, kind: string, detail: string }[]} */ ([]));
   const log = (kind, detail) =>
     setEvents((xs) => [...xs.slice(-9), { time: new Date().toTimeString().slice(0, 8), kind, detail: JSON.stringify(detail) }]);
 
@@ -29,22 +30,31 @@ export default function RemoteDemo() {
           </Alert>
         </Match>
         <Match when={handle()}>
+          {(h) => (
           <div style={{ display: 'grid', gap: 'var(--sp-4)' }}>
             <div>
-              <Badge tone="accent">app: {handle().manifest.app}</Badge>{' '}
-              <Badge>{handle().manifest.components.length} components</Badge>
+              <Badge tone="accent">app: {h().manifest.app}</Badge>{' '}
+              <Badge>{h().manifest.components.length} components</Badge>
             </div>
             <Grid>
-              <Remote
-                tag={handle().get('status-card')?.tag}
-                props={{ title: 'Remote status card', status: 'success', message: 'Served by another app' }}
-                on={{ refresh: (e) => log('refresh', e.detail) }}
-              />
-              <Remote
-                tag={handle().get('metrics-panel')?.tag}
-                props={{ title: 'Remote metrics', series, unit: 'ms' }}
-                on={{ select: (e) => log('select', e.detail) }}
-              />
+              <Show when={h().get('status-card')?.tag}>
+                {(tag) => (
+                  <Remote
+                    tag={tag()}
+                    props={{ title: 'Remote status card', status: 'success', message: 'Served by another app' }}
+                    on={{ refresh: (e) => log('refresh', e.detail) }}
+                  />
+                )}
+              </Show>
+              <Show when={h().get('metrics-panel')?.tag}>
+                {(tag) => (
+                  <Remote
+                    tag={tag()}
+                    props={{ title: 'Remote metrics', series, unit: 'ms' }}
+                    on={{ select: (e) => log('select', e.detail) }}
+                  />
+                )}
+              </Show>
             </Grid>
             <Card title="CustomEvents from the remotes">
               <Logs style={{ height: '140px' }}>
@@ -54,6 +64,7 @@ export default function RemoteDemo() {
               </Logs>
             </Card>
           </div>
+          )}
         </Match>
       </Switch>
     </>

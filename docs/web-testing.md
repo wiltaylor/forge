@@ -38,6 +38,11 @@ the package up:
 }
 ```
 
+A package with no tests yet carries `"test": "node ../../scripts/no-tests-yet.mjs"`
+instead, so the aggregate run reports the package rather than skipping it.
+That script fails the moment a test file appears in the package — replace it
+with the real test script above when you add the first test.
+
 Write `vitest.config.ts`:
 
 ```ts

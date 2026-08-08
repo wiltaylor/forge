@@ -15,7 +15,7 @@ export default function FormsDemo() {
   const [checks, setChecks] = createSignal({ a: true, b: false });
   const [gpu, setGpu] = createSignal(true);
   const [profile, setProfile] = createSignal('balanced');
-  const [model, setModel] = createSignal(null);
+  const [model, setModel] = createSignal(/** @type {string | null} */ (null));
   const [modalModel, setModalModel] = createSignal('ornith');
   const [node, setNode] = createSignal('dgx');
   const [suites, setSuites] = createSignal(['smoke', 'coding']);

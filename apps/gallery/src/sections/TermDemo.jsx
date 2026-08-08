@@ -10,7 +10,7 @@ const TONES = { ready: 'success', connecting: 'warning', error: 'danger', closed
    `term` cargo feature AND FORGE_TERM_ENABLE is set — a failed connect here
    is the expected shape of "feature off". */
 export default function TermDemo() {
-  const [mode, setMode] = createSignal('local');
+  const [mode, setMode] = createSignal(/** @type {'local' | 'ssh'} */ ('local'));
   const [host, setHost] = createSignal('');
   const [port, setPort] = createSignal('22');
   const [username, setUsername] = createSignal('');

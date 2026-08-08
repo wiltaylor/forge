@@ -3,6 +3,7 @@ import { PageHead, Card, Grid, Stat, Toggle } from '@forge/ui';
 import { PieChart, LineChart, BarChart, GanttChart, Sparkline } from '@forge/charts';
 import { Flowchart } from '@forge/graph';
 
+/** @type {import('@forge/charts').LineSeries[]} */
 const REQUESTS = [
   { label: 'dgx', points: [4, 6, 5, 9, 11, 10, 14, 13, 17, 16].map((y, x) => ({ x, y })) },
   { label: 'severus', points: [2, 3, 3, 4, 6, 5, 7, 8, 7, 9].map((y, x) => ({ x, y })) },
@@ -13,18 +14,20 @@ const DEPLOYS = [
   { label: 'Mon', value: 6 }, { label: 'Tue', value: 9 }, { label: 'Wed', value: 4 },
   { label: 'Thu', value: 12 }, { label: 'Fri', value: 8 },
 ];
+/** @type {import('@forge/charts').BarSeries[]} */
 const DEPLOY_SERIES = [
   { label: 'succeeded', tone: 'success', data: DEPLOYS.map((d) => ({ label: d.label, value: d.value })) },
-  { label: 'failed', tone: 'danger', data: [1, 2, 0, 3, 1].map((v, i) => ({ label: DEPLOYS[i].label, value: v })) },
+  { label: 'failed', tone: 'danger', data: [1, 2, 0, 3, 1].map((v, i) => ({ label: DEPLOYS[i]?.label ?? '', value: v })) },
 ];
 
+/** @type {import('@forge/charts').GanttTask[]} */
 const TASKS = [
-  { id: 't1', label: 'Model download', start: '2026-07-01', end: '2026-07-04', progress: 100, tone: 'success' },
-  { id: 't2', label: 'KitOps import', start: '2026-07-03', end: '2026-07-07', progress: 100 },
-  { id: 't3', label: 'vLLM rollout', start: '2026-07-06', end: '2026-07-10', progress: 60 },
-  { id: 't4', label: 'Bench suite', start: '2026-07-08', end: '2026-07-14', progress: 25 },
-  { id: 't5', label: 'severus memtest', start: '2026-07-09', end: '2026-07-12', progress: 0, tone: 'danger' },
-  { id: 't6', label: 'Report', start: '2026-07-13', end: '2026-07-16', progress: 0 },
+  { label: 'Model download', start: '2026-07-01', end: '2026-07-04', progress: 100, tone: 'success' },
+  { label: 'KitOps import', start: '2026-07-03', end: '2026-07-07', progress: 100 },
+  { label: 'vLLM rollout', start: '2026-07-06', end: '2026-07-10', progress: 60 },
+  { label: 'Bench suite', start: '2026-07-08', end: '2026-07-14', progress: 25 },
+  { label: 'severus memtest', start: '2026-07-09', end: '2026-07-12', progress: 0, tone: 'danger' },
+  { label: 'Report', start: '2026-07-13', end: '2026-07-16', progress: 0 },
 ];
 
 const FLOW_NODES = [
@@ -36,6 +39,7 @@ const FLOW_NODES = [
   { id: 'deploy', label: 'Deploy (dgx)', tone: 'success' },
   { id: 'alert', label: 'Alert Hermes', tone: 'danger' },
 ];
+/** @type {import('@forge/graph').FlowEdge[]} */
 const FLOW_EDGES = [
   { from: 'push', to: 'build' },
   { from: 'build', to: 'test', state: 'active' },
@@ -73,7 +77,7 @@ export default function ChartsDemo() {
       </Grid>
 
       <Card title="Requests per hour (line, 3 series, area fills)">
-        <LineChart series={[{ ...REQUESTS[0], }, REQUESTS[1], REQUESTS[2]]} area height={220}
+        <LineChart series={REQUESTS} area height={220}
                    xLabels={['00', '01', '02', '03', '04', '05', '06', '07', '08', '09']} />
       </Card>
       <div style={{ height: '16px' }} />

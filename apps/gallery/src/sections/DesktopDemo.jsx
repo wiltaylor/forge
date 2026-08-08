@@ -17,8 +17,8 @@ export default function DesktopDemo() {
   const [port, setPort] = createSignal('');
   const [username, setUsername] = createSignal('');
   const [password, setPassword] = createSignal('');
-  const [scale, setScale] = createSignal('fit');
-  const [quality, setQuality] = createSignal('lossless');
+  const [scale, setScale] = createSignal(/** @type {'fit' | 'native'} */ ('fit'));
+  const [quality, setQuality] = createSignal(/** @type {'lossless' | 'lossy'} */ ('lossless'));
   const [status, setStatus] = createSignal('disconnected');
   let viewer;
 

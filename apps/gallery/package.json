@@ -6,7 +6,9 @@
   "description": "Forge example frontend: every component + login, live events, doc store and remote-component demos.",
   "scripts": {
     "dev": "vite",
-    "build": "vite build"
+    "build": "vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "node ../../scripts/no-tests-yet.mjs"
   },
   "dependencies": {
     "@forge/charts": "workspace:^",
@@ -26,6 +28,7 @@
     "solid-js": "^1.9.0"
   },
   "devDependencies": {
+    "typescript": "^7.0.0",
     "vite": "^8.1.5",
     "vite-plugin-solid": "^2.11.14"
   }
