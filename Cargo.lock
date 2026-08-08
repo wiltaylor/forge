@@ -2682,6 +2682,8 @@ dependencies = [
  "forge-core",
  "futures-util",
  "http-body-util",
+ "hyper",
+ "hyper-util",
  "mime_guess",
  "rust-embed",
  "serde",

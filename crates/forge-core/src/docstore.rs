@@ -128,7 +128,16 @@ impl DocStore {
 
 #[cfg(test)]
 mod tests {
-    use super::valid_doc_name;
+    use super::{valid_doc_name, DocStore};
+    use crate::error::ForgeError;
+    use serde_json::json;
+
+    /// A store over a fresh temp dir. Keep the `TempDir` alive for the test.
+    fn store() -> (tempfile::TempDir, DocStore) {
+        let dir = tempfile::tempdir().unwrap();
+        let store = DocStore::new(dir.path());
+        (dir, store)
+    }
 
     #[test]
     fn name_validation() {
@@ -142,5 +151,120 @@ mod tests {
         assert!(!valid_doc_name("UPPER"));
         assert!(!valid_doc_name("has.dot"));
         assert!(!valid_doc_name("../etc/passwd"));
+    }
+
+    #[tokio::test]
+    async fn put_get_roundtrip_and_replace() {
+        let (dir, store) = store();
+        let doc = json!({"title": "hello", "items": [1, 2, 3], "nested": {"a": null}});
+        store.put("notes", &doc).await.unwrap();
+        assert_eq!(store.get("notes").await.unwrap(), doc);
+
+        // Replace with a different JSON shape entirely.
+        let doc2 = json!(["now", "an", "array"]);
+        store.put("notes", &doc2).await.unwrap();
+        assert_eq!(store.get("notes").await.unwrap(), doc2);
+
+        // Atomic write: the doc file exists, the tmp file does not survive.
+        assert!(dir.path().join("notes.json").exists());
+        assert!(!dir.path().join("notes.json.tmp").exists());
+    }
+
+    #[tokio::test]
+    async fn bad_names_rejected_on_every_operation() {
+        let (_dir, store) = store();
+        let long = "a".repeat(65);
+        for name in [
+            "UPPER",
+            "_lead",
+            "-lead",
+            "has.dot",
+            "",
+            "../etc/passwd",
+            &long,
+        ] {
+            assert!(
+                matches!(store.get(name).await, Err(ForgeError::BadRequest(_))),
+                "get {name:?}"
+            );
+            assert!(
+                matches!(
+                    store.put(name, &json!({})).await,
+                    Err(ForgeError::BadRequest(_))
+                ),
+                "put {name:?}"
+            );
+            assert!(
+                matches!(store.delete(name).await, Err(ForgeError::BadRequest(_))),
+                "delete {name:?}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn missing_doc_is_not_found() {
+        let (_dir, store) = store();
+        let err = store.get("nope").await.unwrap_err();
+        assert!(matches!(err, ForgeError::NotFound(_)), "got {err:?}");
+        assert!(err.to_string().contains("nope"));
+    }
+
+    #[tokio::test]
+    async fn delete_is_idempotent() {
+        let (_dir, store) = store();
+        store.put("tmp", &json!(1)).await.unwrap();
+        store.delete("tmp").await.unwrap();
+        // Deleting again (missing) still succeeds.
+        store.delete("tmp").await.unwrap();
+        assert!(matches!(
+            store.get("tmp").await,
+            Err(ForgeError::NotFound(_))
+        ));
+    }
+
+    #[tokio::test]
+    async fn list_is_sorted_with_metadata() {
+        let dir = tempfile::tempdir().unwrap();
+        // Point at a subdirectory that does not exist yet: list = [].
+        let store = DocStore::new(dir.path().join("docs"));
+        assert!(store.list().await.unwrap().is_empty());
+
+        store.put("beta", &json!({"b": 2})).await.unwrap();
+        store.put("alpha", &json!({"a": 1})).await.unwrap();
+        let docs = store.list().await.unwrap();
+        assert_eq!(docs.len(), 2);
+        // Sorted by name.
+        assert_eq!(docs[0]["name"], json!("alpha"));
+        assert_eq!(docs[1]["name"], json!("beta"));
+        for doc in &docs {
+            assert!(doc["bytes"].as_u64().unwrap() > 0);
+            // modified = unix seconds as float, recent.
+            let modified = doc["modified"].as_f64().unwrap();
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs_f64();
+            assert!(modified > now - 60.0 && modified <= now + 1.0);
+        }
+    }
+
+    #[tokio::test]
+    async fn list_skips_entries_that_are_not_json_files() {
+        let (dir, store) = store();
+        store.put("real", &json!(1)).await.unwrap();
+        std::fs::write(dir.path().join("notes.txt"), "not a doc").unwrap();
+        std::fs::create_dir(dir.path().join("subdir.json")).unwrap();
+        let docs = store.list().await.unwrap();
+        assert_eq!(docs.len(), 1);
+        assert_eq!(docs[0]["name"], json!("real"));
+    }
+
+    #[tokio::test]
+    async fn corrupt_doc_is_internal() {
+        let (dir, store) = store();
+        std::fs::write(dir.path().join("bad.json"), "{not json").unwrap();
+        let err = store.get("bad").await.unwrap_err();
+        assert!(matches!(err, ForgeError::Internal(_)), "got {err:?}");
+        assert!(err.to_string().contains("corrupt"));
     }
 }

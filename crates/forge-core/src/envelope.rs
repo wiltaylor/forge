@@ -19,3 +19,29 @@ pub fn ok_empty_value() -> Value {
 pub fn err_value(message: impl Into<String>) -> Value {
     json!({ "ok": false, "error": message.into() })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{err_value, ok_empty_value, ok_value};
+    use serde_json::json;
+
+    #[test]
+    fn success_envelope_wraps_the_data() {
+        assert_eq!(ok_value(json!([1, 2])), json!({"ok": true, "data": [1, 2]}));
+        // `null` data is still a `data` key, not an omission.
+        assert_eq!(
+            ok_value(serde_json::Value::Null),
+            json!({"ok": true, "data": null})
+        );
+    }
+
+    #[test]
+    fn empty_success_envelope_has_no_data_key() {
+        assert_eq!(ok_empty_value(), json!({"ok": true}));
+    }
+
+    #[test]
+    fn error_envelope_carries_the_message() {
+        assert_eq!(err_value("boom"), json!({"ok": false, "error": "boom"}));
+    }
+}
