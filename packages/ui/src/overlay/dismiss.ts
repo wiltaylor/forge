@@ -23,6 +23,12 @@ export interface OverlayOptions {
    * for one, does not dismiss the surface underneath it.
    */
   backdrop?: () => Element | undefined | null;
+  /**
+   * Trap Tab and Shift-Tab inside the surface. A modal surface passes true, so
+   * the keyboard cannot walk into the page behind it. Anchored surfaces leave
+   * it unset.
+   */
+  trap?: boolean;
   /** Close the overlay. It stays open until its owner acts on this. */
   onDismiss: () => void;
 }
@@ -54,11 +60,81 @@ const onPointerDown = (e: Event): void => {
 };
 
 const onKeyDown = (e: KeyboardEvent): void => {
-  if (e.key !== 'Escape') return;
-  stack[stack.length - 1]?.onDismiss();
+  if (e.key === 'Escape') stack[stack.length - 1]?.onDismiss();
+  if (e.key === 'Tab') trapTab(e);
 };
 
+/* What Tab can reach. Order in the document is order in the cycle; the kit
+   assigns no positive tabindex, so document order is tab order. Visibility that
+   only layout can decide (display, visibility) is not checked — the trap works
+   without layout, in a browser and in the test DOM alike. */
+const FOCUSABLE =
+  'a[href], button:not(:disabled), input:not(:disabled):not([type="hidden"]), ' +
+  'select:not(:disabled), textarea:not(:disabled), [contenteditable="true"], ' +
+  '[tabindex]:not([tabindex="-1"])';
+
+const focusablesIn = (surface: Element): HTMLElement[] =>
+  Array.from(surface.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
+    (el) => !el.closest('[hidden]'),
+  );
+
+/* The element with focus, resolved through shadow boundaries for the same
+   reason pathOf uses composedPath: inside a shadow root the document reports
+   the host, not the focused element. */
+const focused = (): Element | null => {
+  let el = document.activeElement;
+  while (el?.shadowRoot?.activeElement) el = el.shadowRoot.activeElement;
+  return el;
+};
+
+/* contains() stops at a shadow boundary, and `focused` deliberately crosses
+   them; walk host links so a focusable inside a shadow-DOM component in the
+   surface counts as inside. */
+const within = (root: Element, el: Element | null): boolean => {
+  for (let n: Node | null = el; n; n = n instanceof ShadowRoot ? n.host : n.parentNode) {
+    if (n === root) return true;
+  }
+  return false;
+};
+
+/* Keep Tab inside the innermost trapping surface. Only the edges are
+   intercepted — from the last focusable forward to the first, from the first
+   backward to the last, and from outside the surface back in — so movement in
+   the middle keeps the browser's own tab order. An overlay anchored inside the
+   surface counts as inside, so a popover in a modal does not trigger the
+   wrap. */
+const trapTab = (e: KeyboardEvent): void => {
+  const layer = [...stack].reverse().find((l) => l.trap);
+  const surface = layer?.surface();
+  if (!surface) return;
+  const focusables = focusablesIn(surface);
+  const first = focusables[0];
+  const last = focusables[focusables.length - 1];
+  if (!first || !last) {
+    e.preventDefault();
+    return;
+  }
+  const current = focused();
+  const outside = !current || !within(surface, current);
+  if (!outside && current !== (e.shiftKey ? first : last)) return;
+  e.preventDefault();
+  (e.shiftKey ? last : first).focus();
+};
+
+/* Return focus to whatever opened the overlay, so a keyboard user does not
+   lose their place. Only when focus is still in the overlay or fell to the
+   body when the surface unmounted — a pointer that dismissed the overlay by
+   landing elsewhere takes focus with it, and that is not ours to take back. */
+function restore(layer: Layer, opener: Element | null): void {
+  if (!(opener instanceof HTMLElement) || !opener.isConnected) return;
+  const current = focused();
+  const surface = layer.surface();
+  const lost = !current || current === document.body;
+  if (lost || (surface && within(surface, current))) opener.focus();
+}
+
 function register(layer: Layer): () => void {
+  const opener = focused();
   stack.push(layer);
   if (stack.length === 1) {
     document.addEventListener('pointerdown', onPointerDown);
@@ -71,6 +147,7 @@ function register(layer: Layer): () => void {
       document.removeEventListener('pointerdown', onPointerDown);
       document.removeEventListener('keydown', onKeyDown);
     }
+    restore(layer, opener);
   };
 }
 

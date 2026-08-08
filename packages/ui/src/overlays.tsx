@@ -26,6 +26,7 @@ export function Modal(props: ModalProps): JSX.Element {
     open: () => !!props.open,
     surface: () => panel,
     backdrop: () => backdrop,
+    trap: true,
     onDismiss: () => props.onClose?.(),
   });
   return (
@@ -67,6 +68,7 @@ export function Sheet(props: SheetProps): JSX.Element {
     open: () => !!props.open,
     surface: () => panel,
     backdrop: () => backdrop,
+    trap: true,
     onDismiss: () => props.onClose?.(),
   });
   return (
@@ -74,7 +76,7 @@ export function Sheet(props: SheetProps): JSX.Element {
       <OverlayPortal>
         <div ref={backdrop} class="fsheet" classList={{ 'is-left': props.side === 'left' }}>
           <div class="fsheet-scrim" />
-          <div ref={panel} class="fsheet-panel" role="dialog" aria-label={props.title}>
+          <div ref={panel} class="fsheet-panel" role="dialog" aria-modal="true" aria-label={props.title}>
             <header class="fsheet-head">
               <h3>{props.title}</h3>
               <button class="ftopbar-icon-btn" aria-label="Close" onClick={() => props.onClose?.()}>
@@ -246,6 +248,7 @@ export function Command(props: CommandProps): JSX.Element {
     open: () => !!props.open,
     surface: () => panel,
     backdrop: () => backdrop,
+    trap: true,
     onDismiss: close,
   });
 
@@ -284,7 +287,7 @@ export function Command(props: CommandProps): JSX.Element {
     <Show when={props.open}>
       <OverlayPortal>
         <div ref={backdrop} class="fcmd">
-          <div ref={panel} class="fcmd-panel" role="dialog" aria-label="Command palette">
+          <div ref={panel} class="fcmd-panel" role="dialog" aria-modal="true" aria-label="Command palette">
             <div class="fcmd-input">
               <SearchSvg />
               <input ref={input} placeholder={props.placeholder ?? 'Type a command…'}
