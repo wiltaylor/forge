@@ -22,7 +22,6 @@ pub use chart_palette::{chart_series, series_color, CHART_SERIES_LEN};
 pub use color::{blend, quantize, rgb, shift, ColorMode};
 
 use ratatui::style::Color;
-use std::sync::OnceLock;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Scheme {
@@ -308,27 +307,4 @@ impl Default for Theme {
     fn default() -> Theme {
         Theme::dark()
     }
-}
-
-static DEFAULT_THEME: OnceLock<Theme> = OnceLock::new();
-
-/// The set-once process default theme. Dark until [`set_default_theme`] is
-/// called.
-///
-/// Superseded by [`ambient_theme`], which widgets read instead: this one can
-/// only be set once, so an app that switches theme at runtime is stuck with
-/// whatever it booted with. It also goes stale — after a
-/// [`set_ambient_theme`] this still returns the boot theme while every widget
-/// paints the new one. Kept for callers outside the kit until it is removed.
-pub fn default_theme() -> &'static Theme {
-    DEFAULT_THEME.get_or_init(Theme::dark)
-}
-
-/// Set the process-wide default theme (once — typically from `runtime::run`
-/// with the quantized theme). Returns the rejected theme if one was already
-/// set or defaulted.
-///
-/// Superseded by [`set_ambient_theme`], which can be called again.
-pub fn set_default_theme(theme: Theme) -> Result<(), Theme> {
-    DEFAULT_THEME.set(theme)
 }

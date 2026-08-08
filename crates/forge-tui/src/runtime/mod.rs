@@ -22,7 +22,7 @@ pub use toaster::{Toast, ToastHandle, Toaster};
 
 use crate::error::Result;
 use crate::event::is_press;
-use crate::theme::{set_ambient_theme, set_default_theme, ColorMode, Theme};
+use crate::theme::{set_ambient_theme, ColorMode, Theme};
 use ratatui::backend::CrosstermBackend;
 use ratatui::crossterm::event::{
     self, DisableBracketedPaste, DisableMouseCapture, EnableBracketedPaste, EnableMouseCapture,
@@ -240,7 +240,6 @@ pub fn run(app: &mut dyn App, theme: Theme, opts: RunOptions) -> Result<()> {
     let mode = opts.color_mode.unwrap_or_else(ColorMode::detect);
     let theme = theme.quantized(mode);
     set_ambient_theme(theme.clone());
-    let _ = set_default_theme(theme.clone());
 
     let guard = TerminalGuard::new(&opts)?;
     let mut terminal = Terminal::new(CrosstermBackend::new(io::stdout()))?;
