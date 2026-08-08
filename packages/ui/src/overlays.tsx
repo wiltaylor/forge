@@ -287,7 +287,7 @@ export function Command(props: CommandProps): JSX.Element {
     <Show when={props.open}>
       <OverlayPortal>
         <div ref={backdrop} class="fcmd">
-          <div ref={panel} class="fcmd-panel" role="dialog" aria-label="Command palette">
+          <div ref={panel} class="fcmd-panel" role="dialog" aria-modal="true" aria-label="Command palette">
             <div class="fcmd-input">
               <SearchSvg />
               <input ref={input} placeholder={props.placeholder ?? 'Type a command…'}

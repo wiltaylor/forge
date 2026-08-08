@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import { createSignal } from 'solid-js';
 import { fireEvent, render, screen } from '@solidjs/testing-library';
-import { Modal, Popover, Sheet } from '../src/overlays';
+import { Command, Modal, Popover, Sheet } from '../src/overlays';
 
 describe('modal dialog semantics', () => {
   it('marks the Sheet as a modal dialog like the Modal', () => {
@@ -13,6 +13,13 @@ describe('modal dialog semantics', () => {
         <p>Sheet body</p>
       </Sheet>
     ));
+
+    expect(screen.getByRole('dialog').getAttribute('aria-modal')).toBe('true');
+  });
+
+  /* The Command traps like the Modal does, so it carries the same marking. */
+  it('marks the Command palette as a modal dialog like the Modal', () => {
+    render(() => <Command open items={[]} />);
 
     expect(screen.getByRole('dialog').getAttribute('aria-modal')).toBe('true');
   });
@@ -105,6 +112,35 @@ describe('focus trap', () => {
     fireEvent.keyDown(close, { key: 'Tab', shiftKey: true });
 
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Save' }));
+  });
+
+  /* A hidden element after the last visible focusable must not become the edge
+     of the cycle, or the wrap never fires from the element the user actually
+     reaches last. */
+  it('skips hidden elements when it finds the edges', () => {
+    render(() => (
+      <Modal
+        open
+        title="Settings"
+        footer={
+          <>
+            <button type="button">Save</button>
+            <div hidden>
+              <button type="button">Buried</button>
+            </div>
+            <input type="hidden" name="token" />
+          </>
+        }
+      >
+        <input aria-label="Name" />
+      </Modal>
+    ));
+    const save = screen.getByRole('button', { name: 'Save' });
+    save.focus();
+
+    fireEvent.keyDown(save, { key: 'Tab' });
+
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Close' }));
   });
 
   it('brings Tab back in when focus is outside the modal', () => {

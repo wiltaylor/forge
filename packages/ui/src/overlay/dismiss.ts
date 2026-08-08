@@ -65,10 +65,18 @@ const onKeyDown = (e: KeyboardEvent): void => {
 };
 
 /* What Tab can reach. Order in the document is order in the cycle; the kit
-   assigns no positive tabindex, so document order is tab order. */
+   assigns no positive tabindex, so document order is tab order. Visibility that
+   only layout can decide (display, visibility) is not checked — the trap works
+   without layout, in a browser and in the test DOM alike. */
 const FOCUSABLE =
-  'a[href], button:not(:disabled), input:not(:disabled), select:not(:disabled), ' +
-  'textarea:not(:disabled), [tabindex]:not([tabindex="-1"])';
+  'a[href], button:not(:disabled), input:not(:disabled):not([type="hidden"]), ' +
+  'select:not(:disabled), textarea:not(:disabled), [contenteditable="true"], ' +
+  '[tabindex]:not([tabindex="-1"])';
+
+const focusablesIn = (surface: Element): HTMLElement[] =>
+  Array.from(surface.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
+    (el) => !el.closest('[hidden]'),
+  );
 
 /* The element with focus, resolved through shadow boundaries for the same
    reason pathOf uses composedPath: inside a shadow root the document reports
@@ -77,6 +85,16 @@ const focused = (): Element | null => {
   let el = document.activeElement;
   while (el?.shadowRoot?.activeElement) el = el.shadowRoot.activeElement;
   return el;
+};
+
+/* contains() stops at a shadow boundary, and `focused` deliberately crosses
+   them; walk host links so a focusable inside a shadow-DOM component in the
+   surface counts as inside. */
+const within = (root: Element, el: Element | null): boolean => {
+  for (let n: Node | null = el; n; n = n instanceof ShadowRoot ? n.host : n.parentNode) {
+    if (n === root) return true;
+  }
+  return false;
 };
 
 /* Keep Tab inside the innermost trapping surface. Only the edges are
@@ -89,7 +107,7 @@ const trapTab = (e: KeyboardEvent): void => {
   const layer = [...stack].reverse().find((l) => l.trap);
   const surface = layer?.surface();
   if (!surface) return;
-  const focusables = Array.from(surface.querySelectorAll<HTMLElement>(FOCUSABLE));
+  const focusables = focusablesIn(surface);
   const first = focusables[0];
   const last = focusables[focusables.length - 1];
   if (!first || !last) {
@@ -97,7 +115,7 @@ const trapTab = (e: KeyboardEvent): void => {
     return;
   }
   const current = focused();
-  const outside = !current || !surface.contains(current);
+  const outside = !current || !within(surface, current);
   if (!outside && current !== (e.shiftKey ? first : last)) return;
   e.preventDefault();
   (e.shiftKey ? last : first).focus();
@@ -112,7 +130,7 @@ function restore(layer: Layer, opener: Element | null): void {
   const current = focused();
   const surface = layer.surface();
   const lost = !current || current === document.body;
-  if (lost || (surface && current && surface.contains(current))) opener.focus();
+  if (lost || (surface && within(surface, current))) opener.focus();
 }
 
 function register(layer: Layer): () => void {
