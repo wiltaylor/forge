@@ -11,6 +11,7 @@ export { cloneBlock, insertParsedBlocks, toggleTodo } from './blockops';
 export { detectShortcut, blockToMarkdown } from './line';
 export type { ShortcutHit } from './line';
 export { toMarkdown, fromMarkdown } from './serialize';
+export { loadDocument, DocumentLoadError } from './load';
 export { EMOJI, resolveEmoji, searchEmoji } from './emoji';
 export { InlineMd } from './inline';
 export type { InlineMdProps } from './inline';

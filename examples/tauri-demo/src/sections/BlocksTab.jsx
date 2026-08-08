@@ -1,6 +1,6 @@
 import { createSignal, onMount } from 'solid-js';
 import { PageHead, Card } from '@forge/ui';
-import { BlockEditor, emptyDocument } from '@forge/blocks';
+import { BlockEditor, emptyDocument, loadDocument } from '@forge/blocks';
 import { api } from '../api';
 
 /* The block editor is plain SolidJS + CSS — it works in Tauri unchanged.
@@ -11,7 +11,14 @@ export default function BlocksTab() {
 
   onMount(async () => {
     const saved = await api.data.get('page');
-    if (saved?.version) setDoc(saved);
+    if (saved == null) return;
+    try {
+      setDoc(loadDocument(saved));
+    } catch (err) {
+      // An unreadable stored page keeps the empty document; overwriting the
+      // store waits for the first edit.
+      console.error('stored page rejected:', err);
+    }
   });
 
   const onChange = (next) => {

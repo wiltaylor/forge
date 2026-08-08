@@ -227,3 +227,137 @@ export function createBlock(type: BlockType): Block {
       return { id, type, label: 'note-1', md: '' };
   }
 }
+
+/** Coarse runtime shape of one wire field — what document loading checks a
+    field against. `'array'` says only that the field is an array; the
+    element structs stay unchecked. A capitalised shape names a string-union
+    helper type in `wire.ts`, and loading checks membership of the runtime
+    list exported beside it. */
+export type FieldShape =
+  | 'string'
+  | 'number'
+  | 'boolean'
+  | 'array'
+  | 'unknown'
+  | 'AdmonitionTone'
+  | 'DiagramDirection'
+  | 'ListStyle'
+  | 'TimelineDirection';
+
+/** One wire field of a kind: its name, whether serde may omit it, and its
+    coarse runtime shape. */
+export interface BlockFieldSpec {
+  name: string;
+  optional: boolean;
+  shape: FieldShape;
+}
+
+/** Per kind, its wire fields in wire order — the table document loading
+    validates a block against. */
+export const BLOCK_FIELDS: Record<BlockType, readonly BlockFieldSpec[]> = {
+  paragraph: [{ name: 'md', optional: false, shape: 'string' }],
+  heading: [
+    { name: 'level', optional: false, shape: 'number' },
+    { name: 'md', optional: false, shape: 'string' },
+  ],
+  list_item: [
+    { name: 'style', optional: false, shape: 'ListStyle' },
+    { name: 'checked', optional: true, shape: 'boolean' },
+    { name: 'indent', optional: false, shape: 'number' },
+    { name: 'md', optional: false, shape: 'string' },
+  ],
+  quote: [{ name: 'md', optional: false, shape: 'string' }],
+  divider: [],
+  code: [
+    { name: 'lang', optional: false, shape: 'string' },
+    { name: 'code', optional: false, shape: 'string' },
+  ],
+  table: [
+    { name: 'header', optional: false, shape: 'array' },
+    { name: 'rows', optional: false, shape: 'array' },
+  ],
+  admonition: [
+    { name: 'tone', optional: false, shape: 'AdmonitionTone' },
+    { name: 'title', optional: false, shape: 'string' },
+    { name: 'md', optional: false, shape: 'string' },
+  ],
+  columns: [{ name: 'columns', optional: false, shape: 'array' }],
+  custom: [
+    { name: 'kind', optional: false, shape: 'string' },
+    { name: 'data', optional: false, shape: 'unknown' },
+  ],
+  image: [
+    { name: 'src', optional: false, shape: 'string' },
+    { name: 'alt', optional: false, shape: 'string' },
+    { name: 'width', optional: true, shape: 'number' },
+    { name: 'height', optional: true, shape: 'number' },
+  ],
+  video: [
+    { name: 'src', optional: false, shape: 'string' },
+    { name: 'poster', optional: true, shape: 'string' },
+    { name: 'title', optional: true, shape: 'string' },
+    { name: 'width', optional: true, shape: 'number' },
+    { name: 'height', optional: true, shape: 'number' },
+  ],
+  math: [{ name: 'tex', optional: false, shape: 'string' }],
+  bar_chart: [
+    { name: 'title', optional: true, shape: 'string' },
+    { name: 'x_label', optional: true, shape: 'string' },
+    { name: 'y_label', optional: true, shape: 'string' },
+    { name: 'categories', optional: false, shape: 'array' },
+    { name: 'series', optional: false, shape: 'array' },
+    { name: 'y_min', optional: true, shape: 'number' },
+    { name: 'y_max', optional: true, shape: 'number' },
+  ],
+  line_chart: [
+    { name: 'title', optional: true, shape: 'string' },
+    { name: 'x_label', optional: true, shape: 'string' },
+    { name: 'y_label', optional: true, shape: 'string' },
+    { name: 'categories', optional: false, shape: 'array' },
+    { name: 'series', optional: false, shape: 'array' },
+    { name: 'y_min', optional: true, shape: 'number' },
+    { name: 'y_max', optional: true, shape: 'number' },
+    { name: 'points', optional: true, shape: 'array' },
+    { name: 'point_labels', optional: true, shape: 'boolean' },
+  ],
+  pie_chart: [
+    { name: 'title', optional: true, shape: 'string' },
+    { name: 'slices', optional: false, shape: 'array' },
+  ],
+  diagram: [
+    { name: 'direction', optional: true, shape: 'DiagramDirection' },
+    { name: 'nodes', optional: false, shape: 'array' },
+    { name: 'edges', optional: false, shape: 'array' },
+  ],
+  sequence_diagram: [
+    { name: 'participants', optional: false, shape: 'array' },
+    { name: 'messages', optional: false, shape: 'array' },
+    { name: 'notes', optional: true, shape: 'array' },
+  ],
+  state_diagram: [
+    { name: 'states', optional: false, shape: 'array' },
+    { name: 'transitions', optional: false, shape: 'array' },
+  ],
+  node_table: [
+    { name: 'title', optional: false, shape: 'string' },
+    { name: 'rows', optional: false, shape: 'array' },
+  ],
+  tree: [{ name: 'nodes', optional: false, shape: 'array' }],
+  timeline: [
+    { name: 'title', optional: true, shape: 'string' },
+    { name: 'direction', optional: true, shape: 'TimelineDirection' },
+    { name: 'phases', optional: true, shape: 'array' },
+    { name: 'items', optional: false, shape: 'array' },
+  ],
+  chapter_header: [
+    { name: 'title', optional: false, shape: 'string' },
+    { name: 'kicker', optional: true, shape: 'string' },
+    { name: 'reading_time', optional: true, shape: 'string' },
+    { name: 'updated', optional: true, shape: 'string' },
+    { name: 'version', optional: true, shape: 'string' },
+  ],
+  footnote: [
+    { name: 'label', optional: false, shape: 'string' },
+    { name: 'md', optional: false, shape: 'string' },
+  ],
+};
