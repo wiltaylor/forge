@@ -209,6 +209,7 @@ export function Select<T = string>(props: SelectProps<T>): JSX.Element {
       </Show>
       <div class="fselect" classList={{ 'is-open': open() }} ref={root}>
         <button type="button" class="fselect-btn" aria-haspopup="listbox" aria-expanded={open()}
+                aria-activedescendant={open() ? roving.activeId() : undefined}
                 onClick={() => (open() ? setOpen(false) : openAt())} onKeyDown={onKeyDown} {...rest}>
           <span class="fselect-value" classList={{ 'is-placeholder': !selected() }}>
             {selected()?.label ?? local.placeholder ?? 'Select…'}
@@ -220,6 +221,7 @@ export function Select<T = string>(props: SelectProps<T>): JSX.Element {
             <For each={local.options}>
               {(opt, i) => (
                 <div class="fselect-opt" role="option" aria-selected={opt.value === local.value}
+                     id={roving.itemId(i())}
                      classList={{
                        'is-active': i() === roving.active(),
                        'is-selected': opt.value === local.value,
@@ -287,10 +289,12 @@ export function ListBox<T = string>(props: ListBoxProps<T> & Omit<JSX.HTMLAttrib
         <span class="ffield-label">{local.label}</span>
       </Show>
       <div class="flistbox" role="listbox" tabindex="0" aria-multiselectable={!!local.multiple}
+           aria-activedescendant={roving.activeId()}
            onKeyDown={onKeyDown} {...rest}>
         <For each={local.options}>
           {(opt, i) => (
             <div class="flistbox-opt" role="option" aria-selected={isSelected(opt)}
+                 id={roving.itemId(i())}
                  classList={{ 'is-selected': isSelected(opt), 'is-active': i() === roving.active(), 'is-disabled': !!opt.disabled }}
                  onClick={() => { roving.setActive(i()); pick(opt); }}>
               <Show when={local.multiple}>
@@ -413,6 +417,7 @@ export function Combobox<T = string>(props: ComboboxProps<T>): JSX.Element {
         <span class="ffield-input" classList={{ 'is-error': !!props.error }}>
           <SearchSvg />
           <input ref={input} role="combobox" aria-expanded={open()} disabled={props.disabled}
+                 aria-activedescendant={open() ? roving.activeId() : undefined}
                  placeholder={props.placeholder}
                  value={query() ?? String(selected()?.label ?? '')}
                  onInput={(e) => { setQuery(e.currentTarget.value); setOpen(true); roving.first(); }}
@@ -426,6 +431,7 @@ export function Combobox<T = string>(props: ComboboxProps<T>): JSX.Element {
               <For each={filtered()}>
                 {(opt, i) => (
                   <div class="fselect-opt" role="option" aria-selected={opt.value === props.value}
+                       id={roving.itemId(i())}
                        classList={{
                          'is-active': i() === roving.active(),
                          'is-selected': opt.value === props.value,

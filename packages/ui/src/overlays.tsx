@@ -178,6 +178,7 @@ export function DropdownMenu(props: DropdownMenuProps): JSX.Element {
     <div class="fmenu" ref={root}>
       <Button variant={merged.variant} size={merged.size} icon={merged.icon}
               aria-haspopup="menu" aria-expanded={open()}
+              aria-activedescendant={open() ? roving.activeId() : undefined}
               onClick={() => setOpen((o) => !o)} onKeyDown={onKeyDown}>
         {merged.label}
       </Button>
@@ -218,6 +219,7 @@ export function ContextMenu(props: ContextMenuProps): JSX.Element {
       {props.children}
       <Show when={pos()}>
         <div class="fpop fmenu-pop" role="menu"
+             aria-activedescendant={roving.activeId()}
              style={{ top: `${pos()!.y}px`, left: `${pos()!.x}px` }}>
           <MenuList items={props.items} roving={roving} onCommit={commit} />
         </div>
@@ -291,6 +293,7 @@ export function Command(props: CommandProps): JSX.Element {
             <div class="fcmd-input">
               <SearchSvg />
               <input ref={input} placeholder={props.placeholder ?? 'Type a command…'}
+                     aria-activedescendant={roving.activeId()}
                      value={query()}
                      onInput={(e) => { setQuery(e.currentTarget.value); roving.first(); }}
                      onKeyDown={onKeyDown} />
@@ -307,6 +310,7 @@ export function Command(props: CommandProps): JSX.Element {
                       <For each={g.items}>
                         {(item) => (
                           <button type="button" class="fcmd-item"
+                                  id={roving.itemId(flatIndex(item))}
                                   classList={{ 'is-active': flatIndex(item) === roving.active() }}
                                   onPointerEnter={() => roving.setActive(flatIndex(item))}
                                   onClick={() => commit(item)}>
