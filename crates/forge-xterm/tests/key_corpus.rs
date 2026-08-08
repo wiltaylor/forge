@@ -108,8 +108,19 @@ const CORPUS: &[Case] = &[
         want: Some(&[0x1b, 0xc3, 0xa9]),
     },
     Case {
-        name: "ctrl and alt together have no agreed form, so they send nothing",
+        name: "ctrl and alt compose: ESC then the control byte",
         key: Key::Char('x'),
+        modifiers: Modifiers {
+            shift: false,
+            alt: true,
+            ctrl: true,
+        },
+        cursor: NORMAL,
+        want: Some(&[0x1b, 0x18]),
+    },
+    Case {
+        name: "ctrl and alt on a digit still send nothing — there is no control byte to prefix",
+        key: Key::Char('1'),
         modifiers: Modifiers {
             shift: false,
             alt: true,
@@ -212,13 +223,21 @@ const CORPUS: &[Case] = &[
         cursor: NORMAL,
         want: Some(b"\x1b[A"),
     },
-    // ---- Navigation and editing: the tilde sequences. ----
+    // Home and End are cursor keys too: terminfo's `khome` under `smkx` is
+    // `\EOH`, so a full-screen program in application mode expects SS3.
     Case {
-        name: "home is CSI H in both cursor modes",
+        name: "home is CSI H while the cursor keys are normal",
+        key: Key::Home,
+        modifiers: NONE,
+        cursor: NORMAL,
+        want: Some(b"\x1b[H"),
+    },
+    Case {
+        name: "application mode sends home as SS3 H",
         key: Key::Home,
         modifiers: NONE,
         cursor: APP,
-        want: Some(b"\x1b[H"),
+        want: Some(b"\x1bOH"),
     },
     Case {
         name: "end is CSI F",
@@ -227,6 +246,14 @@ const CORPUS: &[Case] = &[
         cursor: NORMAL,
         want: Some(b"\x1b[F"),
     },
+    Case {
+        name: "application mode sends end as SS3 F",
+        key: Key::End,
+        modifiers: NONE,
+        cursor: APP,
+        want: Some(b"\x1bOF"),
+    },
+    // ---- Navigation and editing: the tilde sequences. ----
     Case {
         name: "page up is CSI 5 tilde",
         key: Key::PageUp,
@@ -424,8 +451,8 @@ fn corpus_covers_every_key() {
     }
 }
 
-/// The four cursor keys are the whole of what application mode changes. A
-/// fifth key quietly reading the mode would break this.
+/// The six cursor keys are the whole of what application mode changes. A
+/// seventh key quietly reading the mode would break this.
 #[test]
 fn application_mode_changes_the_cursor_keys_and_nothing_else() {
     let keys = [
@@ -434,8 +461,6 @@ fn application_mode_changes_the_cursor_keys_and_nothing_else() {
         Key::Backspace,
         Key::Tab,
         Key::Escape,
-        Key::Home,
-        Key::End,
         Key::PageUp,
         Key::PageDown,
         Key::Insert,
@@ -450,7 +475,14 @@ fn application_mode_changes_the_cursor_keys_and_nothing_else() {
             "{key:?} must not read the cursor-key mode"
         );
     }
-    for key in [Key::Up, Key::Down, Key::Right, Key::Left] {
+    for key in [
+        Key::Up,
+        Key::Down,
+        Key::Right,
+        Key::Left,
+        Key::Home,
+        Key::End,
+    ] {
         assert_ne!(
             encode(key, Modifiers::NONE, CursorKeys::Normal),
             encode(key, Modifiers::NONE, CursorKeys::Application),

@@ -62,13 +62,15 @@ pub enum Key {
 ///
 /// DECCKM (`?1h`) puts them in application mode, which full-screen programs
 /// set so that the arrow keys are distinct from the CSI sequences a program
-/// may print. `?1l` puts them back.
+/// may print. `?1l` puts them back. The cursor keys are the four arrows plus
+/// Home and End — terminfo's `khome` is `\EOH` under `smkx`, so a program that
+/// asked for application mode expects the SS3 form of those six.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum CursorKeys {
-    /// The arrows send CSI: `ESC [ A`.
+    /// The cursor keys send CSI: `ESC [ A`, `ESC [ H`.
     #[default]
     Normal,
-    /// The arrows send SS3: `ESC O A`.
+    /// The cursor keys send SS3: `ESC O A`, `ESC O H`.
     Application,
 }
 
@@ -76,10 +78,12 @@ pub enum CursorKeys {
 ///
 /// The modifiers reach the wire on character keys only: Ctrl folds a letter to
 /// its control byte, and Alt prefixes ESC (readline's meta). The keys that send
-/// an escape sequence send the same one whatever is held — this table does not
-/// produce xterm's modified forms (`ESC [ 1;5 A` and friends).
+/// an escape sequence send the same one whatever modifier is held — this table
+/// does not produce xterm's modified forms (`ESC [ 1;5 A` and friends).
 pub fn encode(key: Key, modifiers: Modifiers, cursor: CursorKeys) -> Option<Vec<u8>> {
-    let arrow = |ch: u8| -> Vec<u8> {
+    // The cursor keys: CSI while the mode is normal, SS3 while it is
+    // application. Everything else sends one sequence in both modes.
+    let cursor_key = |ch: u8| -> Vec<u8> {
         match cursor {
             CursorKeys::Normal => vec![0x1b, b'[', ch],
             CursorKeys::Application => vec![0x1b, b'O', ch],
@@ -91,12 +95,12 @@ pub fn encode(key: Key, modifiers: Modifiers, cursor: CursorKeys) -> Option<Vec<
         Key::Backspace => vec![0x7f],
         Key::Tab => vec![b'\t'],
         Key::Escape => vec![0x1b],
-        Key::Up => arrow(b'A'),
-        Key::Down => arrow(b'B'),
-        Key::Right => arrow(b'C'),
-        Key::Left => arrow(b'D'),
-        Key::Home => b"\x1b[H".to_vec(),
-        Key::End => b"\x1b[F".to_vec(),
+        Key::Up => cursor_key(b'A'),
+        Key::Down => cursor_key(b'B'),
+        Key::Right => cursor_key(b'C'),
+        Key::Left => cursor_key(b'D'),
+        Key::Home => cursor_key(b'H'),
+        Key::End => cursor_key(b'F'),
         Key::PageUp => b"\x1b[5~".to_vec(),
         Key::PageDown => b"\x1b[6~".to_vec(),
         Key::Insert => b"\x1b[2~".to_vec(),
@@ -120,30 +124,27 @@ pub fn encode(key: Key, modifiers: Modifiers, cursor: CursorKeys) -> Option<Vec<
     })
 }
 
-/// A character key: itself, its control byte, or ESC and itself.
+/// A character key: itself, its control byte, or ESC and either of those.
+///
+/// The two modifiers compose, as they do in xterm: Alt is a prefix, Ctrl folds
+/// the character, and Ctrl+Alt+C is ESC then `0x03`.
 fn char_bytes(c: char, modifiers: Modifiers) -> Option<Vec<u8>> {
     let mut out = Vec::new();
-    match (modifiers.ctrl, modifiers.alt) {
+    // Alt prefixes ESC, which is how readline reads a meta chord.
+    if modifiers.alt {
+        out.push(0x1b);
+    }
+    if modifiers.ctrl {
         // Ctrl folds a letter to the low five bits of its upper-case form:
         // Ctrl+C is 0x03. Only the letters have one — Ctrl and a digit sends
         // nothing rather than a byte the program did not ask for.
-        (true, false) => {
-            let upper = c.to_ascii_uppercase();
-            if !upper.is_ascii_alphabetic() {
-                return None;
-            }
-            out.push((upper as u8) & 0x1f);
+        let upper = c.to_ascii_uppercase();
+        if !upper.is_ascii_alphabetic() {
+            return None;
         }
-        // Alt prefixes ESC, which is how readline reads a meta chord.
-        (false, true) => {
-            out.push(0x1b);
-            push_utf8(&mut out, c as u32);
-        }
-        (false, false) => push_utf8(&mut out, c as u32),
-        // Ctrl and Alt together: neither kit encodes this chord today, and
-        // xterm's answer for it depends on modifyOtherKeys, which this table
-        // does not implement. Nothing goes out.
-        (true, true) => return None,
+        out.push((upper as u8) & 0x1f);
+    } else {
+        push_utf8(&mut out, c as u32);
     }
     Some(out)
 }
