@@ -2659,6 +2659,7 @@ dependencies = [
  "forge-block-corpus",
  "forge-blocks",
  "forge-core",
+ "forge-xterm",
  "image",
  "pulldown-cmark",
  "serde",
