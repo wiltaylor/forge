@@ -93,21 +93,35 @@ async fn ws_recv_json(
     }
 }
 
+/// Serve the router over an in-memory duplex pipe and complete the WebSocket
+/// handshake against it — no TCP listener involved.
+async fn ws_connect(
+    router: axum::Router,
+) -> tokio_tungstenite::WebSocketStream<tokio::io::DuplexStream> {
+    let (client_io, server_io) = tokio::io::duplex(64 * 1024);
+    tokio::spawn(async move {
+        hyper::server::conn::http1::Builder::new()
+            .serve_connection(
+                hyper_util::rt::TokioIo::new(server_io),
+                hyper_util::service::TowerToHyperService::new(router),
+            )
+            .with_upgrades()
+            .await
+            .ok();
+    });
+    let (ws, _) = tokio_tungstenite::client_async("ws://forge.test/api/ws", client_io)
+        .await
+        .expect("ws handshake");
+    ws
+}
+
 #[tokio::test]
 async fn ws_subscribe_ping_and_events() {
     let app = ForgeApp::new("ws-test").with_events();
     let bus = app.event_bus();
     let router = app.router();
 
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let addr = listener.local_addr().unwrap();
-    tokio::spawn(async move {
-        axum::serve(listener, router).await.unwrap();
-    });
-
-    let (mut ws, _) = tokio_tungstenite::connect_async(format!("ws://{addr}/api/ws"))
-        .await
-        .expect("ws connect");
+    let mut ws = ws_connect(router).await;
 
     // Filter to topic "a", then ping — the pong confirms the subscribe was
     // processed (frames are handled in order).
@@ -136,15 +150,7 @@ async fn ws_default_subscription_is_all_topics() {
     let bus = app.event_bus();
     let router = app.router();
 
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let addr = listener.local_addr().unwrap();
-    tokio::spawn(async move {
-        axum::serve(listener, router).await.unwrap();
-    });
-
-    let (mut ws, _) = tokio_tungstenite::connect_async(format!("ws://{addr}/api/ws"))
-        .await
-        .expect("ws connect");
+    let mut ws = ws_connect(router).await;
     // Ping/pong round-trip guarantees the server task (and its bus
     // subscription) is live before we publish.
     ws.send(Message::text(r#"{"type":"ping"}"#)).await.unwrap();

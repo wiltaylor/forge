@@ -67,3 +67,86 @@ impl EventBus {
         self.tx.receiver_count()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::EventBus;
+    use serde_json::json;
+    use tokio::sync::broadcast::error::RecvError;
+
+    #[tokio::test]
+    async fn publish_serializes_and_delivers() {
+        let bus = EventBus::new();
+        let mut rx = bus.subscribe();
+        bus.publish("tick", json!({"n": 1}));
+        let ev = rx.recv().await.unwrap();
+        assert_eq!(ev.topic, "tick");
+        assert_eq!(ev.json, r#"{"n":1}"#);
+    }
+
+    #[tokio::test]
+    async fn publish_json_passes_the_payload_through_verbatim() {
+        let bus = EventBus::new();
+        let mut rx = bus.subscribe();
+        bus.publish_json("raw", r#"{"pre": "encoded"}"#);
+        let ev = rx.recv().await.unwrap();
+        assert_eq!(ev.topic, "raw");
+        assert_eq!(ev.json, r#"{"pre": "encoded"}"#);
+    }
+
+    #[test]
+    fn publish_without_subscribers_is_fine() {
+        let bus = EventBus::new();
+        assert_eq!(bus.receiver_count(), 0);
+        // Fire-and-forget: no subscriber, no panic, no error surfaced.
+        bus.publish("nobody-listens", json!(1));
+        bus.publish_json("still-nobody", "{}");
+    }
+
+    #[tokio::test]
+    async fn every_subscriber_receives_every_event() {
+        let bus = EventBus::new();
+        let mut a = bus.subscribe();
+        let mut b = bus.subscribe();
+        assert_eq!(bus.receiver_count(), 2);
+        bus.publish("t", json!("x"));
+        assert_eq!(a.recv().await.unwrap().json, r#""x""#);
+        assert_eq!(b.recv().await.unwrap().json, r#""x""#);
+    }
+
+    #[tokio::test]
+    async fn slow_subscriber_lags_instead_of_blocking_publishers() {
+        let bus = EventBus::new();
+        let mut rx = bus.subscribe();
+        // Overrun the capacity-256 buffer without draining the subscriber.
+        for n in 0..300 {
+            bus.publish("tick", json!(n));
+        }
+        let missed = match rx.recv().await {
+            Err(RecvError::Lagged(missed)) => missed,
+            other => panic!("expected a lag report, got {other:?}"),
+        };
+        assert!(missed > 0);
+        // After the lag report the subscriber resumes at the oldest retained
+        // event — the `missed` count says exactly which one that is.
+        let ev = rx.recv().await.unwrap();
+        assert_eq!(ev.json, missed.to_string());
+    }
+
+    #[tokio::test]
+    async fn unserializable_payload_is_dropped_not_published() {
+        struct Boom;
+        impl serde::Serialize for Boom {
+            fn serialize<S: serde::Serializer>(&self, _s: S) -> Result<S::Ok, S::Error> {
+                Err(serde::ser::Error::custom("boom"))
+            }
+        }
+        let bus = EventBus::new();
+        let mut rx = bus.subscribe();
+        bus.publish("bad", Boom);
+        bus.publish("good", json!(1));
+        // The bad payload never entered the channel; the next frame is the
+        // good one.
+        assert_eq!(rx.recv().await.unwrap().topic, "good");
+    }
+}

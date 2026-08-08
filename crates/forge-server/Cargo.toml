@@ -51,3 +51,7 @@ http-body-util = "0.1"
 tokio-tungstenite = "0.29"
 futures-util = "0.3"
 tempfile = "3"
+# Serve the router over an in-memory duplex pipe in the websocket event
+# tests, so no test binds a TCP listener.
+hyper = { version = "1", features = ["http1", "server"] }
+hyper-util = { version = "0.1", features = ["tokio", "service"] }
