@@ -1,58 +1,69 @@
-//! Token exactness: the palette must match `packages/tokens/css/tokens.css`
-//! (via forge-tui's converted constants) literally — these values are the
-//! design system's contract.
+//! Theme behaviour: which role selects which token, how a custom accent
+//! re-derives its dependants, and the frozen chart order.
+//!
+//! The palette's values are NOT asserted here. `theme/palette.rs` is generated
+//! from `packages/tokens/tokens.source.mjs`. `just check` fails while the
+//! committed palette does not match it. A literal hex in this file would only
+//! be a second copy of the source. It would also turn every token change into
+//! a two-file edit. The tests below thus assert relations instead.
 
 use egui::Color32;
 use forge_egui::theme::{chart_series, series_color, Scheme, Severity, Surface, TextRole, Theme};
 
-fn hex(c: Color32) -> String {
-    format!("#{:02X}{:02X}{:02X}", c.r(), c.g(), c.b())
+#[test]
+fn each_theme_declares_its_scheme() {
+    assert_eq!(Theme::dark().scheme, Scheme::Dark);
+    assert_eq!(Theme::light().scheme, Scheme::Light);
 }
 
+/// The named roles select the steps of the two ramps in order: `bg` rises from
+/// the page to the popover, `fg` descends from primary text to disabled.
 #[test]
-fn dark_palette_is_token_exact() {
+fn roles_select_their_ramp_step() {
     let t = Theme::dark();
-    assert_eq!(t.scheme, Scheme::Dark);
-    assert_eq!(hex(t.surface(Surface::Page)), "#0B0D10");
-    assert_eq!(hex(t.surface(Surface::Card)), "#11141A");
-    assert_eq!(hex(t.surface(Surface::Hover)), "#171B22");
-    assert_eq!(hex(t.surface(Surface::Pressed)), "#1E232C");
-    assert_eq!(hex(t.surface(Surface::Popover)), "#252B36");
-    assert_eq!(hex(t.text(TextRole::Primary)), "#ECEEF2");
-    assert_eq!(hex(t.text(TextRole::Disabled)), "#4E5664");
-    assert_eq!(hex(t.border.subtle), "#1A1F27");
-    assert_eq!(hex(t.border.default), "#262C36");
-    assert_eq!(hex(t.border.strong), "#3A4250");
-    // The true browser-rendered accent — NOT the #5A8FDB fallback stand-in.
-    assert_eq!(hex(t.accent.base), "#2389E2");
-    assert_eq!(hex(t.accent.hover), "#2896F5");
-    assert_eq!(hex(t.accent.press), "#0077CC");
-    assert_eq!(hex(t.accent.fg), "#95C9FF");
-    assert_eq!(hex(t.success.base), "#4EB068");
-    assert_eq!(hex(t.warning.base), "#EBA941");
-    assert_eq!(hex(t.danger.base), "#F14D4C");
-    assert_eq!(hex(t.info.base), "#1CA6D9");
+    let surfaces = [
+        Surface::Page,
+        Surface::Card,
+        Surface::Hover,
+        Surface::Pressed,
+        Surface::Popover,
+    ];
+    for (i, role) in surfaces.into_iter().enumerate() {
+        assert_eq!(t.surface(role), t.bg[i], "surface {role:?}");
+    }
+    let texts = [
+        TextRole::Primary,
+        TextRole::Secondary,
+        TextRole::Tertiary,
+        TextRole::Disabled,
+    ];
+    for (i, role) in texts.into_iter().enumerate() {
+        assert_eq!(t.text(role), t.fg[i], "text {role:?}");
+    }
 }
 
-#[test]
-fn light_palette_is_token_exact() {
-    let t = Theme::light();
-    assert_eq!(t.scheme, Scheme::Light);
-    assert_eq!(hex(t.surface(Surface::Page)), "#FAFAFA");
-    assert_eq!(hex(t.text(TextRole::Primary)), "#0C0F14");
-    assert_eq!(hex(t.accent.base), "#006BB9");
-    assert_eq!(hex(t.danger.base), "#C6001F");
-}
-
+/// forge-tui pre-composites its tints, because a terminal has no alpha channel.
+/// Every `*-bg` tint here stays genuinely translucent instead. It thus
+/// composites correctly over whatever surface a widget paints it on. Which
+/// alpha each one carries is the token source's business, not this file's.
 #[test]
 fn tints_carry_real_alpha() {
-    let t = Theme::dark();
-    // 14% tints — unlike forge-tui these are NOT pre-blended over bg1.
-    assert_eq!(t.accent.bg.a(), 36);
-    assert_eq!(t.success.bg.a(), 36);
-    assert_eq!(t.danger.bg.a(), 36);
-    // Light warning is the web's 20% tint.
-    assert_eq!(Theme::light().warning.bg.a(), 51);
+    for t in [Theme::dark(), Theme::light()] {
+        let tints = [
+            t.accent.bg,
+            t.success.bg,
+            t.warning.bg,
+            t.danger.bg,
+            t.info.bg,
+        ];
+        for tint in tints {
+            assert!(
+                tint.a() > 0 && tint.a() < u8::MAX,
+                "tint is not translucent: {tint:?} in {}",
+                t.name
+            );
+        }
+    }
 }
 
 #[test]
@@ -65,8 +76,8 @@ fn with_accent_derives_interaction_states() {
     // Dark scheme: hover lightens, press darkens.
     assert!(t.accent.hover.r() > brand.r());
     assert!(t.accent.press.r() < brand.r());
-    // Tint keeps the brand hue with the standard alpha.
-    assert_eq!(t.accent.bg.a(), 36);
+    // Tint keeps the brand hue at the alpha the token source declares.
+    assert_eq!(t.accent.bg.a(), Theme::dark().accent.bg.a());
     // Everything else untouched.
     assert_eq!(t.bg, Theme::dark().bg);
 }
