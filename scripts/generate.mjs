@@ -28,6 +28,11 @@ import { renderBlocksSlash } from './generate/blocks-slash.mjs';
 import { renderBlocksTypes } from './generate/blocks-types.mjs';
 import { renderEguiTokens } from './generate/egui-tokens.mjs';
 import { renderEguiPalette, renderTuiPalette } from './generate/rust-palette.mjs';
+import {
+  renderSkillChat,
+  renderSkillColorsAndType,
+  renderSkillConsole,
+} from './generate/skill-css.mjs';
 import { renderThemeTs } from './generate/theme-ts.mjs';
 import { renderTokensCss } from './generate/tokens-css.mjs';
 
@@ -43,6 +48,12 @@ const ARTIFACTS = [
   { path: 'packages/blocks/src/types.gen.ts', render: renderBlocksTypes },
   { path: 'packages/blocks/src/slash.gen.ts', render: renderBlocksSlash },
   { path: 'packages/blocks/src/emoji.gen.ts', render: renderBlocksEmoji },
+  // The skill bundles concatenate package stylesheets from disk, so they sit
+  // after the tokens.css entry: a `just generate` run writes tokens.css first
+  // and the bundles read the fresh copy.
+  { path: '.claude/skills/forge-design/assets/colors_and_type.css', render: renderSkillColorsAndType },
+  { path: '.claude/skills/forge-design/assets/console.css', render: renderSkillConsole },
+  { path: '.claude/skills/forge-design/assets/chat.css', render: renderSkillChat },
 ];
 
 async function currentText(path) {

@@ -1,7 +1,16 @@
-/* Forge chat — component CSS. Skill-owned copy-in asset — NOT part of the
-   DesignSync mirror; source of truth is packages/chat/styles/chat.css in the
-   forge repo. All colours route through var(--token).
-   Import after console.css (uses its .eyebrow/.favatar/.fskel). */
+/* =========================================================================
+   GENERATED FILE — do not edit by hand.
+   Source:     packages/chat/styles/chat.css
+   Regenerate: just generate   (`just check` fails while this file is stale)
+   Concatenated in the import order the source headers document.
+   Import at the app entry after console.css.
+   ========================================================================= */
+
+/* ==== packages/chat/styles/chat.css ====================================== */
+
+/* Forge chat — component CSS.
+   All colours route through var(--token) from @forge/tokens.
+   Import after @forge/ui/styles.css (uses its .eyebrow/.favatar/.fskel). */
 
 /* ---------------- Layout ------------------------------------------------------ */
 .fchat { display: flex; flex-direction: column; min-height: 0; height: 100%; }
