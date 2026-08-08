@@ -35,6 +35,7 @@ forge-blocks = { workspace = true, optional = true }
 # channels. forge-core's heavy deps (ironrdp, russh, vnc-rs, portable-pty)
 # only compile under the matching features.
 forge-core = { workspace = true, optional = true }
+forge-xterm = { workspace = true, optional = true }
 tokio = { version = "1", features = ["rt-multi-thread", "sync", "time"], optional = true }
 vt100 = { version = "0.16", optional = true }
 tracing = { version = "0.1", optional = true }
@@ -56,7 +57,7 @@ wgpu = ["eframe/wgpu"]
 full = ["fonts", "images", "markdown", "chat", "code", "calendar", "blocks"]
 # Streaming widgets — mirror forge-core/forge-tauri feature names. Note the
 # embedded terminal is explicitly "RCE by design": opt-in at compile time.
-term = ["dep:forge-core", "forge-core/term", "dep:tokio", "dep:vt100", "dep:tracing"]
+term = ["dep:forge-core", "forge-core/term", "dep:forge-xterm", "dep:tokio", "dep:vt100", "dep:tracing"]
 term-ssh = ["term", "forge-core/term-ssh"]
 vnc = ["dep:forge-core", "forge-core/vnc", "dep:tokio", "dep:tracing"]
 rdp = ["dep:forge-core", "forge-core/rdp", "dep:tokio", "dep:tracing"]
