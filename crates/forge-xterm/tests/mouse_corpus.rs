@@ -10,9 +10,10 @@
 //! is worth asserting on.
 
 use forge_xterm::mouse::{
-    encode, is_reported, Modifiers, MouseEncoding, MouseMode, MouseReport, BUTTON_LEFT,
-    BUTTON_MIDDLE, BUTTON_NONE, BUTTON_RIGHT, WHEEL_DOWN, WHEEL_LEFT, WHEEL_RIGHT, WHEEL_UP,
+    encode, is_reported, MouseEncoding, MouseMode, MouseReport, BUTTON_LEFT, BUTTON_MIDDLE,
+    BUTTON_NONE, BUTTON_RIGHT, WHEEL_DOWN, WHEEL_LEFT, WHEEL_RIGHT, WHEEL_UP,
 };
+use forge_xterm::Modifiers;
 
 struct Case {
     /// What the row pins, in words. Names the failure when it fails.
@@ -75,33 +76,21 @@ const CORPUS: &[Case] = &[
     // ---- Modifiers: shift +4, alt +8, ctrl +16. ----
     Case {
         name: "shift adds 4",
-        report: MouseReport::press(BUTTON_LEFT, 0, 0).with_modifiers(Modifiers {
-            shift: true,
-            alt: false,
-            ctrl: false,
-        }),
+        report: MouseReport::press(BUTTON_LEFT, 0, 0).with_modifiers(Modifiers::SHIFT),
         mode: MouseMode::AnyMotion,
         encoding: SGR,
         want: Some(b"\x1b[<4;1;1M"),
     },
     Case {
         name: "alt adds 8",
-        report: MouseReport::press(BUTTON_LEFT, 0, 0).with_modifiers(Modifiers {
-            shift: false,
-            alt: true,
-            ctrl: false,
-        }),
+        report: MouseReport::press(BUTTON_LEFT, 0, 0).with_modifiers(Modifiers::ALT),
         mode: MouseMode::AnyMotion,
         encoding: SGR,
         want: Some(b"\x1b[<8;1;1M"),
     },
     Case {
         name: "ctrl adds 16",
-        report: MouseReport::press(BUTTON_LEFT, 0, 0).with_modifiers(Modifiers {
-            shift: false,
-            alt: false,
-            ctrl: true,
-        }),
+        report: MouseReport::press(BUTTON_LEFT, 0, 0).with_modifiers(Modifiers::CTRL),
         mode: MouseMode::AnyMotion,
         encoding: SGR,
         want: Some(b"\x1b[<16;1;1M"),
@@ -159,11 +148,7 @@ const CORPUS: &[Case] = &[
     },
     Case {
         name: "a modifier on the wheel keeps the wheel code",
-        report: MouseReport::press(WHEEL_UP, 0, 0).with_modifiers(Modifiers {
-            shift: false,
-            alt: false,
-            ctrl: true,
-        }),
+        report: MouseReport::press(WHEEL_UP, 0, 0).with_modifiers(Modifiers::CTRL),
         mode: MouseMode::AnyMotion,
         encoding: SGR,
         want: Some(b"\x1b[<80;1;1M"),
@@ -192,11 +177,7 @@ const CORPUS: &[Case] = &[
     },
     Case {
         name: "x10 release keeps the modifier bits it drops the button id from",
-        report: MouseReport::release(BUTTON_RIGHT, 0, 0).with_modifiers(Modifiers {
-            shift: false,
-            alt: false,
-            ctrl: true,
-        }),
+        report: MouseReport::release(BUTTON_RIGHT, 0, 0).with_modifiers(Modifiers::CTRL),
         mode: MouseMode::AnyMotion,
         encoding: X10,
         want: Some(&[0x1b, b'[', b'M', 51, 33, 33]),

@@ -1,6 +1,6 @@
 [package]
 name = "forge-xterm"
-description = "The xterm wire encodings shared by the Forge kits: mouse reports and their mode gating."
+description = "The xterm wire encodings shared by the Forge kits: key sequences, mouse reports and their mode gating."
 version.workspace = true
 edition.workspace = true
 license.workspace = true
