@@ -4,7 +4,7 @@
 use forge_tui::runtime::{Fx, Motion};
 use forge_tui::theme::{ColorMode, Theme};
 use ratatui::backend::TestBackend;
-use ratatui::layout::Rect;
+use ratatui::layout::{Position, Rect};
 use ratatui::widgets::Paragraph;
 use ratatui::Terminal;
 use std::time::Duration;
@@ -17,8 +17,12 @@ const RECT: Rect = Rect {
 };
 
 fn fx(motion: Motion) -> Fx {
+    fx_at(Duration::from_millis(80), motion)
+}
+
+fn fx_at(tick_rate: Duration, motion: Motion) -> Fx {
     let mut fx = Fx::with_seed(42);
-    fx.configure(Duration::from_millis(80), motion, ColorMode::TrueColor);
+    fx.configure(tick_rate, motion, ColorMode::TrueColor);
     fx
 }
 
@@ -65,12 +69,81 @@ fn explode_overdraws_region_and_goes_idle() {
     draw_with(&mut terminal, &mut fx, &theme);
     assert!(count_x(&terminal) < 30);
 
+    // The scatter is visible: at least one glyph has flown outside the region.
+    let buf = terminal.backend().buffer();
+    let scattered = buf.area.positions().any(|p| {
+        buf[(p.x, p.y)].symbol() == "X" && !RECT.contains(Position::new(p.x, p.y))
+    });
+    assert!(scattered);
+
     while !fx.is_idle() {
         fx.tick();
     }
     // Effect over: the app's own redraw shows the content untouched.
     draw_with(&mut terminal, &mut fx, &theme);
     assert_eq!(count_x(&terminal), 30);
+}
+
+/// Recreate flies every sampled glyph home: the last frame before the effect
+/// goes idle paints the region exactly as the app drew it.
+#[test]
+fn recreate_lands_every_glyph_home() {
+    let theme = Theme::dark();
+    let mut fx = fx(Motion::Full);
+    let mut terminal = Terminal::new(TestBackend::new(40, 20)).unwrap();
+
+    fx.handle().recreate(RECT);
+    draw_with(&mut terminal, &mut fx, &theme);
+    assert!(!fx.is_idle());
+    assert!(fx.active_in(RECT));
+
+    // Mid-scatter the effect visibly disturbs the region — the landing check
+    // below cannot pass with an effect that never touched the frame.
+    for _ in 0..3 {
+        fx.tick();
+    }
+    draw_with(&mut terminal, &mut fx, &theme);
+    let buf = terminal.backend().buffer();
+    let disturbed = RECT.positions().any(|p| buf[(p.x, p.y)].symbol() != "X");
+    assert!(disturbed);
+
+    let mut last_frame = None;
+    loop {
+        fx.tick();
+        if fx.is_idle() {
+            break;
+        }
+        draw_with(&mut terminal, &mut fx, &theme);
+        last_frame = Some(terminal.backend().buffer().clone());
+    }
+    let buf = last_frame.expect("the effect must outlive its first tick");
+    for y in RECT.top()..RECT.bottom() {
+        for x in RECT.left()..RECT.right() {
+            assert_eq!(buf[(x, y)].symbol(), "X", "cell ({x},{y})");
+        }
+    }
+}
+
+/// The effect's length in ticks is derived from the configured tick rate — a
+/// recreate spans 1100ms of wall clock however long a tick is — and it never
+/// drops below two ticks, even at glacial tick rates.
+#[test]
+fn effect_length_scales_with_tick_rate() {
+    let theme = Theme::dark();
+    for (tick_ms, want_ticks) in [(80, 13), (200, 5), (5000, 2)] {
+        let mut fx = fx_at(Duration::from_millis(tick_ms), Motion::Full);
+        let mut terminal = Terminal::new(TestBackend::new(40, 20)).unwrap();
+
+        fx.handle().recreate(RECT);
+        draw_with(&mut terminal, &mut fx, &theme);
+        let mut ticks = 0;
+        while !fx.is_idle() {
+            fx.tick();
+            ticks += 1;
+            assert!(ticks < 100, "the effect never finished");
+        }
+        assert_eq!(ticks, want_ticks, "at a {tick_ms}ms tick rate");
+    }
 }
 
 #[test]
