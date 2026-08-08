@@ -1,4 +1,5 @@
 use forge_tui::event::Outcome;
+use forge_tui::runtime::{AppShell, NavSection, ShellState};
 use forge_tui::widgets::*;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
@@ -213,6 +214,22 @@ fn menu_hover_highlights_click_submits_away_cancels() {
     assert_eq!(s.handle_mouse(&click(4, 4)), Outcome::Submitted);
     assert_eq!(s.highlight, 2);
     assert_eq!(s.handle_mouse(&click(39, 11)), Outcome::Cancelled);
+}
+
+/// Shell-specific wiring only: render must push one nav rect per item at
+/// the row it painted. The click protocol itself is covered once, in
+/// [`rect_cache_click_selects`].
+#[test]
+fn shell_render_places_nav_rects() {
+    let sections = [NavSection::new(Some("A"), &["one", "two", "three"])];
+    let mut s = ShellState::new();
+    let mut buf = Buffer::empty(Rect::new(0, 0, 80, 20));
+    AppShell::new("T", &sections)
+        .subtitle("sub")
+        .render(Rect::new(0, 0, 80, 20), &mut buf, &mut s);
+    // Items start after brand(1) + subtitle(2) + gap(3) + section title(4): rows 5..7.
+    assert_eq!(s.handle_mouse(&click(3, 6)), Outcome::Changed);
+    assert_eq!(s.selected, 1);
 }
 
 #[test]

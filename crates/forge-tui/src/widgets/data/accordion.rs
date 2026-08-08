@@ -1,7 +1,7 @@
-use crate::event::{clicked, is_press, Outcome};
+use crate::event::{is_press, Outcome};
 use crate::text;
 use crate::theme::{Surface, TextRole};
-use crate::widgets::hit::ToggleState;
+use crate::widgets::hit::{RectCache, ToggleState};
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
@@ -161,7 +161,7 @@ pub struct AccordionState {
     pub open: Option<usize>,
     pub highlight: usize,
     len: usize,
-    headers: Vec<(Rect, usize)>,
+    headers: RectCache,
 }
 
 impl AccordionState {
@@ -171,18 +171,18 @@ impl AccordionState {
 
     /// Click a panel header to toggle it.
     pub fn handle_mouse(&mut self, ev: &MouseEvent) -> Outcome {
-        for (rect, idx) in self.headers.clone() {
-            if clicked(ev, rect) {
+        match self.headers.hit(ev) {
+            Some(idx) => {
                 self.highlight = idx;
                 self.open = if self.open == Some(idx) {
                     None
                 } else {
                     Some(idx)
                 };
-                return Outcome::Changed;
+                Outcome::Changed
             }
+            None => Outcome::Ignored,
         }
-        Outcome::Ignored
     }
 
     pub fn handle_key(&mut self, key: KeyEvent) -> Outcome {
@@ -247,7 +247,7 @@ impl<'a> StatefulWidget for Accordion<'a> {
                 if y >= bottom {
                     break;
                 }
-                state.headers.push((Rect::new(area.x, y, area.width, 1), i));
+                state.headers.push(Rect::new(area.x, y, area.width, 1));
                 let open = state.open == Some(i);
                 let cursor = state.highlight == i;
                 let chevron = if open { "▾" } else { "▸" };
