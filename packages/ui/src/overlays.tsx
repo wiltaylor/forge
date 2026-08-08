@@ -3,7 +3,7 @@ import type { JSX } from 'solid-js';
 import { SearchSvg, XSvg } from './internal/icons';
 import { MenuList, menuRoving, menuSelectable } from './internal/menu';
 import { OverlayPortal, createRoving, useOverlay } from './overlay';
-import { Button, Icon, Kbd } from './primitives';
+import { Button, Icon } from './primitives';
 import type { CommandItem, ControlSize, IconComponent, MenuItem } from './types';
 
 /* ---------------- Modal ---------------------------------------------------- */
@@ -297,7 +297,7 @@ export function Command(props: CommandProps): JSX.Element {
                      value={query()}
                      onInput={(e) => { setQuery(e.currentTarget.value); roving.first(); }}
                      onKeyDown={onKeyDown} />
-              <Kbd>esc</Kbd>
+              <kbd class="fkbd">esc</kbd>
             </div>
             <div class="fcmd-list">
               <Show when={filtered().length} fallback={<div class="fcmd-empty">No results</div>}>

@@ -119,22 +119,20 @@ export function Stat(props: StatProps): JSX.Element {
   );
 }
 
-/* ---------------- Kbd ------------------------------------------------------ */
-export function Kbd(props: { children?: JSX.Element }): JSX.Element {
-  return <kbd class="fkbd">{props.children}</kbd>;
-}
-
 /* ---------------- Status dot ---------------------------------------------- */
+/* Kept: encodes the paired fdot/fdot-<tone> class convention behind a typed tone. */
 export function StatusDot(props: { tone: StatusTone }): JSX.Element {
   return <span class={`fdot fdot-${props.tone}`} />;
 }
 
 /* ---------------- Separator ------------------------------------------------- */
+/* Kept: encodes role="separator" and the orientation modifier together. */
 export function Separator(props: { vertical?: boolean }): JSX.Element {
   return <div class="fsep" classList={{ 'is-vertical': !!props.vertical }} role="separator" />;
 }
 
 /* ---------------- Skeleton -------------------------------------------------- */
+/* Kept: encodes aria-hidden="true" — a placeholder must not reach assistive tech. */
 export interface SkeletonProps extends Omit<JSX.HTMLAttributes<HTMLDivElement>, 'style'> {
   width?: string;
   height?: string;
@@ -174,11 +172,7 @@ export function Avatar(props: AvatarProps): JSX.Element {
   );
 }
 
-/* ---------------- Eyebrow / Empty / Grid ------------------------------------ */
-export function Eyebrow(props: { children?: JSX.Element }): JSX.Element {
-  return <div class="eyebrow">{props.children}</div>;
-}
-
+/* ---------------- Empty ------------------------------------------------------ */
 export interface EmptyProps {
   title: JSX.Element;
   action?: JSX.Element;
@@ -195,9 +189,4 @@ export function Empty(props: EmptyProps): JSX.Element {
       {props.action}
     </div>
   );
-}
-
-export function Grid(props: JSX.HTMLAttributes<HTMLDivElement>): JSX.Element {
-  const [local, rest] = splitProps(props, ['children']);
-  return <div class="fgrid" {...rest}>{local.children}</div>;
 }

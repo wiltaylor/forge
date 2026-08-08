@@ -128,6 +128,29 @@ Git-dep gotchas (pnpm; vmlab is the reference consumer):
   wildcard matching silently skips source files and the packages ship stub
   `.d.ts` files.
 
+### Removed components (breaking, one find-and-replace each)
+
+Six `@forge/ui` components whose entire content was one class name on one
+tag are gone, together with `@forge/chat`'s re-export of the `@forge/ui`
+markdown API (two git installs could otherwise carry two copies of one
+function). Replace each use with the markup it wrapped:
+
+| Removed | Replace with |
+|---|---|
+| `<Kbd>…</Kbd>` | `<kbd class="fkbd">…</kbd>` |
+| `<Eyebrow>…</Eyebrow>` | `<div class="eyebrow">…</div>` |
+| `<Grid …>…</Grid>` | `<div class="fgrid" …>…</div>` |
+| `<Logs …>…</Logs>` | `<div class="flogs" …>…</div>` |
+| `<NavSection>…</NavSection>` | `<div class="fsidebar-section">…</div>` |
+| `<SettingsRow>…</SettingsRow>` | `<div class="settings-row">…</div>` |
+| `import { parseMarkdown, safeUrl } from '@forge/chat'` | same names `from '@forge/ui'` |
+| `import type { MdBlock, MdInline, MdListItem } from '@forge/chat'` | same names `from '@forge/ui'` |
+
+Components that encode an invariant stay: `Separator` (role="separator" +
+orientation), `Table` (required `.ftable-wrap` wrapper), `Skeleton`
+(`aria-hidden`), `StatusDot` (paired `fdot`/`fdot-<tone>` classes),
+`LogLine` (the three-span row structure).
+
 Rust:
 
 ```toml

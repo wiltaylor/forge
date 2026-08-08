@@ -1,10 +1,10 @@
 import { Bell, Plus } from 'lucide-solid';
-import { PageHead, Card, Button, Crumbs, Empty, Grid, Stat, Badge } from '@forge/ui';
+import { PageHead, Card, Button, Crumbs, Empty, Stat, Badge } from '@forge/ui';
 
 export default function Layout() {
   return (
     <>
-      <PageHead title="Page & layout" sub="PageHead, Crumbs, Grid, Empty"
+      <PageHead title="Page & layout" sub="PageHead, Crumbs, .fgrid, Empty"
                 actions={<><Button>Refresh</Button><Button variant="primary" icon={Plus}>New node</Button></>} />
 
       <Card title="Crumbs" action={<Badge tone="neutral">.ftopbar-crumbs</Badge>}>
@@ -14,11 +14,11 @@ export default function Layout() {
       <div style={{ height: '16px' }} />
 
       <Card title="Grid" action={<Badge tone="neutral">.fgrid</Badge>}>
-        <Grid>
+        <div class="fgrid">
           <Card><Stat label="Nodes" value="6" /></Card>
           <Card><Stat label="Alerts" value="2" delta="+1" tone="danger" /></Card>
           <Card><Stat label="Deploys today" value="14" delta="+6" tone="success" /></Card>
-        </Grid>
+        </div>
       </Card>
 
       <div style={{ height: '16px' }} />

@@ -1,7 +1,7 @@
 import { Show, createSignal, onCleanup } from 'solid-js';
 import { Hexagon, LogOut, Moon, Palette } from 'lucide-solid';
 import {
-  AppShell, NavSection, NavLink, Crumbs, IconButton, Badge, Toaster, FxLayer,
+  AppShell, NavLink, Crumbs, IconButton, Badge, Toaster, FxLayer,
 } from '@forge/ui';
 import { applyTheme, darkTheme, defineTheme } from '@forge/tokens';
 import Primitives from './sections/Primitives';
@@ -138,11 +138,11 @@ export default function Gallery(props) {
       }
       sidebar={
         <>
-          <NavSection>Components</NavSection>
+          <div class="fsidebar-section">Components</div>
           {navLinks(SECTIONS)}
-          <NavSection>Backend</NavSection>
+          <div class="fsidebar-section">Backend</div>
           {navLinks(BACKEND_SECTIONS)}
-          <NavSection>Shell</NavSection>
+          <div class="fsidebar-section">Shell</div>
           <div style={{ padding: '6px 10px', 'font-size': '12px', color: 'var(--fg-2)' }}>
             This gallery runs inside <code>AppShell</code> — resize below 1024px
             for the drawer, below 768px for mobile stacking.

@@ -2,7 +2,7 @@ import { createSignal, Show } from 'solid-js';
 import { AlertTriangle } from 'lucide-solid';
 import {
   PageHead, Card, Tabs, Accordion, Collapsible, Pagination, Separator, Avatar,
-  Alert, Skeleton, Badge, Button, SplitPane, Logs, LogLine,
+  Alert, Skeleton, Badge, Button, SplitPane, LogLine,
 } from '@forge/ui';
 
 export default function StructureDemo() {
@@ -87,11 +87,11 @@ export default function StructureDemo() {
       <Card title="SplitPane (drag the divider; arrow keys work too)" padded={false}>
         <SplitPane initial={260} min={160} style={{ height: '220px' }}
           first={
-            <Logs style={{ height: '100%', border: '0', 'border-radius': '0' }}>
+            <div class="flogs" style={{ height: '100%', border: '0', 'border-radius': '0' }}>
               <LogLine time="21:04:12" level="info">model loaded in 41.2 s</LogLine>
               <LogLine time="21:04:13" level="warn">kv cache at 91 %</LogLine>
               <LogLine time="21:04:15" level="error">request 8f2c timed out</LogLine>
-            </Logs>
+            </div>
           }
           second={
             <div style={{ padding: '16px', 'font-size': '13px', color: 'var(--fg-1)' }}>

@@ -1,4 +1,4 @@
-import { AppShell, NavLink, NavSection } from '@forge/ui';
+import { AppShell, NavLink } from '@forge/ui';
 import { useLocation, useNavigate } from '@solidjs/router';
 import { KeyRound, MonitorSmartphone, Network, Shield, Users } from 'lucide-solid';
 import { api } from '../../api';
@@ -37,7 +37,7 @@ export default function AdminLayout(props) {
         </div>
       }
       sidebar={
-        <NavSection title="Identity">
+        <div class="fsidebar-section">
           {NAV.map((item) => (
             <NavLink
               href={item.href}
@@ -48,7 +48,7 @@ export default function AdminLayout(props) {
               {item.label}
             </NavLink>
           ))}
-        </NavSection>
+        </div>
       }
     >
       <div style={{ padding: 'var(--sp-5)', display: 'grid', gap: 'var(--sp-4)' }}>{props.children}</div>

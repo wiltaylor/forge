@@ -2,7 +2,7 @@ import { createSignal, createEffect, onCleanup } from 'solid-js';
 import { Bell, Copy, Pencil, Rocket, Settings, Trash2, LayoutGrid, History } from 'lucide-solid';
 import {
   PageHead, Card, Button, IconButton, Input, Tooltip, Popover, DropdownMenu,
-  ContextMenu, Command, Sheet, Modal, Toaster, toast, Kbd, Checkbox,
+  ContextMenu, Command, Sheet, Modal, Toaster, toast, Checkbox,
 } from '@forge/ui';
 
 export default function OverlaysDemo() {
@@ -69,7 +69,7 @@ export default function OverlaysDemo() {
 
       <Card title="Command palette, sheet & toaster">
         <div style={{ display: 'flex', gap: '12px', 'flex-wrap': 'wrap' }}>
-          <Button onClick={() => setCmdOpen(true)}>Command palette <Kbd>⌘K</Kbd></Button>
+          <Button onClick={() => setCmdOpen(true)}>Command palette <kbd class="fkbd">⌘K</kbd></Button>
           <Button onClick={() => setSheetOpen(true)}>Open sheet (right)</Button>
           <Button onClick={() => setLeftSheet(true)}>Open sheet (left)</Button>
           <Button onClick={() => toast('Deploy started', { tone: 'info', icon: Rocket })}>Toast info</Button>

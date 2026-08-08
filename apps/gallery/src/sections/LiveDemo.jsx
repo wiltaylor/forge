@@ -1,5 +1,5 @@
 import { For, Show, createSignal, onCleanup, onMount } from 'solid-js';
-import { PageHead, Card, Grid, Badge, Button, Logs, LogLine } from '@forge/ui';
+import { PageHead, Card, Badge, Button, LogLine } from '@forge/ui';
 import { api } from '../api';
 
 /* Live events over both transports: the demo backends publish a `ticks`
@@ -38,14 +38,14 @@ export default function LiveDemo() {
     <>
       <PageHead title="Live events" sub="SSE + WebSocket fan-out from the backend event bus"
                 actions={<Button variant="primary" onClick={publish}>Publish event</Button>} />
-      <Grid>
+      <div class="fgrid">
         <Card title="Server-sent events" action={<Badge tone="accent">/api/events</Badge>}>
           <Feed items={sse()} empty="Waiting for events…" />
         </Card>
         <Card title="WebSocket" action={<Badge tone={wsState() === 'open' ? 'success' : 'warning'}>/api/ws · {wsState()}</Badge>}>
           <Feed items={ws()} empty="Waiting for frames…" />
         </Card>
-      </Grid>
+      </div>
     </>
   );
 }
@@ -53,11 +53,11 @@ export default function LiveDemo() {
 function Feed(props) {
   return (
     <Show when={props.items.length} fallback={<small>{props.empty}</small>}>
-      <Logs style={{ height: '200px' }}>
+      <div class="flogs" style={{ height: '200px' }}>
         <For each={props.items}>
           {(e) => <LogLine time={e.time} level="info">{e.msg}</LogLine>}
         </For>
-      </Logs>
+      </div>
     </Show>
   );
 }
