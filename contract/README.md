@@ -12,12 +12,15 @@ every driver at once.
 | Transport id | Driver | Status |
 |---|---|---|
 | `rust-http` | `crates/forge-server/tests/corpus.rs` | landed |
-| `python-http` | — | issue #37 |
+| `python-http` | `python/forge-server/tests/test_corpus.py` | landed |
 | `ts-client` | — | issue #38 |
 | `rust-ipc` | — | issue #41 |
 
 The Rust drivers share the loader and the matcher: `crates/forge-contract`.
-Nothing in that crate knows about HTTP.
+The Python driver has the same pair in
+`python/forge-server/tests/contract/`. Neither knows about HTTP.
+
+`just corpus-test` runs every driver.
 
 ## Applicability, and why it is not optional
 

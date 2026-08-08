@@ -72,14 +72,16 @@ frontend-test: frontend-install
 rust-test:
 	cargo test
 
-# Run the contract corpus (contract/corpus.json) against the Rust HTTP driver.
-# No live server: the driver builds the fixture the corpus describes.
+# Run the contract corpus (contract/corpus.json) against every driver that has
+# one. Each driver builds the fixture the corpus describes, so no recipe here
+# needs a server that is already up.
 [group('test')]
 corpus-test:
 	cargo test -p forge-contract
 	cargo test -p forge-server --test corpus
+	uv run --project python/forge-server --extra dev pytest python/forge-server/tests/test_contract.py python/forge-server/tests/test_corpus.py
 
-# Run Python package tests
+# Run Python package tests (includes the contract corpus — see corpus-test)
 [group('test')]
 python-test:
 	uv run --project python/forge-server --extra dev pytest python/forge-server/tests

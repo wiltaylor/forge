@@ -1,8 +1,9 @@
 """Black-box Forge API contract tests (docs/api-contract.md).
 
 Superseded by `contract/corpus.json`, where every case below now lives as
-authored data. The Python driver that runs the corpus is issue #37; until it
-lands, this suite stays as the Python-side check.
+authored data, run by a driver per transport. What is left here that the
+corpus cannot do is point at a server that is already running — a deployment,
+or a backend started by hand.
 
 Run against a LIVE server (either backend — that's the point):
 

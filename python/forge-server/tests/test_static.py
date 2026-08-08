@@ -53,6 +53,21 @@ def test_api_misses_stay_json_404(tmp_path, dist):
     assert "error" in body
 
 
+def test_api_misses_stay_json_404_for_every_method(tmp_path, dist):
+    """A path no route serves is a miss whatever the method — the catch-all
+    must not turn a PUT to nowhere into a 405."""
+    client, _ = make_client(tmp_path, dist)
+    for send in (client.post, client.put, client.delete, client.patch):
+        r = send("/api/data/no/such/route")
+        assert r.status_code == 404, r.text
+        assert r.json()["ok"] is False
+
+
+def test_a_wrong_method_on_a_real_route_is_still_405(tmp_path, dist):
+    client, _ = make_client(tmp_path, dist)
+    assert client.post("/api/health").status_code == 405
+
+
 def test_api_routes_still_work(tmp_path, dist):
     client, _ = make_client(tmp_path, dist)
     assert client.get("/api/health").status_code == 200

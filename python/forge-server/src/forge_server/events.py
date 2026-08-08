@@ -14,6 +14,9 @@ from typing import Any, Callable
 from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from sse_starlette.sse import EventSourceResponse
 
+from .config import log
+from .envelope import fail
+
 QUEUE_SIZE = 64
 SSE_PING_SECS = 15
 
@@ -87,9 +90,12 @@ def register_routes(app: FastAPI, bus: EventBus, require_claims: Callable) -> No
         claims: dict = Depends(require_claims),
     ):
         wanted = _parse_topics(topics)
+        # Subscribe here, not inside the generator: the response headers reach
+        # the client before the generator takes its first step, so a client
+        # that publishes as soon as the stream is open would lose the event.
+        sub = bus.subscribe()
 
         async def generator():
-            sub = bus.subscribe()
             try:
                 while True:
                     topic, data = await sub.queue.get()
@@ -106,8 +112,8 @@ def register_routes(app: FastAPI, bus: EventBus, require_claims: Callable) -> No
     async def ws_events(ws: WebSocket):
         try:
             _auth.websocket_claims(ws)
-        except HTTPException:
-            await ws.close(code=1008)  # policy violation (bad/missing token)
+        except HTTPException as e:
+            await _refuse(ws, e)
             return
 
         await ws.accept()
@@ -143,6 +149,36 @@ def register_routes(app: FastAPI, bus: EventBus, require_claims: Callable) -> No
         finally:
             sender.cancel()
             bus.unsubscribe(sub)
+
+
+async def _refuse(ws: WebSocket, exc: HTTPException) -> None:
+    """Refuse a handshake with the contract's status and envelope.
+
+    Closing before accepting is what every ASGI server offers, but it reaches
+    the client as a bare 403 with no body. A server that carries the
+    ``websocket.http.response`` extension can answer the upgrade with the real
+    response instead, so an unauthorised socket reads as 401 here exactly as
+    it does on every other endpoint.
+    """
+    if "websocket.http.response" not in (ws.scope.get("extensions") or {}):
+        # Said out loud rather than passed over: on this host a refused upgrade
+        # does not carry the status the contract states, and a silent
+        # difference is the thing the contract corpus exists to stop.
+        log.warning(
+            "this ASGI server has no `websocket.http.response` extension, so a "
+            "refused upgrade closes with 1008 instead of the contract's %d",
+            exc.status_code,
+        )
+        await ws.close(code=1008)  # policy violation (bad/missing token)
+        return
+    response = fail(str(exc.detail), status=exc.status_code)
+    # The server frames this refusal itself and adds our headers to its own, so
+    # a Content-Length here arrives twice and the client rejects the response
+    # as malformed. The server's framing is right; ours is redundant.
+    response.raw_headers = [
+        (name, value) for name, value in response.raw_headers if name != b"content-length"
+    ]
+    await ws.send_denial_response(response)
 
 
 def _parse_topics_list(topics: Any) -> set[str] | None:
