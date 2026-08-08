@@ -387,9 +387,16 @@ mod tests {
     #[test]
     fn the_me_payload_keeps_a_null_issuer_and_a_null_expiry() {
         let payload = serde_json::to_value(MeResponse::from(&Claims::anonymous())).unwrap();
-        assert_eq!(payload["sub"], "anonymous");
-        assert!(payload["iss"].is_null());
-        assert!(payload["exp"].is_null());
+        // The whole object, so an absent member cannot pass as a null one.
+        assert_eq!(
+            payload,
+            serde_json::json!({
+                "sub": "anonymous",
+                "roles": [],
+                "iss": null,
+                "exp": null,
+            })
+        );
     }
 
     #[test]
