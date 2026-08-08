@@ -1,7 +1,8 @@
 //! Access / ID token minting and validation (RS256; HS256 only for the
 //! legacy-forge escape hatch).
 
-use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation};
+use forge_core::auth::Claims as ForgeClaims;
+use jsonwebtoken::{Algorithm, DecodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 
 use super::keys::KeySet;
@@ -196,8 +197,11 @@ pub fn sign_id_token(
     jsonwebtoken::encode(&header, &claims, &keys.encoding).map_err(AppError::internal)
 }
 
-/// Legacy escape hatch: HS256 token in forge-server's stock claim shape so
+/// Legacy escape hatch: HS256 token in forge's stock claim shape so
 /// unmodified forge apps accept it with their shared secret.
+///
+/// The claim shape and the HS256 encoding both come from forge-core, so this
+/// mints exactly what a forge backend validates rather than a local copy.
 pub fn sign_legacy_hs256(
     secret: &str,
     issuer: &str,
@@ -205,28 +209,15 @@ pub fn sign_legacy_hs256(
     roles: &[String],
     ttl: i64,
 ) -> Result<String, AppError> {
-    #[derive(Serialize)]
-    struct LegacyClaims<'a> {
-        sub: &'a str,
-        roles: &'a [String],
-        iat: i64,
-        exp: i64,
-        iss: &'a str,
-    }
     let ts = now();
-    let claims = LegacyClaims {
-        sub: username,
-        roles,
+    let claims = ForgeClaims {
+        sub: username.to_string(),
+        roles: roles.to_vec(),
         iat: ts,
         exp: ts + ttl,
-        iss: issuer,
+        iss: Some(issuer.to_string()),
     };
-    jsonwebtoken::encode(
-        &Header::new(Algorithm::HS256),
-        &claims,
-        &EncodingKey::from_secret(secret.as_bytes()),
-    )
-    .map_err(AppError::internal)
+    forge_core::auth::encode_token(&claims, secret).map_err(AppError::internal)
 }
 
 /// Validate one of our own RS256 access tokens. Audience is NOT checked here —
@@ -274,6 +265,19 @@ mod tests {
             disabled: false,
             created_at: 0,
         }
+    }
+
+    #[test]
+    fn legacy_hs256_token_decodes_as_forge_claims() {
+        // The escape hatch is only worth anything if a forge backend accepts
+        // what it mints, so decode it with the backend's own decoder.
+        let secret = "0123456789abcdef0123456789abcdef"; // 32 chars
+        let token = sign_legacy_hs256(secret, "idp", "alice", &["ops".to_string()], 3600).unwrap();
+        let claims = forge_core::auth::decode_token(&token, secret, Some("idp")).unwrap();
+        assert_eq!(claims.sub, "alice");
+        assert_eq!(claims.roles, vec!["ops".to_string()]);
+        assert_eq!(claims.iss.as_deref(), Some("idp"));
+        assert_eq!(claims.exp - claims.iat, 3600);
     }
 
     #[test]

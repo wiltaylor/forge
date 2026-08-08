@@ -3,7 +3,7 @@ mod common;
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use common::*;
-use forge_server::auth::{encode_token, jwt::unix_now};
+use forge_server::auth::{encode_token, unix_now};
 use forge_server::{AuthConfig, Claims, ForgeApp};
 use serde_json::json;
 

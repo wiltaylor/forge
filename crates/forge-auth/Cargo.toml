@@ -13,6 +13,7 @@ default = []
 dev-login = []
 
 [dependencies]
+forge-core = { workspace = true }
 forge-server = { workspace = true }
 axum = { version = "0.8", features = ["macros"] }
 axum-extra = { version = "0.12", features = ["cookie"] }

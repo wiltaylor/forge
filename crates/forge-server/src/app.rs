@@ -15,7 +15,7 @@ use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 
 use crate::actions::{box_action, ActionCtx, BoxedAction};
-use crate::auth::{AuthConfig, AuthState, Hs256Validator, TokenValidator};
+use crate::auth::{Auth, AuthConfig, TokenValidator};
 use crate::docstore::DocStore;
 use crate::error::ForgeError;
 use crate::events::EventBus;
@@ -299,20 +299,8 @@ impl ForgeApp {
 
         let auth_state = match (self.auth_config, self.auth_validator) {
             (None, None) => None,
-            (config, validator) => {
-                let validator = match (validator, &config) {
-                    (Some(v), _) => v,
-                    (None, Some(cfg)) => {
-                        let mut v = Hs256Validator::new(cfg.secret.clone());
-                        if cfg.validate_iss {
-                            v = v.with_issuer(cfg.iss.clone());
-                        }
-                        Arc::new(v) as Arc<dyn TokenValidator>
-                    }
-                    (None, None) => unreachable!(),
-                };
-                Some(AuthState { validator, config })
-            }
+            (config, Some(validator)) => Some(Auth::with_validator(validator, config)),
+            (Some(config), None) => Some(Auth::new(config)),
         };
 
         let cors = build_cors(self.cors_origins)?;

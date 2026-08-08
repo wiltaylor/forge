@@ -2570,6 +2570,7 @@ dependencies = [
  "axum-extra",
  "base64 0.23.0",
  "dotenvy",
+ "forge-core",
  "forge-server",
  "hex",
  "http-body-util",
@@ -2619,11 +2620,13 @@ dependencies = [
 name = "forge-core"
 version = "0.1.0"
 dependencies = [
+ "argon2",
  "flate2",
  "ironrdp",
  "ironrdp-tls",
  "ironrdp-tokio",
  "jpeg-encoder",
+ "jsonwebtoken",
  "portable-pty",
  "russh",
  "serde",
@@ -2669,7 +2672,6 @@ dependencies = [
  "forge-core",
  "futures-util",
  "http-body-util",
- "jsonwebtoken",
  "mime_guess",
  "rust-embed",
  "serde",

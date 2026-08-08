@@ -33,8 +33,8 @@ tower = "0.5"
 tower-http = { version = "0.7", features = ["cors", "fs", "trace"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-jsonwebtoken = { version = "11", features = ["rust_crypto"] }
 dotenvy = "0.15"
+# Hashing only, for the `forge-hash` bin; verification lives in forge-core.
 argon2 = { version = "0.5", features = ["std"] }
 rust-embed = { version = "8", features = ["mime-guess"], optional = true }
 tokio-stream = { version = "0.1", features = ["sync"] }
