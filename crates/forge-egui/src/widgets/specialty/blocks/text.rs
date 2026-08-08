@@ -1,7 +1,8 @@
 //! The text-block path: list/quote markers, the unfocused inline-markdown
 //! label, and the focused frameless `TextEdit` with the shared keyboard
-//! model (Enter splits, Backspace-at-0 merges, boundary arrows hop blocks,
-//! Tab indents lists, `/` opens the palette, `:pre` completes emoji).
+//! model (Enter splits, Backspace-at-0 and Delete-at-end merge, boundary
+//! arrows hop blocks, Tab indents lists, `/` opens the palette, `:pre`
+//! completes emoji).
 
 use super::inline::{inline_job, text_style, InlineStyle};
 use super::{byte_of_char, popups, siblings, Action, BlockEditorState, CaretHint, Ecx};
@@ -362,7 +363,8 @@ fn edit_body(
 
 /// The per-key booleans we may consume this frame. Consumption is
 /// conditional: boundary arrows only at the galley's first/last row,
-/// Backspace only with the caret at 0, and popups take nav keys first.
+/// Backspace only with the caret at 0, Delete only with it at the end, and
+/// popups take nav keys first.
 fn handle_keys(
     ui: &mut Ui,
     ecx: &mut Ecx,
@@ -381,6 +383,7 @@ fn handle_keys(
     };
     let popup = slash_open || emoji.is_some();
     let at_start = st.caret.char_idx == 0 && !st.caret.has_selection;
+    let at_end = st.caret.char_idx >= st.draft.chars().count() && !st.caret.has_selection;
     let on_first = st.caret.row == 0;
     let on_last = st.caret.row + 1 >= st.caret.rows.max(1);
 
@@ -393,6 +396,7 @@ fn handle_keys(
         up: bool,
         down: bool,
         backspace: bool,
+        delete: bool,
         esc: bool,
     }
     // Order matters: `consume_key` ignores *extra* Shift and Alt, so the more
@@ -407,6 +411,7 @@ fn handle_keys(
         up: (popup || on_first) && i.consume_key(Modifiers::NONE, Key::ArrowUp),
         down: (popup || on_last) && i.consume_key(Modifiers::NONE, Key::ArrowDown),
         backspace: at_start && !popup && i.consume_key(Modifiers::NONE, Key::Backspace),
+        delete: at_end && !popup && i.consume_key(Modifiers::NONE, Key::Delete),
         esc: i.consume_key(Modifiers::NONE, Key::Escape),
     });
 
@@ -461,6 +466,8 @@ fn handle_keys(
         ecx.actions.push(Action::Split(addr));
     } else if keys.backspace {
         ecx.actions.push(Action::BackspaceAt0(addr));
+    } else if keys.delete {
+        ecx.actions.push(Action::DeleteAtEnd(addr));
     } else if keys.up {
         ecx.actions.push(Action::NavPrev {
             addr,

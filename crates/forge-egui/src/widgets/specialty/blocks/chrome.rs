@@ -7,7 +7,7 @@ use crate::response::{ForgeResponse, Outcome};
 use crate::theme::TextRole;
 use crate::widgets::overlays::{DropdownMenu, MenuItem};
 use egui::{Popup, Pos2, Rect, Sense, Ui, Vec2};
-use forge_blocks::{Address, BlockKind, Document, ListStyle};
+use forge_blocks::{kind_entry, Address, BlockKind, Document, ListStyle, PaletteAction};
 
 /// The left gutter cell of one block row: an (invisible until hovered)
 /// handle that opens the block menu.
@@ -48,6 +48,23 @@ pub(super) fn gutter(ui: &mut Ui, ecx: &mut Ecx, doc: &Document, addr: Address, 
             ecx.actions.push(action.clone());
         }
     }
+}
+
+/// The heading levels the shared kind registry offers, under the labels
+/// every kit lists them by. The palette reads the same rows, so a level
+/// added there reaches this menu without anyone editing it.
+fn heading_levels() -> impl Iterator<Item = (&'static str, u8)> {
+    kind_entry("heading")
+        .expect("the registry knows headings")
+        .palette
+        .iter()
+        .filter_map(|row| match row.action {
+            PaletteAction::Insert(make) => match make() {
+                BlockKind::Heading { level, .. } => Some((row.label, level)),
+                _ => None,
+            },
+            PaletteAction::WrapColumns(_) => None,
+        })
 }
 
 /// The block menu rows and their matching actions, built from the block's
@@ -93,29 +110,19 @@ fn menu_entries(doc: &Document, addr: Address) -> (Vec<MenuItem>, Vec<Action>) {
 
     if is_text {
         let turn = |label: &str, kind: BlockKind| (MenuItem::new(label), kind);
-        let conversions = [
-            turn("Text", BlockKind::Paragraph { md: md.clone() }),
+        let mut conversions = vec![turn("Text", BlockKind::Paragraph { md: md.clone() })];
+        // The heading rows come off the shared registry rather than a copy of
+        // it, so this menu cannot offer fewer levels than the palette does.
+        conversions.extend(heading_levels().map(|(label, level)| {
             turn(
-                "Heading 1",
+                label,
                 BlockKind::Heading {
-                    level: 1,
+                    level,
                     md: md.clone(),
                 },
-            ),
-            turn(
-                "Heading 2",
-                BlockKind::Heading {
-                    level: 2,
-                    md: md.clone(),
-                },
-            ),
-            turn(
-                "Heading 3",
-                BlockKind::Heading {
-                    level: 3,
-                    md: md.clone(),
-                },
-            ),
+            )
+        }));
+        conversions.extend([
             turn(
                 "Bullet list",
                 BlockKind::ListItem {
@@ -152,7 +159,7 @@ fn menu_entries(doc: &Document, addr: Address) -> (Vec<MenuItem>, Vec<Action>) {
                     md: md.clone(),
                 },
             ),
-        ];
+        ]);
         for (i, (item, kind)) in conversions.into_iter().enumerate() {
             entry(
                 &mut items,

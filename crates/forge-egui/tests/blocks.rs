@@ -122,6 +122,65 @@ fn enter_splits_the_focused_block() {
 }
 
 #[test]
+fn delete_at_the_end_pulls_the_next_paragraph_in() {
+    // The shared keyboard model: Delete with the caret at the end of a block
+    // is Backspace-at-0 of the block below it. The TUI and the web kit both
+    // do this; this kit had no Delete binding at all.
+    let doc = Document::from_blocks(vec![
+        forge_egui::forge_blocks::Block::new(BlockKind::Paragraph { md: "ab".into() }),
+        forge_egui::forge_blocks::Block::new(BlockKind::Paragraph { md: "cd".into() }),
+    ]);
+    let state = RefCell::new(BlockEditorState::new(doc));
+    let mut harness = themed_harness(|ui| {
+        let mut s = state.borrow_mut();
+        let _ = BlockEditor::new(&mut s).show(ui);
+    });
+    // Click focuses the first block with the caret at the end.
+    harness.get_by_label("ab").click();
+    harness.run();
+    harness.key_press(egui::Key::Delete);
+    harness.run();
+    drop(harness);
+    let state = state.borrow();
+    assert_eq!(
+        state.doc.blocks.len(),
+        1,
+        "Delete at the end must merge the two blocks"
+    );
+    assert_eq!(state.doc.blocks[0].kind.md(), Some("abcd"));
+}
+
+#[test]
+fn delete_inside_a_block_still_deletes_a_character() {
+    // The binding is conditional: only the caret at the end merges, so the
+    // TextEdit keeps Delete everywhere else.
+    let doc = Document::from_blocks(vec![
+        forge_egui::forge_blocks::Block::new(BlockKind::Paragraph { md: "ab".into() }),
+        forge_egui::forge_blocks::Block::new(BlockKind::Paragraph { md: "cd".into() }),
+    ]);
+    let state = RefCell::new(BlockEditorState::new(doc));
+    let mut harness = themed_harness(|ui| {
+        let mut s = state.borrow_mut();
+        let _ = BlockEditor::new(&mut s).show(ui);
+    });
+    harness.get_by_label("ab").click();
+    harness.run();
+    // Home puts the caret before "a"; Delete then eats it rather than merging.
+    harness.key_press(egui::Key::Home);
+    harness.run();
+    harness.key_press(egui::Key::Delete);
+    harness.run();
+    drop(harness);
+    let state = state.borrow();
+    assert_eq!(
+        state.doc.blocks.len(),
+        2,
+        "an interior Delete must not merge"
+    );
+    assert_eq!(state.doc.blocks[0].kind.md(), Some("b"));
+}
+
+#[test]
 fn slash_palette_converts_an_empty_paragraph() {
     let state = RefCell::new(BlockEditorState::new(Document::new()));
     let mut harness = themed_harness(|ui| {

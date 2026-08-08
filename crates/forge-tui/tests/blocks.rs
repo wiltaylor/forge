@@ -283,31 +283,32 @@ fn read_only_scrolls_but_never_edits() {
 
 /* ---------------- data blocks (wdoc kinds) ------------------------------- */
 
-/// One of each data-kind starter payload, rendered read-only.
+/// One of each starter payload the registry shares, rendered read-only.
+///
+/// The list comes off the registry rather than a copy of it: a hand-written
+/// copy is how this snapshot came to be missing `line_chart` while the
+/// palette offered it. A new shared starter joins the snapshot on its own.
 #[test]
 fn data_blocks_snapshot() {
-    let kinds = [
-        "image",
-        "video",
-        "math",
-        "bar_chart",
-        "pie_chart",
-        "diagram",
-        "sequence_diagram",
-        "state_diagram",
-        "node_table",
-        "tree",
-        "timeline",
-        "chapter_header",
-        "footnote",
-    ];
-    let blocks = kinds
+    let blocks: Vec<Block> = forge_blocks::KINDS
         .iter()
-        .map(|k| Block::new(forge_blocks::starter_kind(k).unwrap()))
+        .filter_map(|entry| forge_blocks::starter_kind(entry.type_name))
+        .map(Block::new)
         .collect();
     let mut state = BlockEditorState::new(doc(blocks));
-    let buf = render(&mut state, 80, 78, true);
-    insta::assert_snapshot!(buffer_text(&buf));
+    let buf = render(&mut state, 80, 90, true);
+    let text = buffer_text(&buf);
+    // The paint has to stop short of the last row. A tail that ran past it
+    // would drop a kind from the snapshot as quietly as the copied list did,
+    // and naming the kind that has to survive would be another copy — empty
+    // rows below the last block are the proof that nothing was cut off.
+    let slack = text
+        .lines()
+        .rev()
+        .take_while(|line| line.is_empty())
+        .count();
+    assert!(slack >= 4, "the viewport is full: a starter is clipped");
+    insta::assert_snapshot!(text);
 }
 
 /// Entering a data block opens its JSON source; Esc with valid JSON commits,
