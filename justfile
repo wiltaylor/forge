@@ -57,9 +57,9 @@ build: frontend-build rust-build
 
 # The fast invariants — Node only, no Rust, Python or browser toolchain
 [group('test')]
-check: generate-test generate-check
+check: generate-test generate-check token-scan
 
-# Test the generators themselves
+# Test the generators and the token scan themselves
 [group('test')]
 generate-test:
 	node --test 'scripts/**/*.test.mjs'
@@ -68,6 +68,11 @@ generate-test:
 [group('test')]
 generate-check:
 	node scripts/generate.mjs --check
+
+# Fail when anything references a design token the token source never declared
+[group('test')]
+token-scan:
+	node scripts/token-scan.mjs
 
 # Run npm package tests (includes the block key corpus's web driver — see
 # block-corpus-test)
