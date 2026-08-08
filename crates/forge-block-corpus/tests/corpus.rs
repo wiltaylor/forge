@@ -28,8 +28,12 @@ fn every_kit_has_cases_to_run() {
     }
 }
 
-/// The known kit divergences are written down against the kit they belong to,
-/// with the issue that closes them. #28 is that issue.
+/// The divergence register is empty: #28 closed all three recorded cases, and
+/// each one's kit moved into `applies`.
+///
+/// A new entry here is not forbidden — it is how a fresh divergence gets
+/// written down — but it must name the issue that closes it, and this test is
+/// where that gets noticed.
 #[test]
 fn the_known_divergences_are_recorded() {
     let corpus = corpus();
@@ -37,23 +41,21 @@ fn the_known_divergences_are_recorded() {
         corpus
             .divergences_for(kit)
             .map(|(case, d)| {
-                assert_eq!(d.issue, 28, "{}: {kit} names an unexpected issue", case.id);
+                assert!(d.issue > 0, "{}: {kit} names no closing issue", case.id);
                 assert!(!d.why.trim().is_empty(), "{}: {kit} has no reason", case.id);
                 case.id.as_str()
             })
             .collect::<Vec<_>>()
     };
+    let empty: [&str; 0] = [];
     assert_eq!(
         ids(RUST_TUI),
-        [
-            "slash-palette-offers-a-heading-4",
-            "slash-palette-starts-a-three-by-two-table",
-        ],
+        empty,
         "the ratatui divergences changed — is that intended?"
     );
     assert_eq!(
         ids(RUST_EGUI),
-        ["delete-at-the-end-merges-the-next-paragraph-forward"],
+        empty,
         "the egui divergences changed — is that intended?"
     );
     assert!(ids("web").is_empty(), "the web kit diverges from nothing");
