@@ -4,7 +4,9 @@ import { Portal } from 'solid-js/web';
 
 /**
  * Overlay mount context — where Portal-based overlays (Modal, Sheet, Command,
- * Toaster, ContextMenu popups) attach. Defaults to `document.body`.
+ * Toaster, the code editor's menu, the grid palette's drag ghost) attach.
+ * Defaults to `document.body`. The anchored surfaces — Popover, DropdownMenu,
+ * ContextMenu, Select, Combobox, DatePicker — render in place and never portal.
  *
  * Remote components rendered inside a shadow root MUST wrap their tree in
  * `OverlayMountProvider` pointing at a node inside the shadow root, otherwise

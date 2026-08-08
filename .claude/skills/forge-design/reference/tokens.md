@@ -131,16 +131,21 @@ responsive, no media query needed.
 
 ## Layers (z-index ladder)
 
-| z | Layer | Classes |
+The scale is authored once, as the `--layer-*` tokens in `packages/tokens/tokens.source.mjs`.
+Every surface on the ladder takes `z-index: var(--layer-…)`; only stacking local to one
+component (grid cells, graph nodes, drag ghosts) declares a number of its own.
+
+| Token | z | Classes |
 |---|---|---|
-| 10 | topbar | `.ftopbar` |
-| 20 | drawer scrim | `.fscrim` |
-| 30 | sidebar drawer | `.fsidebar` (≤1024px) |
-| 40 | sheet | `.fsheet` — above the drawer, below modals |
-| 50 | modal, command palette | `.fmodal`, `.fcmd` (don't open both) |
-| 60 | anchored popovers | `.fpop`, `.fselect-pop` — beat modals so they work inside them |
-| 70 | toaster, editor context menu | `.ftoaster`, `.fcode-menu` |
-| 80 | tooltip | `.ftip::after` |
+| `--layer-topbar` | 10 | `.ftopbar` |
+| `--layer-scrim` | 20 | `.fscrim` |
+| `--layer-drawer` | 30 | `.fsidebar` (≤1024px) |
+| `--layer-sheet` | 40 | `.fsheet` — above the drawer, below the modal |
+| `--layer-modal` | 50 | `.fmodal`, `.fcmd` — both are modal surfaces, so only one is open at a time |
+| `--layer-pop` | 60 | `.fpop`, `.fselect-pop`, `.fcode-menu` — above the modal so they work inside one |
+| `--layer-toast` | 70 | `.ftoaster` |
+| `--layer-tip` | 80 | `.ftip::after` |
+| `--layer-fx` | 90 | `.ffx-layer` — non-interactive particle canvas |
 
 ## Chart colours
 

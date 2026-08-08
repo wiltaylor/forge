@@ -378,6 +378,10 @@ importers:
         version: 7.0.2
 
   packages/grid:
+    dependencies:
+      '@forge/ui':
+        specifier: workspace:^
+        version: link:../ui
     devDependencies:
       solid-js:
         specifier: ^1.9.0

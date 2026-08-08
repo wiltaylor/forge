@@ -126,6 +126,22 @@
   /* Shell dimensions — the app-shell grid and the mobile drawer share these */
   --sidebar-w: 240px;
   --topbar-h:  48px;
+
+  /* Layering — the z-index scale of the shell and its overlays, bottom to
+     top. Every surface on this ladder takes its layer from here rather than
+     declaring its own number; stacking local to one component (grid cells,
+     drag ghosts) stays in that component's stylesheet. The modal and the
+     command palette share the modal layer: both are modal surfaces, so only
+     one of them is open at a time. */
+  --layer-topbar: 10;  /* sticky shell chrome */
+  --layer-scrim:  20;  /* backdrop behind the drawer */
+  --layer-drawer: 30;  /* off-canvas sidebar */
+  --layer-sheet:  40;  /* above the drawer, below the modal */
+  --layer-modal:  50;  /* modal and command palette */
+  --layer-pop:    60;  /* anchored popovers; above the modal so they work inside one */
+  --layer-toast:  70;  /* above the modal */
+  --layer-tip:    80;  /* tooltips top every interactive surface */
+  --layer-fx:     90;  /* non-interactive particle canvas */
 }
 
 /* -------- LIGHT ----------------------------------------------------------- */
