@@ -1,4 +1,8 @@
-/* Forge charts — optional zero-dep copy-in asset (needs console.css's
+/* AUTHORED FILE — hand-maintained standalone port of packages/charts. Not
+   generated: of this skill's assets only the CSS bundles are (see
+   scripts/generate.mjs). Sync changes from the package by hand.
+
+   Forge charts — optional zero-dep copy-in asset (needs console.css's
    "Charts" section). Static SVG, tokens only. Imports only solid-js.
 
    Categorical series colours use CHART_SERIES — a fixed, validated order

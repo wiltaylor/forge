@@ -17,7 +17,7 @@ How to wire the Forge design system into a SolidJS project and build screens wit
    - `assets/code.jsx` — CodeMirror 6 editor/diff. Needs npm packages (see "Code editor").
    - `assets/chat.jsx` + `assets/chat.css` — chat kit + `Markdown` control. **The exception:
      chat.jsx imports `./ui.jsx`** (Avatar, Button, form controls), so copy it next to ui.jsx,
-     and import `chat.css` after `console.css` (chat CSS is skill-owned, not in the mirror).
+     and import `chat.css` after `console.css` (a generated bundle of `packages/chat`'s stylesheet).
 2. The three files version together — `ui.jsx` components emit classes defined in `console.css`
    (e.g. `Modal` needs the `.fmodal` block), so always copy/update them as a set, never one file.
 3. Import the CSS once, in the app entry, tokens first. Find the entry by reading the

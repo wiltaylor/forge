@@ -102,12 +102,13 @@ page-level horizontal scroll. Run any new component through the checklist at the
 - Use drop shadows, gradients, frosted-glass cards, emoji, or unicode-as-icon (`→`, `✓`)
 - Put the accent colour on large background fills or pill-shaped buttons
 - Hide content on narrow screens beyond the documented reflows (breadcrumbs ≤768px) — reflow, don't remove
-- Edit the files in `${CLAUDE_SKILL_DIR}/assets/` — `colors_and_type.css` and `console.css` mirror
-  the design project (id `019dc74c-a1ff-74d0-8504-0ad85b5589fe`; re-sync via the DesignSync tool),
-  and `ui.jsx` is the skill-owned SolidJS port (the remote `ui.jsx` is the React original — never
-  push it from here). `chat.jsx`/`chat.css` (like `charts.jsx`/`graph.jsx`/`code.jsx`) are
-  skill-owned ports whose source of truth is the forge repo's packages — sync from there, not by
-  hand-invention. `${CLAUDE_SKILL_DIR}/preview/` is skill-owned tooling, not part of the mirror —
-  editing it is fine.
+- Edit the files in `${CLAUDE_SKILL_DIR}/assets/` — the CSS files (`colors_and_type.css`,
+  `console.css`, `chat.css`) are GENERATED bundles of the package stylesheets: regenerate with
+  `just generate` in the forge repo (`just check` fails while one is stale), never edit them by
+  hand. The `.jsx` files are AUTHORED — hand-maintained standalone ports whose source of truth
+  is the forge repo's packages — sync from there, not by hand-invention. (The old DesignSync
+  mirror of the CSS is retired; `ui.jsx`'s remote React original still exists in the design
+  project — never push the SolidJS port over it.) `${CLAUDE_SKILL_DIR}/preview/` is skill-owned
+  tooling — editing it is fine.
 </never>
 </boundaries>

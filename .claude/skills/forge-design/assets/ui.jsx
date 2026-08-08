@@ -1,4 +1,8 @@
-/* Forge UI primitives — SolidJS port of ui_kits/console/ui.jsx.
+/* AUTHORED FILE — hand-maintained standalone port of packages/ui. Not
+   generated: of this skill's assets only the CSS bundles are (see
+   scripts/generate.mjs). Sync changes from the package by hand.
+
+   Forge UI primitives — SolidJS port of ui_kits/console/ui.jsx.
    Requires console.css + colors_and_type.css to be imported by the app.
    Icons come from lucide-solid: pass the imported icon component via the
    `icon` prop, e.g. icon={Terminal}. All icons render at 1.5px stroke. */

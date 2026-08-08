@@ -1,4 +1,8 @@
-/* Forge code editor — optional copy-in asset wrapping CodeMirror 6.
+/* AUTHORED FILE — hand-maintained standalone port of packages/code. Not
+   generated: of this skill's assets only the CSS bundles are (see
+   scripts/generate.mjs). Sync changes from the package by hand.
+
+   Forge code editor — optional copy-in asset wrapping CodeMirror 6.
    Needs console.css's "Code editor" + "Popovers & menus" sections, and these
    npm packages (install when you copy this file — see reference/solidjs.md):
 
