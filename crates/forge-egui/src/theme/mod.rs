@@ -38,8 +38,11 @@ pub use tokens::{
 use egui::Color32;
 
 impl Space {
-    /// `n` steps of the spacing scale. The `--sp-*` ramp is the base step
-    /// times 1, 2, 3, 4, 5, 6, 8, 10, 12 and 16, so `x(1.0)` is `--sp-1`.
+    /// `n` steps of the spacing scale: `x(6.0)` is what `--sp-6` declares.
+    ///
+    /// The kit holds the ramp as its first step alone. The generator checks
+    /// that every `--sp-*` really is its index times that step, so this
+    /// multiplication cannot drift away from the token source.
     pub fn x(&self, n: f32) -> f32 {
         self.base * n
     }

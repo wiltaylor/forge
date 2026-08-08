@@ -15,11 +15,14 @@ import { formatValue, renderTokensCss } from './tokens-css.mjs';
 import {
   SOURCE_PATH,
   groups,
+  inKit,
   isSchemeToken,
   tokens,
-  tokensFor,
   valueFor,
 } from '../../packages/tokens/tokens.source.mjs';
+
+/** The tokens the stylesheet declares: every token not scoped away from the web. */
+const web = tokens.filter((t) => inKit(t, 'web'));
 
 const css = renderTokensCss();
 const blocks = parseBlocks(css);
@@ -48,11 +51,11 @@ test('every block the stylesheet needs is emitted', () => {
 });
 
 test(':root declares the whole web token set and nothing else', () => {
-  assert.deepEqual(names(ROOT), tokensFor('web').map((t) => `--${t.name}`));
+  assert.deepEqual(names(ROOT), web.map((t) => `--${t.name}`));
 });
 
 test('the override blocks restate exactly the per-scheme tokens', () => {
-  const scheme = tokensFor('web').filter(isSchemeToken).map((t) => `--${t.name}`);
+  const scheme = web.filter(isSchemeToken).map((t) => `--${t.name}`);
   for (const block of [MEDIA_LIGHT, ATTR_LIGHT, ATTR_DARK]) assert.deepEqual(names(block), scheme);
 });
 

@@ -126,13 +126,14 @@ function annotation(token, value, { namesOverSurface }) {
 /**
  * The body of one `Theme` literal, from `name:` to the last semantic triple.
  *
- * `kit` supplies the two things the kits differ by: how a value becomes a Rust
- * expression, and whether a tint's comment names the surface it flattened over.
+ * `kit` supplies the three things the kits differ by: which kit the source
+ * scopes their tokens to, how a value becomes a Rust expression, and whether a
+ * tint's comment names the surface it flattened over.
  */
 function themeBody(kit, { scheme, name, variant }, indent) {
   const inner = `${indent}    `;
   const cell = (tokenName) => {
-    const token = tokenNamed(tokenName);
+    const token = tokenNamed(tokenName, kit.id);
     const value = valueFor(token, scheme);
     return { value, comment: annotation(token, value, kit), expression: kit.expression(value, scheme) };
   };
@@ -161,11 +162,12 @@ function themeBody(kit, { scheme, name, variant }, indent) {
 /* ------------------------------------------------------------------ forge-tui */
 
 const TUI = {
+  id: 'tui',
   namesOverSurface: true,
   /** Every colour is opaque: a tint arrives already composited over its surface. */
   expression(value, scheme) {
     if (!isTint(value)) return `rgb(${hexLiteral(toRgb(value))})`;
-    const surface = toRgb(valueFor(tokenNamed(value.over), scheme));
+    const surface = toRgb(valueFor(tokenNamed(value.over, this.id), scheme));
     return `rgb(${hexLiteral(flatten(toRgb(value), surface, value.alpha))})`;
   },
 };
@@ -209,6 +211,7 @@ export function renderTuiPalette() {
 /* ----------------------------------------------------------------- forge-egui */
 
 const EGUI = {
+  id: 'egui',
   namesOverSurface: false,
   /** A tint keeps its own colour and carries the alpha as a byte. */
   expression(value) {
@@ -229,7 +232,7 @@ function tintAlphas() {
   const alphas = new Set();
   for (const tokenName of paletteTokens()) {
     for (const { scheme } of SCHEMES) {
-      const value = valueFor(tokenNamed(tokenName), scheme);
+      const value = valueFor(tokenNamed(tokenName, EGUI.id), scheme);
       if (isTint(value)) alphas.add(value.alpha);
     }
   }

@@ -11,8 +11,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { bannerLines } from './banner.mjs';
-import { CONSTANTS, STRUCTS, measure, renderEguiTokens } from './egui-tokens.mjs';
-import { SOURCE_PATH, inKit, tokenNamed, tokens } from '../../packages/tokens/tokens.source.mjs';
+import { CONSTANTS, STRUCTS, measure, renderEguiTokens, spacingRamp } from './egui-tokens.mjs';
+import { KITS, SOURCE_PATH, inKit, tokenNamed, tokens } from '../../packages/tokens/tokens.source.mjs';
 
 const rust = renderEguiTokens();
 
@@ -126,6 +126,26 @@ test('a kit cannot read a token scoped to another kit', () => {
   const scoped = tokens.find((t) => t.only?.includes('egui') && !inKit(t, 'web'));
   assert.throws(() => tokenNamed(scoped.name, 'web'), /scoped to egui/);
   assert.doesNotThrow(() => tokenNamed(scoped.name, 'egui'));
+});
+
+test('a token is scoped to kits that exist, so a typo cannot hide it from everything', () => {
+  for (const token of tokens) {
+    for (const kit of token.only ?? []) assert.ok(KITS.includes(kit), `--${token.name} names "${kit}"`);
+  }
+});
+
+/**
+ * The kit reaches nine of the ten spacing steps by multiplying the first, so
+ * the ramp is a derivation rule the generator has to hold the source to. Assert
+ * the rule, not the step: which pixel `--sp-1` is stays the source's business.
+ */
+test('the spacing ramp is its index times the step the kit holds', () => {
+  const base = spacingRamp();
+  const steps = tokens.filter((t) => /^sp-\d+$/.test(t.name));
+  assert.ok(steps.length > 1, 'the source has no spacing ramp to check');
+  for (const { name } of steps) {
+    assert.equal(measure(name, 'points'), Number(name.slice('sp-'.length)) * base, `--${name}`);
+  }
 });
 
 test('a value authored in the wrong unit is refused, not silently rescaled', () => {

@@ -2,10 +2,10 @@
  * The authored Forge token source — the one place a token value changes.
  *
  * A generator makes each palette from this file, and the tree holds the result.
- * Today that is the CSS custom properties in `css/tokens.css` and both Rust kit
- * palettes. The typed theme follows as its generator lands. Run
- * `just generate` after you edit this file. `just check` fails while a
- * generated file is stale.
+ * Today that is the CSS custom properties in `css/tokens.css`, both Rust kit
+ * palettes, and forge-egui's geometry, type and motion tokens. The typed theme
+ * follows as its generator lands. Run `just generate` after you edit this file.
+ * `just check` fails while a generated file is stale.
  *
  * Shape
  * -----
@@ -19,7 +19,7 @@
  *   - `dark` and `light` — a scheme token; declared in `:root` and repeated in
  *     each scheme-override block.
  *
- * A token belongs to every kit unless it names the kits it belongs to:
+ * A token belongs to every kit in `KITS` unless it names the ones it belongs to:
  *   { name: 'sidebar-rail-w', only: ['egui'], … }
  * `only` is for a dimension one kit has and the others have no equivalent of.
  * Such a token gets no CSS custom property, and reading it from a kit it is not
@@ -253,11 +253,23 @@ export const tokens = groups.flatMap((group) => group.tokens ?? []);
 /** True when the token is declared per scheme rather than once for both. */
 export const isSchemeToken = (token) => token.dark !== undefined;
 
+/** Every kit a token can be scoped to. The stylesheet and the typed theme are `web`. */
+export const KITS = ['web', 'tui', 'egui'];
+
 /** True when the kit declares this token — every kit, unless the token says otherwise. */
 export const inKit = (token, kit) => token.only === undefined || token.only.includes(kit);
 
-/** Every token the kit declares, in declaration order. */
-export const tokensFor = (kit) => tokens.filter((token) => inKit(token, kit));
+/**
+ * A misspelt kit would scope a token to nothing at all: it would vanish from
+ * the stylesheet, and no generator would claim it. Refuse at load instead.
+ */
+for (const token of tokens) {
+  for (const kit of token.only ?? []) {
+    if (!KITS.includes(kit)) {
+      throw new Error(`"${token.name}" is scoped to "${kit}", which is not one of ${KITS.join(', ')}`);
+    }
+  }
+}
 
 const byName = new Map(tokens.map((token) => [token.name, token]));
 

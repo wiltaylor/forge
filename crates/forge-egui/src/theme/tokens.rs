@@ -33,7 +33,8 @@ impl Default for Radius {
 }
 
 /// The spacing scale, held as its base step. `space.x(n)` is n steps,
-/// which is how the rest of the `--sp-*` ramp is reached.
+/// which is how the rest of the `--sp-*` ramp is reached — the generator
+/// checks that the ramp really is its index times this step.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Space {
     /// `--sp-1`

@@ -4,14 +4,16 @@
  * These are the tokens a pixel canvas can express and a terminal cannot, so
  * forge-tui takes none of them and this generator has one kit to serve. Every
  * value the kit holds is a length in pixels or a duration in milliseconds, and
- * egui wants points and seconds — those two conversions are the whole job.
+ * egui wants points and seconds — those two conversions are most of the job.
+ * The spacing ramp is the derivation beyond them: the kit holds its first step
+ * and multiplies, so `spacingRamp` holds the source to that.
  *
  * The layout below — which token fills which struct field, and the prose each
  * struct carries — is the only thing this module knows that the source does
  * not. It is a fact about forge-egui's types, so it lives beside the code that
  * writes them, exactly as the palette layout does in `./rust-palette.mjs`.
  */
-import { SOURCE_PATH, isSchemeToken, tokenNamed } from '../../packages/tokens/tokens.source.mjs';
+import { SOURCE_PATH, isSchemeToken, tokenNamed, tokens } from '../../packages/tokens/tokens.source.mjs';
 import { f32, moduleDoc } from './rust.mjs';
 
 const KIT = 'egui';
@@ -40,7 +42,8 @@ export const STRUCTS = [
     type: 'Space',
     doc: [
       'The spacing scale, held as its base step. `space.x(n)` is n steps,',
-      'which is how the rest of the `--sp-*` ramp is reached.',
+      'which is how the rest of the `--sp-*` ramp is reached — the generator',
+      'checks that the ramp really is its index times this step.',
     ],
     unit: 'points',
     fields: [['base', 'sp-1']],
@@ -96,9 +99,10 @@ export const CONSTANTS = [
   ['STATUSBAR_HEIGHT', 'statusbar-h'],
 ];
 
+/** What the source authors a field's value in, and what egui wants it multiplied by. */
 const UNITS = {
-  points: { suffix: 'px', scale: 1 },
-  seconds: { suffix: 'ms', scale: 1 / 1000 },
+  points: { authoredIn: 'px', scale: 1 },
+  seconds: { authoredIn: 'ms', scale: 1 / 1000 },
 };
 
 /**
@@ -113,19 +117,46 @@ const UNITS = {
  * @returns {number} the value in that unit.
  */
 export function measure(name, unit) {
-  const { suffix, scale } = UNITS[unit];
+  const { authoredIn, scale } = UNITS[unit];
   const token = tokenNamed(name, KIT);
   if (isSchemeToken(token)) {
     throw new Error(`--${name} is authored per scheme, and forge-egui's geometry holds one value`);
   }
-  const match = String(token.value.raw).match(new RegExp(`^(-?\\d+(?:\\.\\d+)?)${suffix}$`));
+  const match = String(token.value.raw).match(new RegExp(`^(-?\\d+(?:\\.\\d+)?)${authoredIn}$`));
   if (!match) {
     throw new Error(
       `--${name} is "${token.value.raw}" in ${SOURCE_PATH}, and forge-egui reads it as ${unit}. ` +
-        `Author it in ${suffix}.`,
+        `Author it in ${authoredIn}.`,
     );
   }
   return Number(match[1]) * scale;
+}
+
+/**
+ * Check that the `--sp-*` ramp really is its index times its first step.
+ *
+ * forge-egui holds the whole spacing ramp as that one step and multiplies:
+ * `space.x(6.0)` is what `--sp-6` declares. That is a derivation rule, so it
+ * belongs here rather than in the kit's prose. Without it the nine steps the
+ * struct does not name go back to being a silent transcription — author
+ * `--sp-6` as 25px and egui would keep painting 24 with the check still green.
+ *
+ * @returns {number} the base step, in points.
+ */
+export function spacingRamp() {
+  const base = measure('sp-1', 'points');
+  for (const { name } of tokens.filter((token) => /^sp-\d+$/.test(token.name))) {
+    const steps = Number(name.slice('sp-'.length));
+    const wanted = steps * base;
+    const authored = measure(name, 'points');
+    if (authored !== wanted) {
+      throw new Error(
+        `--${name} is ${authored}px in ${SOURCE_PATH}, and forge-egui reaches it as ${steps} × ` +
+          `--sp-1 (${wanted}px). Either restore the ramp or give the kit the step of its own.`,
+      );
+    }
+  }
+  return base;
 }
 
 /** The rustdoc line a field or constant carries: its token, and the note if it has one. */
@@ -165,6 +196,10 @@ function struct({ type, doc, unit, fields }) {
 
 /** @returns {string} the full text of `crates/forge-egui/src/theme/tokens.rs`. */
 export function renderEguiTokens() {
+  // `Space` names one step and the kit multiplies for the rest, so the ramp
+  // behind it has to hold before any of it is worth emitting.
+  spacingRamp();
+
   const lines = [
     ...moduleDoc([
       'Geometry, type, motion and control-height tokens.',
