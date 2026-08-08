@@ -15,6 +15,8 @@
 //! code, a motion flag, a release flag, a 0-based cell and the modifiers.
 //! Each kit maps its own event type onto that.
 
+use crate::{push_utf8, Modifiers};
+
 /// The tracking mode the running program asked for.
 ///
 /// Mirrors the DECSET modes an emulator reports: `?9` is [`MouseMode::Press`],
@@ -68,30 +70,6 @@ pub const WHEEL_DOWN: u16 = 65;
 pub const WHEEL_LEFT: u16 = 66;
 /// Wheel right (horizontal scroll).
 pub const WHEEL_RIGHT: u16 = 67;
-
-/// The modifier keys held when the event happened.
-///
-/// A named type, because the three flags always travel together and a kit
-/// building them from its own modifier set would otherwise pass three bare
-/// booleans — where swapping two of them still compiles and still encodes.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-pub struct Modifiers {
-    /// Shift was held: `cb` bit 2.
-    pub shift: bool,
-    /// Alt was held: `cb` bit 3.
-    pub alt: bool,
-    /// Ctrl was held: `cb` bit 4.
-    pub ctrl: bool,
-}
-
-impl Modifiers {
-    /// No modifier held.
-    pub const NONE: Modifiers = Modifiers {
-        shift: false,
-        alt: false,
-        ctrl: false,
-    };
-}
 
 /// One event to report, in xterm's vocabulary.
 ///
@@ -160,8 +138,9 @@ impl MouseReport {
         self.button >= WHEEL_UP && self.button <= WHEEL_RIGHT
     }
 
-    /// `cb`: the button code with the modifier and motion bits set. The bits
-    /// are flags, so an out-of-range button cannot carry into them.
+    /// `cb`: the button code with the modifier and motion bits set — shift is
+    /// bit 2, alt bit 3, ctrl bit 4, motion bit 5. The bits are flags, so an
+    /// out-of-range button cannot carry into them.
     const fn cb(&self) -> u16 {
         let mut cb = self.button;
         if self.modifiers.shift {
@@ -225,9 +204,9 @@ pub fn encode(report: &MouseReport, encoding: MouseEncoding) -> Vec<u8> {
         MouseEncoding::Utf8 => {
             let cb = fold_release(cb, report.release);
             let mut out = vec![0x1b, b'[', b'M'];
-            push_utf8(&mut out, cb + 32);
-            push_utf8(&mut out, report.col.saturating_add(33));
-            push_utf8(&mut out, report.row.saturating_add(33));
+            push_utf8(&mut out, u32::from(cb + 32));
+            push_utf8(&mut out, u32::from(report.col.saturating_add(33)));
+            push_utf8(&mut out, u32::from(report.row.saturating_add(33)));
             out
         }
         // X10: one printable byte per field, saturating at 255.
@@ -253,12 +232,4 @@ const fn fold_release(cb: u16, release: bool) -> u16 {
     } else {
         cb
     }
-}
-
-/// Append `v` as a UTF-8 code point (the `?1005` encoding widens coords past
-/// the 223-cell wall the single-byte form hits).
-fn push_utf8(out: &mut Vec<u8>, v: u16) {
-    let ch = char::from_u32(v as u32).unwrap_or('\u{fffd}');
-    let mut buf = [0u8; 4];
-    out.extend_from_slice(ch.encode_utf8(&mut buf).as_bytes());
 }

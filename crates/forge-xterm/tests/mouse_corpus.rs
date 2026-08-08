@@ -10,9 +10,10 @@
 //! is worth asserting on.
 
 use forge_xterm::mouse::{
-    encode, is_reported, Modifiers, MouseEncoding, MouseMode, MouseReport, BUTTON_LEFT,
-    BUTTON_MIDDLE, BUTTON_NONE, BUTTON_RIGHT, WHEEL_DOWN, WHEEL_LEFT, WHEEL_RIGHT, WHEEL_UP,
+    encode, is_reported, MouseEncoding, MouseMode, MouseReport, BUTTON_LEFT, BUTTON_MIDDLE,
+    BUTTON_NONE, BUTTON_RIGHT, WHEEL_DOWN, WHEEL_LEFT, WHEEL_RIGHT, WHEEL_UP,
 };
+use forge_xterm::Modifiers;
 
 struct Case {
     /// What the row pins, in words. Names the failure when it fails.
