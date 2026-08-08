@@ -1,4 +1,5 @@
 use crate::text;
+use crate::theme::TextRole;
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
@@ -25,7 +26,9 @@ impl Widget for SettingsSection<'_> {
                 area.x,
                 area.y,
                 text::truncate(&title, area.width as usize),
-                Style::new().fg(t.fg[2]).add_modifier(Modifier::BOLD),
+                Style::new()
+                    .fg(t.text(TextRole::Tertiary))
+                    .add_modifier(Modifier::BOLD),
             );
             if area.height >= 2 {
                 buf.set_string(
@@ -88,14 +91,14 @@ impl Widget for SettingsRow<'_> {
                 area.x,
                 area.y,
                 text::truncate(self.label, lw.saturating_sub(1)),
-                Style::new().fg(t.fg[0]),
+                Style::new().fg(t.text(TextRole::Primary)),
             );
             if let (Some(help), true) = (self.help, area.height >= 2) {
                 buf.set_string(
                     area.x,
                     area.y + 1,
                     text::truncate(help, lw.saturating_sub(1)),
-                    Style::new().fg(t.fg[2]),
+                    Style::new().fg(t.text(TextRole::Tertiary)),
                 );
             }
         });

@@ -20,7 +20,7 @@ use syntect::highlighting::{
 use syntect::parsing::SyntaxSet;
 
 use crate::text;
-use crate::theme::Theme;
+use crate::theme::{Surface, TextRole, Theme};
 
 use super::{list_ordinal, tone_severity, CustomBlock, Editing};
 
@@ -256,12 +256,14 @@ pub(super) fn layout(p: &mut Painter, width: u16) -> (Vec<Slot>, usize) {
 /* ---------------- inline span styling ----------------------------------- */
 
 /// Map one shared inline span onto a ratatui span: strong bold, emphasis
-/// italic, strike crossed-out, code tinted on `bg[3]`, links accent
+/// italic, strike crossed-out, code tinted on [`Surface::Pressed`], links accent
 /// underlined. Spans leave the background alone so tint bands show through.
 pub(super) fn style_span(s: &InlineSpan, base: Style, t: &Theme) -> Span<'static> {
     let mut st = base;
     if s.strong {
-        st = st.fg(t.fg[0]).add_modifier(Modifier::BOLD);
+        st = st
+            .fg(t.text(TextRole::Primary))
+            .add_modifier(Modifier::BOLD);
     }
     if s.emphasis {
         st = st.add_modifier(Modifier::ITALIC);
@@ -270,7 +272,7 @@ pub(super) fn style_span(s: &InlineSpan, base: Style, t: &Theme) -> Span<'static
         st = st.add_modifier(Modifier::CROSSED_OUT);
     }
     if s.code {
-        st = st.fg(t.accent.fg).bg(t.bg[3]);
+        st = st.fg(t.accent.fg).bg(t.surface(Surface::Pressed));
     }
     if s.link.is_some() {
         st = st.fg(t.accent.base).add_modifier(Modifier::UNDERLINED);
@@ -281,10 +283,14 @@ pub(super) fn style_span(s: &InlineSpan, base: Style, t: &Theme) -> Span<'static
 fn heading_style(level: u8, t: &Theme) -> Style {
     match level {
         1 => Style::new()
-            .fg(t.fg[0])
+            .fg(t.text(TextRole::Primary))
             .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
-        2 => Style::new().fg(t.fg[0]).add_modifier(Modifier::BOLD),
-        _ => Style::new().fg(t.fg[1]).add_modifier(Modifier::BOLD),
+        2 => Style::new()
+            .fg(t.text(TextRole::Primary))
+            .add_modifier(Modifier::BOLD),
+        _ => Style::new()
+            .fg(t.text(TextRole::Secondary))
+            .add_modifier(Modifier::BOLD),
     }
 }
 
@@ -320,7 +326,12 @@ pub(super) fn paint_block(
 
     match &block.kind {
         BlockKind::Divider => {
-            buf.set_string(GUTTER, 0, "─".repeat(cw as usize), Style::new().fg(t.fg[3]));
+            buf.set_string(
+                GUTTER,
+                0,
+                "─".repeat(cw as usize),
+                Style::new().fg(t.text(TextRole::Disabled)),
+            );
         }
         BlockKind::Code { lang, code } => {
             paint_code(p, addr, lang, code, buf, w, h, focused_here);
@@ -387,7 +398,7 @@ fn paint_text_block(
             for dy in 0..h {
                 buf.set_string(GUTTER, dy, "▎ ", Style::new().fg(t.border.default));
             }
-            Style::new().fg(t.fg[1])
+            Style::new().fg(t.text(TextRole::Secondary))
         }
         BlockKind::ListItem {
             style,
@@ -400,9 +411,9 @@ fn paint_text_block(
                 GUTTER + (*indent as u16) * 2,
                 0,
                 marker,
-                Style::new().fg(t.fg[2]),
+                Style::new().fg(t.text(TextRole::Tertiary)),
             );
-            Style::new().fg(t.fg[1])
+            Style::new().fg(t.text(TextRole::Secondary))
         }
         BlockKind::Footnote { label, .. } => {
             buf.set_string(
@@ -411,7 +422,7 @@ fn paint_text_block(
                 format!("[^{label}] "),
                 Style::new().fg(t.accent.base).add_modifier(Modifier::BOLD),
             );
-            Style::new().fg(t.fg[2])
+            Style::new().fg(t.text(TextRole::Tertiary))
         }
         BlockKind::Admonition { tone, title, .. } => {
             let tri = t.severity(tone_severity(*tone));
@@ -427,9 +438,9 @@ fn paint_text_block(
                 Style::new().fg(tri.fg).add_modifier(Modifier::BOLD),
             );
             body_y = 1;
-            Style::new().fg(t.fg[1])
+            Style::new().fg(t.text(TextRole::Secondary))
         }
-        _ => Style::new().fg(t.fg[1]),
+        _ => Style::new().fg(t.text(TextRole::Secondary)),
     };
 
     let editing_text = focused_here && matches!(*p.editing, Editing::Text(_));
@@ -449,7 +460,7 @@ fn paint_text_block(
                 content_x,
                 y,
                 text::truncate(&src[s..e], content_w),
-                Style::new().fg(t.fg[0]),
+                Style::new().fg(t.text(TextRole::Primary)),
             );
         }
         if widget_focused {
@@ -497,14 +508,14 @@ fn paint_code(
     let widget_focused = p.widget_focused;
     buf.set_style(
         Rect::new(GUTTER, 0, w - GUTTER, h),
-        Style::new().bg(t.bg[1]),
+        Style::new().bg(t.surface(Surface::Card)),
     );
     let label = if lang.is_empty() { "code" } else { lang };
     buf.set_string(
         GUTTER + 1,
         0,
         text::truncate(label, w.saturating_sub(GUTTER + 1) as usize),
-        Style::new().fg(t.fg[3]),
+        Style::new().fg(t.text(TextRole::Disabled)),
     );
     let (source, cursor) = if focused_here {
         match &*p.editing {
@@ -575,7 +586,7 @@ fn paint_table(
             GUTTER,
             0,
             text::truncate("[table]", total),
-            Style::new().fg(t.fg[3]),
+            Style::new().fg(t.text(TextRole::Disabled)),
         );
         return;
     }
@@ -633,16 +644,23 @@ fn paint_table(
             let inner = Rect::new(x, y, cell_w as u16, 1);
             let is_focus = entered && table_cell == Some((display_r, c));
             if is_focus {
-                buf.set_style(inner, Style::new().bg(t.bg[3]));
+                buf.set_style(inner, Style::new().bg(t.surface(Surface::Pressed)));
             }
             let base = if bold {
-                Style::new().fg(t.fg[0]).add_modifier(Modifier::BOLD)
+                Style::new()
+                    .fg(t.text(TextRole::Primary))
+                    .add_modifier(Modifier::BOLD)
             } else {
-                Style::new().fg(t.fg[1])
+                Style::new().fg(t.text(TextRole::Secondary))
             };
             match &editing_cell {
                 Some(((er, ec), src, (_, col))) if (*er, *ec) == (display_r, c) => {
-                    buf.set_string(x, y, text::fit(src, cell_w), Style::new().fg(t.fg[0]));
+                    buf.set_string(
+                        x,
+                        y,
+                        text::fit(src, cell_w),
+                        Style::new().fg(t.text(TextRole::Primary)),
+                    );
                     if widget_focused {
                         let cx = x + (*col).min(cell_w.saturating_sub(1)) as u16;
                         buf.set_style(
@@ -708,7 +726,7 @@ fn paint_unknown_custom(kind: &str, area: Rect, buf: &mut Buffer, t: &Theme) {
             area.x + 2,
             area.y + 1,
             text::truncate(&format!("custom: {kind}"), wu.saturating_sub(4)),
-            Style::new().fg(t.fg[2]),
+            Style::new().fg(t.text(TextRole::Tertiary)),
         );
     }
 }
@@ -729,9 +747,9 @@ fn syntax_set() -> &'static SyntaxSet {
 
 /// The CodeView scope mapping rebuilt for the editor (CodeView keeps its
 /// theme private). Truecolor tokens required; quantized themes return `None`
-/// and code falls back to plain `fg[1]`.
+/// and code falls back to plain secondary text.
 fn forge_syn_theme(t: &Theme) -> Option<SynTheme> {
-    let fg = syn_color(t.fg[0])?;
+    let fg = syn_color(t.text(TextRole::Primary))?;
     let item = |scopes: &str, color: Color, bold: bool| -> Option<ThemeItem> {
         let selectors: ScopeSelectors = scopes.parse().ok()?;
         Some(ThemeItem {
@@ -755,7 +773,7 @@ fn forge_syn_theme(t: &Theme) -> Option<SynTheme> {
             t.info.fg,
             false,
         ),
-        ("comment, punctuation.definition.comment", t.fg[3], false),
+        ("comment, punctuation.definition.comment", t.text(TextRole::Disabled), false),
         (
             "entity.name.type, entity.name.class, support.type, support.class, storage.type",
             t.warning.fg,
@@ -766,9 +784,9 @@ fn forge_syn_theme(t: &Theme) -> Option<SynTheme> {
             t.info.fg,
             false,
         ),
-        ("entity.name.function", t.fg[0], true),
-        ("punctuation, keyword.operator", t.fg[2], false),
-        ("variable", t.fg[0], false),
+        ("entity.name.function", t.text(TextRole::Primary), true),
+        ("punctuation, keyword.operator", t.text(TextRole::Tertiary), false),
+        ("variable", t.text(TextRole::Primary), false),
     ];
     let mut theme = SynTheme {
         settings: ThemeSettings {
@@ -807,13 +825,15 @@ fn highlight_lines(lang: &str, source: &str, t: &Theme) -> StyledLines {
                         if s.font_style.contains(FontStyle::BOLD) {
                             style = style.add_modifier(Modifier::BOLD);
                         }
-                        (style.bg(t.bg[1]), txt.to_owned())
+                        (style.bg(t.surface(Surface::Card)), txt.to_owned())
                     })
                     .collect();
                 out.push(spans);
             }
             None => out.push(vec![(
-                Style::new().fg(t.fg[1]).bg(t.bg[1]),
+                Style::new()
+                    .fg(t.text(TextRole::Secondary))
+                    .bg(t.surface(Surface::Card)),
                 line.to_owned(),
             )]),
         }
@@ -834,7 +854,7 @@ fn highlight_cached<'c>(
     lang.hash(&mut hasher);
     source.hash(&mut hasher);
     t.name.hash(&mut hasher);
-    matches!(t.fg[0], Color::Rgb(..)).hash(&mut hasher);
+    matches!(t.text(TextRole::Primary), Color::Rgb(..)).hash(&mut hasher);
     let key = hasher.finish();
     if cache.get(id).map(|e| e.0) != Some(key) {
         let lines = highlight_lines(lang, source, t);

@@ -1,4 +1,4 @@
-use crate::theme::{ambient_theme, Theme};
+use crate::theme::{ambient_theme, Surface, TextRole, Theme};
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
@@ -57,13 +57,19 @@ impl<'a> Sheet<'a> {
 
     fn block(&self, t: &'a Theme) -> Block<'a> {
         let mut block = Block::bordered()
-            .border_style(Style::new().fg(t.border.strong).bg(t.bg[1]))
-            .style(Style::new().bg(t.bg[1]))
+            .border_style(
+                Style::new()
+                    .fg(t.border.strong)
+                    .bg(t.surface(Surface::Card)),
+            )
+            .style(Style::new().bg(t.surface(Surface::Card)))
             .padding(Padding::horizontal(1));
         if let Some(title) = self.title {
-            block = block
-                .title(title)
-                .title_style(Style::new().fg(t.fg[0]).add_modifier(Modifier::BOLD));
+            block = block.title(title).title_style(
+                Style::new()
+                    .fg(t.text(TextRole::Primary))
+                    .add_modifier(Modifier::BOLD),
+            );
         }
         block
     }

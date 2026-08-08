@@ -1,5 +1,5 @@
 use crate::text;
-use crate::theme::Severity;
+use crate::theme::{Severity, TextRole};
 use crate::widgets::paint;
 use crate::widgets::primitives::Glyph;
 use ratatui::buffer::Buffer;
@@ -74,7 +74,7 @@ impl Widget for Alert<'_> {
                     .add_modifier(Modifier::BOLD),
             );
             if let Some(body) = self.body {
-                let style = Style::new().fg(t.fg[1]).bg(tri.bg);
+                let style = Style::new().fg(t.text(TextRole::Secondary)).bg(tri.bg);
                 for (i, line) in text::wrap(body, inner_w.max(1)).into_iter().enumerate() {
                     let y = area.y + 1 + i as u16;
                     if y >= area.y + area.height {

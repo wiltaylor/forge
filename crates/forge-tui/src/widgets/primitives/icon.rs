@@ -1,3 +1,4 @@
+use crate::theme::TextRole;
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
@@ -69,7 +70,7 @@ impl Icon {
 impl Widget for Icon {
     fn render(self, area: Rect, buf: &mut Buffer) {
         paint(area, |t| {
-            let color = self.color.unwrap_or(t.fg[1]);
+            let color = self.color.unwrap_or(t.text(TextRole::Secondary));
             buf.set_string(area.x, area.y, self.glyph.as_str(), Style::new().fg(color));
         });
     }

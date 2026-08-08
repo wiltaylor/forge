@@ -1,5 +1,5 @@
 use crate::text;
-use crate::theme::series_color;
+use crate::theme::{series_color, TextRole};
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
@@ -119,9 +119,14 @@ impl Widget for PieChart<'_> {
                         lx + 2,
                         y,
                         text::truncate(slice.label, legend_w.saturating_sub(8) as usize),
-                        Style::new().fg(t.fg[1]),
+                        Style::new().fg(t.text(TextRole::Secondary)),
                     );
-                    buf.set_string(lx + legend_w - 5, y, pct, Style::new().fg(t.fg[2]));
+                    buf.set_string(
+                        lx + legend_w - 5,
+                        y,
+                        pct,
+                        Style::new().fg(t.text(TextRole::Tertiary)),
+                    );
                 }
             }
         });

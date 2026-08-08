@@ -3,7 +3,7 @@
 //! construction. Esc closes the top overlay unless it consumed the key.
 
 use crate::event::is_press;
-use crate::theme::Theme;
+use crate::theme::{Surface, TextRole, Theme};
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{Event, KeyCode};
 use ratatui::layout::Rect;
@@ -103,5 +103,10 @@ impl OverlayStack {
 /// Scrim: push every cell in `area` down to disabled-text-on-page colors,
 /// keeping the glyphs — the terminal equivalent of the web's overlay dim.
 pub fn dim(buf: &mut Buffer, area: Rect, theme: &Theme) {
-    buf.set_style(area, Style::new().fg(theme.fg[3]).bg(theme.bg[0]));
+    buf.set_style(
+        area,
+        Style::new()
+            .fg(theme.text(TextRole::Disabled))
+            .bg(theme.surface(Surface::Page)),
+    );
 }

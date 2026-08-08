@@ -1,5 +1,6 @@
 use crate::event::{clicked, is_press, Outcome};
 use crate::text;
+use crate::theme::TextRole;
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
@@ -80,11 +81,11 @@ impl<'a> StatefulWidget for Toggle<'a> {
         state.area = Rect::new(area.x, area.y, area.width, 1);
         paint(area, |t| {
             let (track, knob) = if self.disabled {
-                (t.fg[3], t.fg[3])
+                (t.text(TextRole::Disabled), t.text(TextRole::Disabled))
             } else if state.on {
                 (t.accent.base, t.accent.base)
             } else {
-                (t.border.strong, t.fg[2])
+                (t.border.strong, t.text(TextRole::Tertiary))
             };
             let switch = if state.on { "──●" } else { "○──" };
             // Paint track and knob separately so the knob pops.
@@ -97,7 +98,11 @@ impl<'a> StatefulWidget for Toggle<'a> {
                 Style::new().fg(knob),
             );
             if area.width > 4 {
-                let mut style = Style::new().fg(if self.disabled { t.fg[3] } else { t.fg[0] });
+                let mut style = Style::new().fg(if self.disabled {
+                    t.text(TextRole::Disabled)
+                } else {
+                    t.text(TextRole::Primary)
+                });
                 if self.focused {
                     style = style.add_modifier(Modifier::UNDERLINED);
                 }

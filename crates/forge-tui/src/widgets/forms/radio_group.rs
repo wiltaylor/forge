@@ -1,6 +1,6 @@
 use crate::event::{clicked, is_press, Outcome};
 use crate::text;
-use crate::theme::Theme;
+use crate::theme::{TextRole, Theme};
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
@@ -105,18 +105,18 @@ impl<'a> RadioGroup<'a> {
 
     fn item_style(&self, t: &Theme, selected: bool) -> (Style, Style) {
         let mark = if self.disabled {
-            Style::new().fg(t.fg[3])
+            Style::new().fg(t.text(TextRole::Disabled))
         } else if selected {
             Style::new().fg(t.accent.base)
         } else {
-            Style::new().fg(t.fg[2])
+            Style::new().fg(t.text(TextRole::Tertiary))
         };
         let mut label = if self.disabled {
-            Style::new().fg(t.fg[3])
+            Style::new().fg(t.text(TextRole::Disabled))
         } else if selected {
-            Style::new().fg(t.fg[0])
+            Style::new().fg(t.text(TextRole::Primary))
         } else {
-            Style::new().fg(t.fg[1])
+            Style::new().fg(t.text(TextRole::Secondary))
         };
         if self.focused && selected {
             label = label.add_modifier(Modifier::UNDERLINED);

@@ -18,7 +18,7 @@
 //! branch.
 
 use crate::theme::color::{approx_rgb, quantize};
-use crate::theme::{blend, ColorMode, Theme};
+use crate::theme::{blend, ColorMode, Surface, TextRole, Theme};
 use ratatui::layout::Rect;
 use ratatui::style::{Color, Style};
 use ratatui::Frame;
@@ -367,14 +367,14 @@ impl Fx {
             self.spawn(req, frame, area, theme);
         }
 
-        let bg = theme.bg[0];
+        let bg = theme.surface(Surface::Page);
         let page_rgb = approx_rgb(bg);
         let buf = frame.buffer_mut();
 
         for effect in &self.active {
             if effect.reduced {
                 if let Some(rect) = intersect(effect.rect, area) {
-                    buf.set_style(rect, Style::new().fg(theme.fg[3]).bg(bg));
+                    buf.set_style(rect, Style::new().fg(theme.text(TextRole::Disabled)).bg(bg));
                 }
                 continue;
             }
@@ -441,7 +441,7 @@ impl Fx {
             ),
             _ => {
                 if alpha < 0.35 {
-                    theme.fg[3]
+                    theme.text(TextRole::Disabled)
                 } else {
                     p.fg
                 }

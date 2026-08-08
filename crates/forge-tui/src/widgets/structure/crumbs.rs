@@ -1,4 +1,5 @@
 use crate::text;
+use crate::theme::TextRole;
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
@@ -27,12 +28,21 @@ impl Widget for Crumbs<'_> {
                     break;
                 }
                 let last = i + 1 == self.segments.len();
-                let style = Style::new().fg(if last { t.fg[0] } else { t.fg[2] });
+                let style = Style::new().fg(if last {
+                    t.text(TextRole::Primary)
+                } else {
+                    t.text(TextRole::Tertiary)
+                });
                 let seg = text::truncate(seg, (right - x) as usize);
                 buf.set_string(x, area.y, &seg, style);
                 x += text::width(&seg) as u16;
                 if !last && x + 3 <= right {
-                    buf.set_string(x, area.y, " › ", Style::new().fg(t.fg[3]));
+                    buf.set_string(
+                        x,
+                        area.y,
+                        " › ",
+                        Style::new().fg(t.text(TextRole::Disabled)),
+                    );
                     x += 3;
                 }
             }

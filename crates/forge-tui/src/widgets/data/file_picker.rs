@@ -1,5 +1,6 @@
 use crate::event::{in_area, is_press, left_down, scroll_delta, Outcome};
 use crate::text;
+use crate::theme::{Surface, TextRole};
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
@@ -196,7 +197,7 @@ impl StatefulWidget for FilePicker {
                 area.x,
                 area.y,
                 text::truncate(&path, area.width as usize),
-                Style::new().fg(t.fg[2]),
+                Style::new().fg(t.text(TextRole::Tertiary)),
             );
             let list = Rect::new(
                 area.x,
@@ -228,21 +229,29 @@ impl StatefulWidget for FilePicker {
                 };
                 let y = list.y + vis as u16;
                 let is_cursor = ei == state.cursor;
-                let mut style = Style::new().fg(if entry.is_dir { t.fg[0] } else { t.fg[1] });
+                let mut style = Style::new().fg(if entry.is_dir {
+                    t.text(TextRole::Primary)
+                } else {
+                    t.text(TextRole::Secondary)
+                });
                 if is_cursor {
                     buf.set_style(
                         Rect::new(list.x, y, list.width, 1),
-                        Style::new().bg(t.bg[3]),
+                        Style::new().bg(t.surface(Surface::Pressed)),
                     );
-                    style = style.bg(t.bg[3]);
+                    style = style.bg(t.surface(Surface::Pressed));
                     if self.focused {
                         style = style.add_modifier(Modifier::BOLD);
                     }
                 }
                 let marker = if entry.is_dir { "▸" } else { "·" };
-                let mut ms = Style::new().fg(if entry.is_dir { t.accent.base } else { t.fg[3] });
+                let mut ms = Style::new().fg(if entry.is_dir {
+                    t.accent.base
+                } else {
+                    t.text(TextRole::Disabled)
+                });
                 if is_cursor {
-                    ms = ms.bg(t.bg[3]);
+                    ms = ms.bg(t.surface(Surface::Pressed));
                 }
                 buf.set_string(list.x, y, marker, ms);
                 buf.set_string(

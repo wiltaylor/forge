@@ -1,5 +1,6 @@
 use crate::event::{clicked, is_press, Outcome};
 use crate::text;
+use crate::theme::{Surface, TextRole};
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
@@ -109,11 +110,15 @@ impl<'a> StatefulWidget for ToggleGroup<'a> {
                 }
                 let active = i == state.selected;
                 let mut style = if self.disabled {
-                    Style::new().fg(t.fg[3]).bg(t.bg[2])
+                    Style::new()
+                        .fg(t.text(TextRole::Disabled))
+                        .bg(t.surface(Surface::Hover))
                 } else if active {
                     Style::new().fg(t.accent.contrast).bg(t.accent.base)
                 } else {
-                    Style::new().fg(t.fg[1]).bg(t.bg[3])
+                    Style::new()
+                        .fg(t.text(TextRole::Secondary))
+                        .bg(t.surface(Surface::Pressed))
                 };
                 if active && self.focused {
                     style = style.add_modifier(Modifier::BOLD | Modifier::UNDERLINED);

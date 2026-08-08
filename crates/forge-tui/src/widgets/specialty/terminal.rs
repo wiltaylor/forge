@@ -5,6 +5,7 @@
 //! Tab is NOT forwarded so the default focus traversal still works).
 
 use crate::event::{in_area, is_press, Outcome};
+use crate::theme::{Surface, TextRole};
 use crate::widgets::paint;
 use portable_pty::{native_pty_system, ChildKiller, CommandBuilder, PtySize};
 use ratatui::buffer::Buffer;
@@ -392,7 +393,7 @@ impl StatefulWidget for Terminal {
             state.last_area = area;
             state.resize(area.height, area.width);
             let screen = state.parser.screen();
-            buf.set_style(area, Style::new().bg(t.bg[0]));
+            buf.set_style(area, Style::new().bg(t.surface(Surface::Page)));
             for row in 0..area.height.min(state.size.0) {
                 for col in 0..area.width.min(state.size.1) {
                     let Some(cell) = screen.cell(row, col) else {
@@ -401,8 +402,8 @@ impl StatefulWidget for Terminal {
                     let x = area.x + col;
                     let y = area.y + row;
                     let mut style = Style::new()
-                        .fg(map_color(cell.fgcolor(), t.fg[0]))
-                        .bg(map_color(cell.bgcolor(), t.bg[0]));
+                        .fg(map_color(cell.fgcolor(), t.text(TextRole::Primary)))
+                        .bg(map_color(cell.bgcolor(), t.surface(Surface::Page)));
                     if cell.bold() {
                         style = style.add_modifier(Modifier::BOLD);
                     }

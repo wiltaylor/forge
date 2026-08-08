@@ -1,5 +1,6 @@
 use crate::event::{clicked, is_press, Outcome};
 use crate::text;
+use crate::theme::{Surface, TextRole};
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, MouseEvent};
@@ -110,11 +111,16 @@ impl<'a> StatefulWidget for Collapsible<'a> {
         state.header = Rect::new(area.x, area.y, area.width, 1);
         paint(area, |t| {
             let chevron = if state.open { "▾" } else { "▸" };
-            let mut style = Style::new().fg(t.fg[0]);
+            let mut style = Style::new().fg(t.text(TextRole::Primary));
             if self.focused {
                 style = style.add_modifier(Modifier::UNDERLINED);
             }
-            buf.set_string(area.x, area.y, chevron, Style::new().fg(t.fg[2]));
+            buf.set_string(
+                area.x,
+                area.y,
+                chevron,
+                Style::new().fg(t.text(TextRole::Tertiary)),
+            );
             buf.set_string(
                 area.x + 2,
                 area.y,
@@ -132,7 +138,12 @@ impl<'a> StatefulWidget for Collapsible<'a> {
                         if y >= area.y + area.height {
                             break;
                         }
-                        buf.set_string(inner.x, y, line, Style::new().fg(t.fg[1]));
+                        buf.set_string(
+                            inner.x,
+                            y,
+                            line,
+                            Style::new().fg(t.text(TextRole::Secondary)),
+                        );
                     }
                 }
             }
@@ -237,24 +248,30 @@ impl<'a> StatefulWidget for Accordion<'a> {
                 let open = state.open == Some(i);
                 let cursor = state.highlight == i;
                 let chevron = if open { "▾" } else { "▸" };
-                let mut style = Style::new().fg(if cursor { t.fg[0] } else { t.fg[1] });
+                let mut style = Style::new().fg(if cursor {
+                    t.text(TextRole::Primary)
+                } else {
+                    t.text(TextRole::Secondary)
+                });
                 if cursor {
                     if self.focused {
                         style = style.add_modifier(Modifier::BOLD | Modifier::UNDERLINED);
                     }
                     buf.set_style(
                         Rect::new(area.x, y, area.width, 1),
-                        Style::new().bg(t.bg[2]),
+                        Style::new().bg(t.surface(Surface::Hover)),
                     );
-                    style = style.bg(t.bg[2]);
+                    style = style.bg(t.surface(Surface::Hover));
                 }
                 buf.set_string(
                     area.x,
                     y,
                     chevron,
-                    Style::new()
-                        .fg(t.fg[2])
-                        .bg(if cursor { t.bg[2] } else { t.bg[1] }),
+                    Style::new().fg(t.text(TextRole::Tertiary)).bg(if cursor {
+                        t.surface(Surface::Hover)
+                    } else {
+                        t.surface(Surface::Card)
+                    }),
                 );
                 buf.set_string(
                     area.x + 2,
@@ -268,7 +285,12 @@ impl<'a> StatefulWidget for Accordion<'a> {
                         if y >= bottom {
                             break;
                         }
-                        buf.set_string(area.x + 2, y, line, Style::new().fg(t.fg[2]));
+                        buf.set_string(
+                            area.x + 2,
+                            y,
+                            line,
+                            Style::new().fg(t.text(TextRole::Tertiary)),
+                        );
                         y += 1;
                     }
                 }

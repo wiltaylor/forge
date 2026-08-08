@@ -1,11 +1,11 @@
-use crate::theme::{ambient_theme, Theme};
+use crate::theme::{ambient_theme, Surface, TextRole, Theme};
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
 use ratatui::widgets::{Block, Padding, Widget};
 
-/// A flat, border-driven surface (`bg[1]`), the Forge card. Renders chrome
+/// A flat, border-driven [`Surface::Card`], the Forge card. Renders chrome
 /// only — measure the content region with [`Card::inner`] and render content
 /// there yourself.
 #[derive(Clone, Debug, Default)]
@@ -32,17 +32,19 @@ impl<'a> Card<'a> {
     fn block(&self, t: &Theme) -> Block<'a> {
         let mut block = Block::bordered()
             .border_style(Style::new().fg(t.border.default))
-            .style(Style::new().bg(t.bg[1]))
+            .style(Style::new().bg(t.surface(Surface::Card)))
             .padding(Padding::horizontal(1));
         if let Some(title) = self.title {
-            block = block
-                .title(title)
-                .title_style(Style::new().fg(t.fg[0]).add_modifier(Modifier::BOLD));
+            block = block.title(title).title_style(
+                Style::new()
+                    .fg(t.text(TextRole::Primary))
+                    .add_modifier(Modifier::BOLD),
+            );
         }
         if let Some(footer) = self.footer {
             block = block
                 .title_bottom(footer)
-                .title_style(Style::new().fg(t.fg[2]));
+                .title_style(Style::new().fg(t.text(TextRole::Tertiary)));
         }
         block
     }

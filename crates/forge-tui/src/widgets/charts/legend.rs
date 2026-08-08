@@ -1,5 +1,5 @@
 use crate::text;
-use crate::theme::series_color;
+use crate::theme::{series_color, TextRole};
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
@@ -30,7 +30,12 @@ impl Widget for Legend<'_> {
                     break;
                 }
                 buf.set_string(x, area.y, "■", Style::new().fg(series_color(t, i)));
-                buf.set_string(x + 2, area.y, *label, Style::new().fg(t.fg[1]));
+                buf.set_string(
+                    x + 2,
+                    area.y,
+                    *label,
+                    Style::new().fg(t.text(TextRole::Secondary)),
+                );
                 x += need;
             }
         });

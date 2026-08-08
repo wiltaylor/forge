@@ -1,4 +1,5 @@
 use crate::text;
+use crate::theme::TextRole;
 use crate::widgets::paint;
 use crate::widgets::primitives::Glyph;
 use ratatui::buffer::Buffer;
@@ -47,10 +48,25 @@ impl Widget for Empty<'_> {
                 let x = area.x + area.width.saturating_sub(text::width(&s) as u16) / 2;
                 buf.set_string(x, y, s, style);
             };
-            center(self.glyph.as_str(), top, Style::new().fg(t.fg[3]), buf);
-            center(self.title, top + 1, Style::new().fg(t.fg[1]), buf);
+            center(
+                self.glyph.as_str(),
+                top,
+                Style::new().fg(t.text(TextRole::Disabled)),
+                buf,
+            );
+            center(
+                self.title,
+                top + 1,
+                Style::new().fg(t.text(TextRole::Secondary)),
+                buf,
+            );
             if let Some(hint) = self.hint {
-                center(hint, top + 2, Style::new().fg(t.fg[2]), buf);
+                center(
+                    hint,
+                    top + 2,
+                    Style::new().fg(t.text(TextRole::Tertiary)),
+                    buf,
+                );
             }
         });
     }

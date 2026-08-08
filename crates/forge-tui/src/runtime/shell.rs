@@ -5,7 +5,7 @@
 
 use crate::event::{clicked, is_press, Outcome};
 use crate::text;
-use crate::theme::Theme;
+use crate::theme::{Surface, TextRole, Theme};
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent};
@@ -173,7 +173,7 @@ impl<'a> AppShell<'a> {
         slim: bool,
     ) {
         state.item_rects.clear();
-        buf.set_style(area, Style::new().bg(t.bg[1]));
+        buf.set_style(area, Style::new().bg(t.surface(Surface::Card)));
         if area.is_empty() {
             return;
         }
@@ -189,7 +189,7 @@ impl<'a> AppShell<'a> {
                 Style::new()
                     .fg(t.accent.base)
                     .add_modifier(Modifier::BOLD)
-                    .bg(t.bg[1]),
+                    .bg(t.surface(Surface::Card)),
             );
             y += 1;
         }
@@ -199,7 +199,9 @@ impl<'a> AppShell<'a> {
                     area.x + 1,
                     y,
                     text::truncate(sub, area.width.saturating_sub(2) as usize),
-                    Style::new().fg(t.fg[2]).bg(t.bg[1]),
+                    Style::new()
+                        .fg(t.text(TextRole::Tertiary))
+                        .bg(t.surface(Surface::Card)),
                 );
                 y += 1;
             }
@@ -215,7 +217,9 @@ impl<'a> AppShell<'a> {
                         area.x + 1,
                         y,
                         text::truncate(&title, area.width.saturating_sub(2) as usize),
-                        Style::new().fg(t.fg[3]).bg(t.bg[1]),
+                        Style::new()
+                            .fg(t.text(TextRole::Disabled))
+                            .bg(t.surface(Surface::Card)),
                     );
                     y += 1;
                 }
@@ -227,9 +231,16 @@ impl<'a> AppShell<'a> {
                     if active {
                         buf.set_style(
                             Rect::new(area.x, y, area.width, 1),
-                            Style::new().bg(t.bg[3]),
+                            Style::new().bg(t.surface(Surface::Pressed)),
                         );
-                        buf.set_string(area.x, y, "▎", Style::new().fg(t.accent.base).bg(t.bg[3]));
+                        buf.set_string(
+                            area.x,
+                            y,
+                            "▎",
+                            Style::new()
+                                .fg(t.accent.base)
+                                .bg(t.surface(Surface::Pressed)),
+                        );
                     }
                     let label: std::borrow::Cow<str> = if slim {
                         text::truncate(item, 1)
@@ -237,8 +248,16 @@ impl<'a> AppShell<'a> {
                         text::truncate(item, area.width.saturating_sub(3) as usize)
                     };
                     let mut style = Style::new()
-                        .fg(if active { t.fg[0] } else { t.fg[1] })
-                        .bg(if active { t.bg[3] } else { t.bg[1] });
+                        .fg(if active {
+                            t.text(TextRole::Primary)
+                        } else {
+                            t.text(TextRole::Secondary)
+                        })
+                        .bg(if active {
+                            t.surface(Surface::Pressed)
+                        } else {
+                            t.surface(Surface::Card)
+                        });
                     if active && self.nav_focused {
                         style = style.add_modifier(Modifier::BOLD | Modifier::UNDERLINED);
                     }
@@ -264,7 +283,12 @@ impl<'a> StatefulWidget for AppShell<'a> {
         // is nothing to lay out, which is what `paint` returns early on.
         state.content = Rect::ZERO;
         paint(area, |t| {
-            buf.set_style(area, Style::new().bg(t.bg[0]).fg(t.fg[0]));
+            buf.set_style(
+                area,
+                Style::new()
+                    .bg(t.surface(Surface::Page))
+                    .fg(t.text(TextRole::Primary)),
+            );
 
             let slim = state.collapsed.unwrap_or(area.width < 72);
             let sidebar_w = if slim { 4 } else { self.sidebar_width }.min(area.width);
@@ -285,13 +309,15 @@ impl<'a> StatefulWidget for AppShell<'a> {
             let main_w = area.width.saturating_sub(sidebar_w);
             if has_topbar && area.height > status_h {
                 let topbar = Rect::new(main_x, area.y, main_w, 1);
-                buf.set_style(topbar, Style::new().bg(t.bg[1]));
+                buf.set_style(topbar, Style::new().bg(t.surface(Surface::Card)));
                 if let Some(text_) = self.topbar {
                     buf.set_string(
                         main_x + 2,
                         area.y,
                         text::truncate(text_, main_w.saturating_sub(3) as usize),
-                        Style::new().fg(t.fg[1]).bg(t.bg[1]),
+                        Style::new()
+                            .fg(t.text(TextRole::Secondary))
+                            .bg(t.surface(Surface::Card)),
                     );
                 }
                 if let Some(right) = self.topbar_right {
@@ -301,7 +327,9 @@ impl<'a> StatefulWidget for AppShell<'a> {
                             main_x + main_w - rw - 1,
                             area.y,
                             right,
-                            Style::new().fg(t.fg[2]).bg(t.bg[1]),
+                            Style::new()
+                                .fg(t.text(TextRole::Tertiary))
+                                .bg(t.surface(Surface::Card)),
                         );
                     }
                 }
@@ -309,13 +337,15 @@ impl<'a> StatefulWidget for AppShell<'a> {
             if has_status {
                 let y = area.y + area.height - 1;
                 let status = Rect::new(area.x, y, area.width, 1);
-                buf.set_style(status, Style::new().bg(t.bg[1]));
+                buf.set_style(status, Style::new().bg(t.surface(Surface::Card)));
                 if let Some(left) = self.status {
                     buf.set_string(
                         area.x + 1,
                         y,
                         text::truncate(left, area.width.saturating_sub(2) as usize),
-                        Style::new().fg(t.fg[2]).bg(t.bg[1]),
+                        Style::new()
+                            .fg(t.text(TextRole::Tertiary))
+                            .bg(t.surface(Surface::Card)),
                     );
                 }
                 if let Some(right) = self.status_right {
@@ -325,7 +355,9 @@ impl<'a> StatefulWidget for AppShell<'a> {
                             area.x + area.width - rw - 1,
                             y,
                             right,
-                            Style::new().fg(t.fg[2]).bg(t.bg[1]),
+                            Style::new()
+                                .fg(t.text(TextRole::Tertiary))
+                                .bg(t.surface(Surface::Card)),
                         );
                     }
                 }

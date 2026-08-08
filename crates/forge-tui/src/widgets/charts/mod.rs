@@ -1,7 +1,8 @@
 //! Zero-dep themed charts on the locked CVD-safe series palette
-//! `[accent, danger, success, warning, info]` (overflow folds into `fg[2]`
-//! "Other" — never reorder, never cycle). Bar/Line/Sparkline wrap the
-//! ratatui primitives; Pie and Gantt are drawn directly.
+//! `[accent, danger, success, warning, info]` (overflow folds into the
+//! tertiary text role, "Other" — never reorder, never cycle).
+//! Bar/Line/Sparkline wrap the ratatui primitives; Pie and Gantt are drawn
+//! directly.
 
 mod bar;
 mod gantt;

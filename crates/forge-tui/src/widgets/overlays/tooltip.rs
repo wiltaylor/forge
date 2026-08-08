@@ -1,4 +1,5 @@
 use crate::text;
+use crate::theme::{Surface, TextRole};
 use crate::widgets::overlays::place;
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
@@ -26,7 +27,9 @@ impl Widget for Tooltip<'_> {
             let w = (text::width(self.text) as u16 + 2).min(area.width);
             let chip = place(self.anchor, (w, 1), area);
             Clear.render(chip, buf);
-            let style = Style::new().fg(t.fg[1]).bg(t.bg[4]);
+            let style = Style::new()
+                .fg(t.text(TextRole::Secondary))
+                .bg(t.surface(Surface::Popover));
             buf.set_style(chip, style);
             buf.set_string(
                 chip.x + 1,

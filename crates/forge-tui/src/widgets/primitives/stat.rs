@@ -1,4 +1,5 @@
 use crate::text;
+use crate::theme::TextRole;
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
@@ -53,14 +54,16 @@ impl Widget for Stat<'_> {
                 area.x,
                 area.y,
                 text::truncate(&label, w),
-                Style::new().fg(t.fg[2]),
+                Style::new().fg(t.text(TextRole::Tertiary)),
             );
             if area.height >= 2 {
                 buf.set_string(
                     area.x,
                     area.y + 1,
                     text::truncate(self.value, w),
-                    Style::new().fg(t.fg[0]).add_modifier(Modifier::BOLD),
+                    Style::new()
+                        .fg(t.text(TextRole::Primary))
+                        .add_modifier(Modifier::BOLD),
                 );
             }
             if area.height >= 3 {
@@ -71,7 +74,7 @@ impl Widget for Stat<'_> {
                         Trend::Flat => ("→", true),
                     };
                     let color = if trend == Trend::Flat {
-                        t.fg[2]
+                        t.text(TextRole::Tertiary)
                     } else if good {
                         t.success.base
                     } else {

@@ -4,7 +4,7 @@
 //! hyperlinks).
 
 use crate::text;
-use crate::theme::{ambient_theme, Theme};
+use crate::theme::{ambient_theme, Surface, TextRole, Theme};
 use crate::widgets::paint;
 use pulldown_cmark::{CodeBlockKind, Event, HeadingLevel, Options, Parser, Tag, TagEnd};
 use ratatui::buffer::Buffer;
@@ -37,7 +37,7 @@ impl<'t> Builder<'t> {
             lists: Vec::new(),
             quote: 0,
             code: false,
-            styles: vec![Style::new().fg(t.fg[1])],
+            styles: vec![Style::new().fg(t.text(TextRole::Secondary))],
         }
     }
 
@@ -61,7 +61,7 @@ impl<'t> Builder<'t> {
             p.push_str("▎ ");
         }
         p.push_str(&"  ".repeat(self.lists.len().saturating_sub(1)));
-        (p, Style::new().fg(self.t.fg[3]))
+        (p, Style::new().fg(self.t.text(TextRole::Disabled)))
     }
 
     fn flush(&mut self) {
@@ -118,7 +118,9 @@ impl<'t> Builder<'t> {
     }
 
     fn code_line(&mut self, line: &str) {
-        let style = Style::new().fg(self.t.fg[1]).bg(self.t.bg[2]);
+        let style = Style::new()
+            .fg(self.t.text(TextRole::Secondary))
+            .bg(self.t.surface(Surface::Hover));
         let padded = format!("  {}", line);
         let padded = text::fit(&padded, self.width);
         self.lines.push(Line::from(Span::styled(padded, style)));
@@ -139,10 +141,14 @@ pub fn markdown_lines(source: &str, width: usize, t: &Theme) -> Vec<Line<'static
                 b.blank();
                 let style = match level {
                     HeadingLevel::H1 => Style::new()
-                        .fg(t.fg[0])
+                        .fg(t.text(TextRole::Primary))
                         .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
-                    HeadingLevel::H2 => Style::new().fg(t.fg[0]).add_modifier(Modifier::BOLD),
-                    _ => Style::new().fg(t.fg[1]).add_modifier(Modifier::BOLD),
+                    HeadingLevel::H2 => Style::new()
+                        .fg(t.text(TextRole::Primary))
+                        .add_modifier(Modifier::BOLD),
+                    _ => Style::new()
+                        .fg(t.text(TextRole::Secondary))
+                        .add_modifier(Modifier::BOLD),
                 };
                 b.styles.push(style);
             }
@@ -163,7 +169,7 @@ pub fn markdown_lines(source: &str, width: usize, t: &Theme) -> Vec<Line<'static
             Event::Start(Tag::BlockQuote(_)) => {
                 b.blank();
                 b.quote += 1;
-                b.push_style(|s| s.fg(t.fg[2]));
+                b.push_style(|s| s.fg(t.text(TextRole::Tertiary)));
             }
             Event::End(TagEnd::BlockQuote(_)) => {
                 b.quote = b.quote.saturating_sub(1);
@@ -192,7 +198,10 @@ pub fn markdown_lines(source: &str, width: usize, t: &Theme) -> Vec<Line<'static
                     _ => "• ".to_string(),
                 };
                 b.cur_w += text::width(&marker);
-                b.cur.push(Span::styled(marker, Style::new().fg(t.fg[2])));
+                b.cur.push(Span::styled(
+                    marker,
+                    Style::new().fg(t.text(TextRole::Tertiary)),
+                ));
             }
             Event::End(TagEnd::Item) => {
                 if !b.cur.is_empty() {
@@ -207,7 +216,7 @@ pub fn markdown_lines(source: &str, width: usize, t: &Theme) -> Vec<Line<'static
                     if !lang.is_empty() {
                         b.lines.push(Line::from(Span::styled(
                             format!("  {lang}"),
-                            Style::new().fg(t.fg[3]),
+                            Style::new().fg(t.text(TextRole::Disabled)),
                         )));
                     }
                 }
@@ -221,7 +230,7 @@ pub fn markdown_lines(source: &str, width: usize, t: &Theme) -> Vec<Line<'static
             Event::Start(Tag::Emphasis) => b.push_style(|s| s.add_modifier(Modifier::ITALIC)),
             Event::End(TagEnd::Emphasis) => b.pop_style(),
             Event::Start(Tag::Strong) => {
-                b.push_style(|s| s.add_modifier(Modifier::BOLD).fg(t.fg[0]))
+                b.push_style(|s| s.add_modifier(Modifier::BOLD).fg(t.text(TextRole::Primary)))
             }
             Event::End(TagEnd::Strong) => b.pop_style(),
             Event::Start(Tag::Strikethrough) => {
@@ -248,7 +257,7 @@ pub fn markdown_lines(source: &str, width: usize, t: &Theme) -> Vec<Line<'static
                 }
             }
             Event::Code(s) => {
-                let style = Style::new().fg(t.accent.fg).bg(t.bg[3]);
+                let style = Style::new().fg(t.accent.fg).bg(t.surface(Surface::Pressed));
                 b.push_text(&s, style);
             }
             Event::SoftBreak => {

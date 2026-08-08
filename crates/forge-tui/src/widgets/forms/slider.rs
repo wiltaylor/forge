@@ -1,6 +1,6 @@
 use crate::event::{in_area, is_press, left_down, Outcome};
 use crate::text;
-use crate::theme::Severity;
+use crate::theme::{Severity, TextRole};
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent, MouseEventKind};
@@ -136,7 +136,7 @@ impl<'a> StatefulWidget for Slider<'a> {
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut SliderState) {
         paint(area, |t| {
             let fill = if self.disabled {
-                t.fg[3]
+                t.text(TextRole::Disabled)
             } else {
                 match self.severity {
                     Some(s) => t.severity(s).base,
@@ -148,7 +148,12 @@ impl<'a> StatefulWidget for Slider<'a> {
             if let Some(label) = self.label {
                 let label = text::truncate(label, (w / 3) as usize);
                 let lw = text::width(&label) as u16 + 1;
-                buf.set_string(x, area.y, label, Style::new().fg(t.fg[1]));
+                buf.set_string(
+                    x,
+                    area.y,
+                    label,
+                    Style::new().fg(t.text(TextRole::Secondary)),
+                );
                 x += lw;
                 w = w.saturating_sub(lw);
             }
@@ -173,7 +178,12 @@ impl<'a> StatefulWidget for Slider<'a> {
                 }
             }
             if self.show_value && val_w > 0 {
-                buf.set_string(x + w + 2, area.y, val, Style::new().fg(t.fg[1]));
+                buf.set_string(
+                    x + w + 2,
+                    area.y,
+                    val,
+                    Style::new().fg(t.text(TextRole::Secondary)),
+                );
             }
         });
     }

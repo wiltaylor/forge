@@ -1,5 +1,5 @@
 use crate::text;
-use crate::theme::Severity;
+use crate::theme::{Severity, Surface, TextRole};
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
@@ -40,7 +40,9 @@ impl Widget for Badge<'_> {
                     let tri = t.severity(s);
                     Style::new().fg(tri.fg).bg(tri.bg)
                 }
-                None => Style::new().fg(t.fg[1]).bg(t.bg[3]),
+                None => Style::new()
+                    .fg(t.text(TextRole::Secondary))
+                    .bg(t.surface(Surface::Pressed)),
             };
             let label = text::truncate(self.label, area.width.saturating_sub(2) as usize);
             let w = (text::width(&label) as u16 + 2).min(area.width);

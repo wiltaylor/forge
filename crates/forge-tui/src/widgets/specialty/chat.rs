@@ -4,7 +4,7 @@
 
 use crate::event::{clicked, in_area, is_press, scroll_delta, Outcome};
 use crate::text;
-use crate::theme::Theme;
+use crate::theme::{Surface, TextRole, Theme};
 use crate::widgets::forms::{Textarea, TextareaState};
 use crate::widgets::paint;
 use crate::widgets::specialty::markdown::markdown_lines;
@@ -193,17 +193,22 @@ impl<'a> ChatView<'a> {
         let (glyph, name, color) = match role {
             Role::User => ("▸", author.unwrap_or("you"), t.accent.base),
             Role::Assistant => ("◆", author.unwrap_or("assistant"), t.success.base),
-            Role::System => ("·", author.unwrap_or("system"), t.fg[2]),
+            Role::System => ("·", author.unwrap_or("system"), t.text(TextRole::Tertiary)),
         };
         let mut spans = vec![
             Span::styled(format!("{glyph} "), Style::new().fg(color)),
             Span::styled(
                 name.to_owned(),
-                Style::new().fg(t.fg[0]).add_modifier(Modifier::BOLD),
+                Style::new()
+                    .fg(t.text(TextRole::Primary))
+                    .add_modifier(Modifier::BOLD),
             ),
         ];
         if let Some(ts) = ts {
-            spans.push(Span::styled(format!("  {ts}"), Style::new().fg(t.fg[3])));
+            spans.push(Span::styled(
+                format!("  {ts}"),
+                Style::new().fg(t.text(TextRole::Disabled)),
+            ));
         }
         Line::from(spans)
     }
@@ -243,8 +248,13 @@ impl<'a> ChatView<'a> {
                     ToolStatus::Error => ("●", t.danger.base),
                 };
                 let mut lines = vec![Line::from(vec![
-                    Span::styled("  ⚙ ", Style::new().fg(t.fg[2])),
-                    Span::styled(name.clone(), Style::new().fg(t.fg[1]).bg(t.bg[2])),
+                    Span::styled("  ⚙ ", Style::new().fg(t.text(TextRole::Tertiary))),
+                    Span::styled(
+                        name.clone(),
+                        Style::new()
+                            .fg(t.text(TextRole::Secondary))
+                            .bg(t.surface(Surface::Hover)),
+                    ),
                     Span::styled(format!(" {dot}"), Style::new().fg(color)),
                 ])];
                 if *open {
@@ -252,7 +262,7 @@ impl<'a> ChatView<'a> {
                         for l in text::wrap(detail, width.saturating_sub(6).max(8)) {
                             lines.push(Line::from(Span::styled(
                                 format!("      {l}"),
-                                Style::new().fg(t.fg[2]),
+                                Style::new().fg(t.text(TextRole::Tertiary)),
                             )));
                         }
                     }
@@ -265,7 +275,7 @@ impl<'a> ChatView<'a> {
                 vec![
                     Line::from(Span::styled(
                         format!("{} {} {}", "─".repeat(pad), label, "─".repeat(pad)),
-                        Style::new().fg(t.fg[3]),
+                        Style::new().fg(t.text(TextRole::Disabled)),
                     )),
                     Line::default(),
                 ]
@@ -275,8 +285,11 @@ impl<'a> ChatView<'a> {
                 let d = dots[(self.frame as usize / 2) % dots.len()];
                 vec![Line::from(vec![
                     Span::styled("✳ ", Style::new().fg(t.accent.base)),
-                    Span::styled(format!("{name} is typing "), Style::new().fg(t.fg[2])),
-                    Span::styled(d.to_owned(), Style::new().fg(t.fg[2])),
+                    Span::styled(
+                        format!("{name} is typing "),
+                        Style::new().fg(t.text(TextRole::Tertiary)),
+                    ),
+                    Span::styled(d.to_owned(), Style::new().fg(t.text(TextRole::Tertiary))),
                 ])]
             }
         }
@@ -468,7 +481,7 @@ impl<'a> StatefulWidget for ChatPrompt<'a> {
                 area.x,
                 area.y,
                 text::truncate(self.question, area.width as usize),
-                Style::new().fg(t.fg[0]),
+                Style::new().fg(t.text(TextRole::Primary)),
             );
             if area.height < 2 {
                 return;
@@ -483,7 +496,9 @@ impl<'a> StatefulWidget for ChatPrompt<'a> {
                 let mut style = if active {
                     Style::new().fg(t.accent.contrast).bg(t.accent.base)
                 } else {
-                    Style::new().fg(t.fg[1]).bg(t.bg[3])
+                    Style::new()
+                        .fg(t.text(TextRole::Secondary))
+                        .bg(t.surface(Surface::Pressed))
                 };
                 if active && self.focused {
                     style = style.add_modifier(Modifier::BOLD | Modifier::UNDERLINED);

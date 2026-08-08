@@ -1,5 +1,6 @@
 use crate::event::{is_press, left_down, mouse_pos, scroll_delta, Outcome};
 use crate::text;
+use crate::theme::TextRole;
 use crate::widgets::paint;
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent};
@@ -345,14 +346,18 @@ impl<'a> StatefulWidget for Textarea<'a> {
                 state.scroll_col = cursor_cells + 1 - inner.width as usize;
             }
 
-            let fg = if self.disabled { t.fg[3] } else { t.fg[0] };
+            let fg = if self.disabled {
+                t.text(TextRole::Disabled)
+            } else {
+                t.text(TextRole::Primary)
+            };
             let empty = state.lines.len() == 1 && state.lines[0].is_empty();
             if empty && !self.placeholder.is_empty() {
                 buf.set_string(
                     inner.x,
                     inner.y,
                     text::truncate(self.placeholder, inner.width as usize),
-                    Style::new().fg(t.fg[3]),
+                    Style::new().fg(t.text(TextRole::Disabled)),
                 );
             } else {
                 for vis in 0..inner.height as usize {

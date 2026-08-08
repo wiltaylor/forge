@@ -1,5 +1,5 @@
 use crate::text;
-use crate::theme::Theme;
+use crate::theme::{Surface, TextRole, Theme};
 use crate::widgets::paint;
 use crate::widgets::primitives::Glyph;
 use ratatui::buffer::Buffer;
@@ -60,7 +60,9 @@ impl<'a> Button<'a> {
 
     fn style(&self, t: &Theme) -> Style {
         if self.disabled {
-            return Style::new().fg(t.fg[3]).bg(t.bg[2]);
+            return Style::new()
+                .fg(t.text(TextRole::Disabled))
+                .bg(t.surface(Surface::Hover));
         }
         let s = match self.variant {
             Variant::Primary => Style::new().fg(t.accent.contrast).bg(if self.focused {
@@ -69,12 +71,18 @@ impl<'a> Button<'a> {
                 t.accent.base
             }),
             Variant::Danger => Style::new().fg(t.accent.contrast).bg(t.danger.base),
-            Variant::Default => {
-                Style::new()
-                    .fg(t.fg[0])
-                    .bg(if self.focused { t.bg[4] } else { t.bg[3] })
-            }
-            Variant::Ghost => Style::new().fg(if self.focused { t.accent.fg } else { t.fg[1] }),
+            Variant::Default => Style::new()
+                .fg(t.text(TextRole::Primary))
+                .bg(if self.focused {
+                    t.surface(Surface::Popover)
+                } else {
+                    t.surface(Surface::Pressed)
+                }),
+            Variant::Ghost => Style::new().fg(if self.focused {
+                t.accent.fg
+            } else {
+                t.text(TextRole::Secondary)
+            }),
         };
         if self.focused {
             s.add_modifier(Modifier::BOLD | Modifier::UNDERLINED)
