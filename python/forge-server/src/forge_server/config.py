@@ -50,7 +50,61 @@ def env_int(name: str, default: int) -> int:
         raise ValueError(f"{name} must be an integer, got {raw!r}") from e
 
 
+# -- the contract's variables -------------------------------------------------
+#
+# The nine FORGE_* variables docs/api-contract.md documents, each read by
+# exactly one function here, with its default stated once. Other FORGE_*
+# names in this repo (FORGE_TEST_*, the demo and gallery variables) are not
+# part of the contract and are not read here.
+
+
+def jwt_secret() -> str | None:
+    """``FORGE_JWT_SECRET`` — no default; unset means auth-disabled mode."""
+    return env_str("FORGE_JWT_SECRET")
+
+
+def auth_users() -> str:
+    """``FORGE_AUTH_USERS``, raw — parse with :func:`parse_users`."""
+    return env_str("FORGE_AUTH_USERS", "") or ""
+
+
+def jwt_ttl_secs() -> int:
+    """``FORGE_JWT_TTL_SECS`` (default 86400)."""
+    return env_int("FORGE_JWT_TTL_SECS", DEFAULT_TTL_SECS)
+
+
+def jwt_iss() -> str | None:
+    """``FORGE_JWT_ISS`` — ``None`` when unset.
+
+    ``DEFAULT_ISS`` is not applied here on purpose: the contract validates
+    the issuer only when it is set explicitly, so the caller must see the
+    difference between unset and ``"forge"``.
+    """
+    return env_str("FORGE_JWT_ISS")
+
+
+def host() -> str:
+    """``FORGE_HOST`` (default 127.0.0.1)."""
+    return env_str("FORGE_HOST", DEFAULT_HOST)
+
+
+def port() -> int:
+    """``FORGE_PORT`` (default 8765)."""
+    return env_int("FORGE_PORT", DEFAULT_PORT)
+
+
+def data_dir() -> str:
+    """``FORGE_DATA_DIR`` (default ./data)."""
+    return env_str("FORGE_DATA_DIR", DEFAULT_DATA_DIR)
+
+
+def components_dir() -> str:
+    """``FORGE_COMPONENTS_DIR`` (default ./components)."""
+    return env_str("FORGE_COMPONENTS_DIR", DEFAULT_COMPONENTS_DIR)
+
+
 def cors_origins() -> list[str]:
+    """``FORGE_CORS_ORIGINS``, split on commas (default localhost:5173 pair)."""
     raw = env_str("FORGE_CORS_ORIGINS")
     if raw is None:
         return list(DEFAULT_CORS_ORIGINS)

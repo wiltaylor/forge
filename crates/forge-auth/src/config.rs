@@ -45,7 +45,10 @@ fn env_bool(key: &str, default: bool) -> Result<bool, AppError> {
 
 impl Config {
     pub fn from_env() -> Result<Self, AppError> {
-        let host = std::env::var("FORGE_HOST").unwrap_or_else(|_| "127.0.0.1".into());
+        // `FORGE_HOST` is a contract variable, so its default comes from the one
+        // place that states it. `FORGE_PORT` is not read that way on purpose:
+        // the IdP runs beside a Forge server and defaults to its own port.
+        let host = forge_core::env::host();
         let port = env_i64("FORGE_PORT", 8770)? as u16;
         let issuer = match std::env::var("FORGE_AUTH_ISSUER") {
             Ok(raw) => raw.trim_end_matches('/').to_string(),

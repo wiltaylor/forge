@@ -36,7 +36,7 @@ async fn main() -> Result<(), ForgeError> {
         .frontend_embedded::<Assets>();
 
     // Auth is on when the .env provides a secret; without one the demo runs open.
-    if std::env::var("FORGE_JWT_SECRET").is_ok() {
+    if forge_server::env::jwt_secret().is_some() {
         app = app.auth_from_env();
     }
 
@@ -53,8 +53,8 @@ async fn main() -> Result<(), ForgeError> {
 
     // Clickable URL (same FORGE_HOST/FORGE_PORT resolution as serve(); the
     // .env is already loaded by ForgeApp::new above).
-    let host = std::env::var("FORGE_HOST").unwrap_or_else(|_| "127.0.0.1".into());
-    let port = std::env::var("FORGE_PORT").unwrap_or_else(|_| "8765".into());
+    let host = forge_server::env::host();
+    let port = forge_server::env::port()?;
     let display_host = if host == "0.0.0.0" {
         "127.0.0.1"
     } else {

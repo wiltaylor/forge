@@ -24,8 +24,6 @@ use crate::frontend::Frontend;
 use crate::state::{ForgeState, StateInner};
 use crate::{auth, components, docstore, events, frontend, health};
 
-pub(crate) const DEFAULT_CORS_ORIGINS: &str = "http://localhost:5173,http://127.0.0.1:5173";
-
 /// Builder for a Forge backend.
 ///
 /// ```no_run
@@ -135,8 +133,7 @@ impl ForgeApp {
 
     /// Enable the doc store in `FORGE_DATA_DIR` (default `./data`).
     pub fn with_docstore_from_env(self) -> Self {
-        let dir = std::env::var("FORGE_DATA_DIR").unwrap_or_else(|_| "./data".into());
-        self.with_docstore(dir)
+        self.with_docstore(forge_core::env::data_dir())
     }
 
     /// Mount `/api/events` (SSE) and `/api/ws` (WebSocket).
@@ -162,8 +159,7 @@ impl ForgeApp {
 
     /// Enable components from `FORGE_COMPONENTS_DIR` (default `./components`).
     pub fn with_components_from_env(self) -> Self {
-        let dir = std::env::var("FORGE_COMPONENTS_DIR").unwrap_or_else(|_| "./components".into());
-        self.with_components(dir)
+        self.with_components(forge_core::env::components_dir())
     }
 
     /// Mount `/api/term` with defaults (local shell + ssh allowed, any host).
@@ -399,13 +395,8 @@ impl ForgeApp {
         let app = self.app.clone();
         let router = self.try_router()?;
 
-        let host = std::env::var("FORGE_HOST").unwrap_or_else(|_| "127.0.0.1".into());
-        let port: u16 = match std::env::var("FORGE_PORT") {
-            Ok(raw) => raw
-                .parse()
-                .map_err(|_| ForgeError::Config(format!("FORGE_PORT is not a port: {raw:?}")))?,
-            Err(_) => 8765,
-        };
+        let host = forge_core::env::host();
+        let port = forge_core::env::port()?;
 
         let listener = tokio::net::TcpListener::bind((host.as_str(), port))
             .await
@@ -419,6 +410,11 @@ impl ForgeApp {
 }
 
 /// Truthy env flag: `1`, `true` or `yes` (case-insensitive).
+///
+/// The widget variables read through this (`FORGE_TERM_*`, `FORGE_VNC_ENABLE`,
+/// `FORGE_RDP_ENABLE`, `FORGE_DESKTOP_ALLOW_HOSTS`) are extensions of this
+/// crate, not part of the contract — which is why they are read here and not
+/// in [`forge_core::env`].
 #[cfg(any(feature = "term", feature = "vnc", feature = "rdp"))]
 fn env_flag(name: &str) -> bool {
     std::env::var(name)
@@ -443,14 +439,7 @@ fn desktop_config_from_env() -> crate::widgets::DesktopConfig {
 }
 
 fn build_cors(origins: Option<Vec<String>>) -> Result<CorsLayer, ForgeError> {
-    let origins = origins.unwrap_or_else(|| {
-        std::env::var("FORGE_CORS_ORIGINS")
-            .unwrap_or_else(|_| DEFAULT_CORS_ORIGINS.into())
-            .split(',')
-            .map(|s| s.trim().to_string())
-            .filter(|s| !s.is_empty())
-            .collect()
-    });
+    let origins = origins.unwrap_or_else(forge_core::env::cors_origins);
     // Never a wildcard: an explicit origin list, always.
     let mut values = Vec::with_capacity(origins.len());
     for origin in &origins {

@@ -26,6 +26,9 @@ pub mod auth;
 pub mod components;
 pub mod docstore;
 pub mod envelope;
+/// The contract's environment variables and defaults — declared once, in
+/// [`forge_core::env`].
+pub use forge_core::env;
 pub mod error;
 pub mod events;
 pub mod frontend;

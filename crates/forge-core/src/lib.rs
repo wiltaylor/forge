@@ -13,6 +13,7 @@ pub mod auth;
 pub mod claims;
 pub mod components;
 pub mod docstore;
+pub mod env;
 pub mod envelope;
 pub mod error;
 pub mod events;

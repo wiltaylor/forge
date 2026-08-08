@@ -21,10 +21,7 @@ pub use crate::claims::{unix_now, Claims};
 pub use jwt::{decode_token, encode_token};
 pub use users::{parse_users, AuthUser};
 
-/// Default token lifetime (seconds) — 24 hours.
-pub const DEFAULT_TTL_SECS: u64 = 86_400;
-/// Default issuer claim.
-pub const DEFAULT_ISS: &str = "forge";
+pub use crate::env::{DEFAULT_ISS, DEFAULT_TTL_SECS};
 /// Error message for a login attempt while auth is disabled. The contract
 /// makes this a 404: with no auth configured there is no login endpoint.
 pub const AUTH_DISABLED: &str = "auth is disabled";
@@ -102,20 +99,16 @@ impl AuthConfig {
     /// and `FORGE_JWT_ISS`. Returns `Ok(None)` when no secret is set
     /// (auth-disabled mode).
     pub fn from_env() -> Result<Option<Self>, ForgeError> {
-        let Ok(secret) = std::env::var("FORGE_JWT_SECRET") else {
+        let Some(secret) = crate::env::jwt_secret() else {
             return Ok(None);
         };
         let mut cfg = AuthConfig::new(secret);
         cfg.validate()?;
-        if let Ok(raw) = std::env::var("FORGE_AUTH_USERS") {
+        if let Some(raw) = crate::env::auth_users() {
             cfg.users = parse_users(&raw)?;
         }
-        if let Ok(raw) = std::env::var("FORGE_JWT_TTL_SECS") {
-            cfg.ttl_secs = raw.parse().map_err(|_| {
-                ForgeError::Config(format!("FORGE_JWT_TTL_SECS is not a number: {raw:?}"))
-            })?;
-        }
-        if let Ok(iss) = std::env::var("FORGE_JWT_ISS") {
+        cfg.ttl_secs = crate::env::jwt_ttl_secs()?;
+        if let Some(iss) = crate::env::jwt_iss() {
             cfg = cfg.issuer(iss);
         }
         Ok(Some(cfg))

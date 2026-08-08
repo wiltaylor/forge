@@ -92,7 +92,7 @@ class ForgeApp:
 
     def auth_from_env(self) -> "ForgeApp":
         """Enable JWT auth from FORGE_* env vars; raises if the secret is unset."""
-        secret = config.env_str("FORGE_JWT_SECRET")
+        secret = config.jwt_secret()
         if not secret:
             raise RuntimeError(
                 "auth_from_env(): FORGE_JWT_SECRET is not set — set it (>= 32 "
@@ -100,9 +100,9 @@ class ForgeApp:
             )
         return self.auth(
             secret=secret,
-            users=config.parse_users(config.env_str("FORGE_AUTH_USERS", "") or ""),
-            ttl=config.env_int("FORGE_JWT_TTL_SECS", config.DEFAULT_TTL_SECS),
-            iss=config.env_str("FORGE_JWT_ISS"),
+            users=config.parse_users(config.auth_users()),
+            ttl=config.jwt_ttl_secs(),
+            iss=config.jwt_iss(),
         )
 
     @property
@@ -119,7 +119,7 @@ class ForgeApp:
     # -- features ----------------------------------------------------------
 
     def with_docstore(self, data_dir: str | Path | None = None) -> "ForgeApp":
-        directory = data_dir or config.env_str("FORGE_DATA_DIR", config.DEFAULT_DATA_DIR)
+        directory = data_dir or config.data_dir()
         self.docstore = DocStore(directory)
         _docstore.register_routes(self.fastapi, self.docstore, self.require_auth)
         self._resort_routes()
@@ -144,9 +144,7 @@ class ForgeApp:
         return self
 
     def with_components(self, components_dir: str | Path | None = None) -> "ForgeApp":
-        directory = components_dir or config.env_str(
-            "FORGE_COMPONENTS_DIR", config.DEFAULT_COMPONENTS_DIR
-        )
+        directory = components_dir or config.components_dir()
         _components.register_routes(self.fastapi, directory, self.name, self.require_auth)
         self._resort_routes()
         return self
@@ -204,8 +202,8 @@ class ForgeApp:
 
         uvicorn.run(
             self.fastapi,
-            host=host or config.env_str("FORGE_HOST", config.DEFAULT_HOST),
-            port=port if port is not None else config.env_int("FORGE_PORT", config.DEFAULT_PORT),
+            host=host or config.host(),
+            port=port if port is not None else config.port(),
         )
 
     # -- internals ---------------------------------------------------------------
