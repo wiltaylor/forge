@@ -19,7 +19,8 @@
   "scripts": {
     "build": "tsup && tsc -p tsconfig.build.json",
     "prepare": "node ../../scripts/prepare-package.mjs",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node ../../scripts/no-tests-yet.mjs"
   },
   "dependencies": {
     "@xterm/addon-fit": "^0.11.0",

@@ -21,6 +21,7 @@ export function useHealth(url, intervalMs = 5000) {
 }
 `;
 
+/** @type {import('@forge/code').CodeAnnotation[]} */
 const ANNOTATIONS = [
   { from: { line: 14, col: 34 }, to: { line: 14, col: 42 }, severity: 'error',
     message: "'interval' is not defined — did you mean 'intervalMs'?", source: 'eslint(no-undef)' },

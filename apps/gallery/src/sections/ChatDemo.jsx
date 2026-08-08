@@ -14,9 +14,11 @@ const svgUri = (label, bg) =>
   )}`;
 
 /* ---------------- Direct (1:1) ------------------------------------------------ */
+/** @typedef {import('@forge/chat').ChatItem} ChatItem */
+
 function DirectDemo() {
   let nextId = 1;
-  const [items, setItems] = createSignal([
+  const [items, setItems] = createSignal(/** @type {ChatItem[]} */ ([
     { id: 'd1', author: 'sam', at: ago(32), text: 'Hey — did the **staging deploy** go out? The release notes still say `v0.8.1`.' },
     { id: 'd2', author: 'me', at: ago(30), text: 'Going out now. Changes:\n- new ingest pipeline\n- retry budget fix\n- *smaller* docker image' },
     { id: 'd3', author: 'me', at: ago(29), blocks: [
@@ -37,8 +39,8 @@ function DirectDemo() {
     ] },
     { id: 'd6', author: 'me', at: ago(2), text: 'Sending the summary to the team now.', pending: true },
     { id: 'd7', author: 'me', at: ago(1), text: 'And the metrics dashboard link.', error: 'Not delivered — retry' },
-  ]);
-  const [typing, setTyping] = createSignal([]);
+  ]));
+  const [typing, setTyping] = createSignal(/** @type {string[]} */ ([]));
 
   const send = (text) => {
     setItems((cur) => [...cur, { id: `dm-${nextId++}`, author: 'me', at: new Date(), text }]);
@@ -77,7 +79,7 @@ function DirectDemo() {
 function RoomDemo() {
   let nextId = 1;
   const yesterday = (min) => new Date(now - 24 * 60 * 60_000 - min * 60_000);
-  const [items, setItems] = createSignal([
+  const [items, setItems] = createSignal(/** @type {ChatItem[]} */ ([
     { id: 'r1', author: 'ana', at: yesterday(200), text: 'Rolling restart of the ingest workers done. Error rate back under **0.1%**.' },
     { id: 'r2', author: 'ben', at: yesterday(190), text: 'Confirmed from the dashboard side.' },
     { id: 'r0', type: 'event', at: yesterday(60), text: 'Priya joined #ops' },
@@ -87,7 +89,7 @@ function RoomDemo() {
     { id: 'r6', author: 'ana', at: ago(80), text: 'Thanks. Watch the compaction queue too, it spiked overnight.' },
     { id: 'r7', author: 'ben', at: ago(12), text: 'Deploy window opens at 14:00 — anything blocking?' },
     { id: 'r8', author: 'me', at: ago(3), text: 'Nothing from my side. Ship it.' },
-  ]);
+  ]));
   const [typing] = createSignal(['ana', 'priya']);
 
   const send = (text) =>
@@ -117,8 +119,8 @@ function RoomDemo() {
 function AssistantDemo() {
   let nextId = 1;
   const [answers, setAnswers] = createSignal({});
-  const [extra, setExtra] = createSignal([]);
-  const [older, setOlder] = createSignal([]);
+  const [extra, setExtra] = createSignal(/** @type {ChatItem[]} */ ([]));
+  const [older, setOlder] = createSignal(/** @type {ChatItem[]} */ ([]));
   const answer = (id) => (value) => setAnswers((cur) => ({ ...cur, [id]: value }));
 
   const resolveLink = (url) =>
@@ -132,11 +134,18 @@ function AssistantDemo() {
       }), 1500),
     );
 
+  /**
+   * @param {string} id
+   * @param {string} question
+   * @param {import('@forge/chat').ChatPromptControl} control
+   * @returns {import('@forge/chat').ChatBlock}
+   */
   const prompt = (id, question, control) => ({
     kind: 'prompt',
     prompt: { id, question, control, answer: answers()[id], onAnswer: answer(id) },
   });
 
+  /** @returns {ChatItem[]} */
   const items = () => [
     ...older(),
     { id: 'a1', author: 'me', at: ago(14), text: 'Find the flaky test in CI and fix it.' },

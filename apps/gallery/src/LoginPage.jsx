@@ -1,11 +1,12 @@
 import { Show, createSignal } from 'solid-js';
 import { Alert, Button, Card, Input } from '@forge/ui';
+import { ApiError } from '@forge/client';
 import { api } from './api';
 
 export default function LoginPage(props) {
   const [username, setUsername] = createSignal('');
   const [password, setPassword] = createSignal('');
-  const [error, setError] = createSignal(null);
+  const [error, setError] = createSignal(/** @type {string | null} */ (null));
   const [busy, setBusy] = createSignal(false);
 
   const submit = async (e) => {
@@ -16,7 +17,9 @@ export default function LoginPage(props) {
       await api.auth.login(username(), password());
       props.onLogin?.();
     } catch (err) {
-      setError(err?.status === 401 ? 'Invalid username or password.' : `Login failed: ${err?.message ?? err}`);
+      setError(err instanceof ApiError && err.status === 401
+        ? 'Invalid username or password.'
+        : `Login failed: ${err instanceof Error ? err.message : err}`);
     } finally {
       setBusy(false);
     }

@@ -4,6 +4,7 @@ import { CodeEditor } from '@forge/code';
 import { BlockEditor, fromMarkdown, toMarkdown, newId } from '@forge/blocks';
 
 /* The same sample content every platform demos (forge-blocks sample.rs). */
+/** @type {import('@forge/blocks').BlockDocument} */
 const SAMPLE = {
   version: 1,
   blocks: [

@@ -14,8 +14,8 @@ export default function Forms2Demo() {
   const [temp, setTemp] = createSignal(70);
   const [topP, setTopP] = createSignal(95);
   const [precision, setPrecision] = createSignal('fp8');
-  const [calDate, setCalDate] = createSignal(null);
-  const [runDate, setRunDate] = createSignal(null);
+  const [calDate, setCalDate] = createSignal(/** @type {string | undefined} */ (undefined));
+  const [runDate, setRunDate] = createSignal(/** @type {string | undefined} */ (undefined));
 
   return (
     <>

@@ -12,14 +12,17 @@ const TEMPLATES = [
   { w: 3, h: 1, label: 'Wide' },
 ];
 
+/** The demo rides a display label on each block; extra fields flow through the grid untouched. */
+/** @typedef {import('@forge/grid').GridBlock & { label: string }} DemoBlock */
+
 export default function GridDemo() {
-  const [layout, setLayout] = createSignal([
+  const [layout, setLayout] = createSignal(/** @type {DemoBlock[]} */ ([
     { id: 'cpu', x: 0, y: 0, w: 1, h: 1, label: 'CPU' },
     { id: 'mem', x: 1, y: 0, w: 1, h: 1, label: 'Memory' },
     { id: 'reqs', x: 2, y: 0, w: 2, h: 1, label: 'Requests' },
     { id: 'logs', x: 0, y: 1, w: 2, h: 2, label: 'Logs' },
     { id: 'latency', x: 2, y: 1, w: 4, h: 2, label: 'Latency' },
-  ]);
+  ]));
 
   // Preserve untouched block objects so DOM (and settle transitions) survive commits.
   const commit = (next) =>
@@ -46,12 +49,15 @@ export default function GridDemo() {
       </Card>
       <Card padded={false} title="Dashboard">
         <BlockGrid cols={6} rowHeight={90} layout={layout()} onLayoutChange={commit} onBlockAdd={addBlock}>
-          {(block) => (
-            <div style={{ display: 'flex', 'align-items': 'flex-start', 'justify-content': 'space-between', gap: '6px' }}>
-              <span style={{ 'font-weight': 600 }}>{block.label}</span>
-              <IconButton icon={X} label={`Remove ${block.label}`} data-no-drag onClick={() => removeBlock(block.id)} />
-            </div>
-          )}
+          {(block) => {
+            const b = /** @type {DemoBlock} */ (block);
+            return (
+              <div style={{ display: 'flex', 'align-items': 'flex-start', 'justify-content': 'space-between', gap: '6px' }}>
+                <span style={{ 'font-weight': 600 }}>{b.label}</span>
+                <IconButton icon={X} label={`Remove ${b.label}`} data-no-drag onClick={() => removeBlock(b.id)} />
+              </div>
+            );
+          }}
         </BlockGrid>
       </Card>
       </GridDndProvider>

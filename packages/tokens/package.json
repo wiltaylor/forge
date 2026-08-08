@@ -18,7 +18,8 @@
   "scripts": {
     "build": "tsup && tsc -p tsconfig.build.json",
     "prepare": "node ../../scripts/prepare-package.mjs",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node ../../scripts/no-tests-yet.mjs"
   },
   "devDependencies": {
     "tsup": "^8.5.1",

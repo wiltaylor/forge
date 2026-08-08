@@ -28,6 +28,9 @@ import DesktopDemo from './sections/DesktopDemo';
 import FxDemo from './sections/FxDemo';
 import BlocksDemo from './sections/BlocksDemo';
 
+/** @typedef {[id: string, label: string, section: import('solid-js').Component]} GallerySection */
+
+/** @type {GallerySection[]} */
 const SECTIONS = [
   ['primitives', 'Primitives', Primitives],
   ['forms', 'Forms', FormsDemo],
@@ -49,6 +52,7 @@ const SECTIONS = [
   ['fx', 'Particle FX', FxDemo],
 ];
 
+/** @type {GallerySection[]} */
 const BACKEND_SECTIONS = [
   ['live', 'Live events', LiveDemo],
   ['data', 'Document store', DataDemo],

@@ -59,7 +59,7 @@ build: frontend-build rust-build
 [group('test')]
 check: generate-test generate-check token-scan
 
-# Test the generators and the token scan themselves
+# Test the repo scripts themselves (generators, token scan, no-tests-yet guard)
 [group('test')]
 generate-test:
 	node --test 'scripts/**/*.test.mjs'

@@ -6,7 +6,8 @@
   "description": "Example Forge remote-component bundle: web components another Forge app can mount.",
   "scripts": {
     "build": "vite build",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node ../../scripts/no-tests-yet.mjs"
   },
   "dependencies": {
     "@forge/charts": "workspace:^",

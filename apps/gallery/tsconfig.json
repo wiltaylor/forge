@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  // The gallery is authored in untyped JSX (a full conversion is out of
+  // scope), but it is the one consumer that touches every public component —
+  // so `checkJs` type-checks each component usage against the packages'
+  // published types. `noImplicitAny` is off because untyped source cannot
+  // annotate its own locals; everything with a declared type is still checked.
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noImplicitAny": false,
+    "noEmit": true
+  },
+  "include": ["src"]
+}
