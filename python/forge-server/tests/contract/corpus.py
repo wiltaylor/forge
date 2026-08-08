@@ -303,8 +303,8 @@ class Corpus:
         return [case for case in self.cases if case.applies_to(transport)]
 
     def fixture(self, case: Case) -> Fixture:
-        """The fixture a case runs against. Validation has already proved it
-        is there, so a driver can take it."""
+        """The fixture a case runs against. Validation proves every case names
+        one that exists before anything else asks for it."""
         return self.fixtures[case.fixture]
 
     def validate(self) -> None:

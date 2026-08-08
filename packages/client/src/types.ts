@@ -20,12 +20,13 @@ export interface LoginResult {
 }
 
 /** `/api/auth/me` response payload — the decoded claims the contract names
- * for that endpoint. `iat` is a token claim and not one of them. */
+ * for that endpoint: `{sub, roles, iss, exp}`. `iat` is a token claim and not
+ * one of them, so no backend sends it. */
 export interface Claims {
   sub: string;
   roles: string[];
-  iss: string | null;
-  exp: number | null;
+  iss?: string | null;
+  exp?: number | null;
 }
 
 /** `/api/health` response payload. */

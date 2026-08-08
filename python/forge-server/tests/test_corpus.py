@@ -146,6 +146,7 @@ class Harness:
 
         app = ForgeApp(interpolate(fixture.app, variables))
         if fixture.auth.enabled:
+            _reject_roles(fixture)
             # Configured the way a deployment configures it: through the
             # FORGE_AUTH_USERS parser. Handing the store a name and a secret
             # directly would step over the parse, which is where an argon2
@@ -497,6 +498,19 @@ def _serve(app: ForgeApp) -> tuple[uvicorn.Server, threading.Thread, int]:
             raise AssertionError("the corpus fixture did not come up")
         time.sleep(0.02)
     return server, thread, port
+
+
+def _reject_roles(fixture: Fixture) -> None:
+    """Loud rather than silent: this backend issues a token with no roles, and
+    ``FORGE_AUTH_USERS`` carries none either, so a fixture that wants them is
+    not the fixture served. The two Rust drivers put roles back on after the
+    parse; this one cannot."""
+    for user in fixture.auth.users:
+        if user.roles:
+            raise AssertionError(
+                f"the corpus fixture gives {user.name!r} roles, which this backend "
+                "cannot put in a token"
+            )
 
 
 def _events_kwargs(events: FixtureEvents) -> dict[str, Any]:

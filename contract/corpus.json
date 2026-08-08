@@ -64,10 +64,25 @@
       "app": "${app}",
       "auth": { "enabled": false },
       "docstore": true,
+      "events": {},
       "actions": ["echo"],
       "components": {
-        "manifest": { "components": [] },
-        "files": {}
+        "manifest": {
+          "components": [
+            {
+              "name": "Widget",
+              "tag": "forge-widget",
+              "file": "${component_file}",
+              "hash": "sha256-corpus",
+              "props": [],
+              "events": [],
+              "version": "1.0.0"
+            }
+          ]
+        },
+        "files": {
+          "${component_file}": "export const widget = 1;\n"
+        }
       }
     },
     "absent-manifest": {
@@ -909,7 +924,7 @@
       "id": "auth-disabled-identity-is-anonymous",
       "title": "With no auth configured, a request with no token is the anonymous identity",
       "fixture": "auth-disabled",
-      "note": "A subset, unlike `me-with-bearer`: the contract fixes `sub` and `roles` for the anonymous identity and says nothing about what an expiry means for an identity that never came from a token.",
+      "note": "Everything the document decides, and one member short of `me-with-bearer`'s `$exact`. The two backends disagree on what `exp` means for an identity that never came from a token — Rust mints a far-future expiry, Python answers null — and the contract is silent on it, so the difference is raised as issue #115 rather than settled here. `exp` is the only member this case leaves open; a backend that drops `iss`, or that adds a member, still fails.",
       "applies": ["rust-http", "python-http", "rust-ipc", "ts-client"],
       "inapplicable": {},
       "steps": [
@@ -919,7 +934,7 @@
             "status": 200,
             "body": {
               "ok": true,
-              "data": { "sub": "anonymous", "roles": { "$exact": [] } }
+              "data": { "sub": "anonymous", "roles": { "$exact": [] }, "iss": null }
             }
           }
         }
@@ -953,9 +968,69 @@
           "request": { "method": "GET", "path": "/api/components", "auth": "none" },
           "expect": {
             "status": 200,
-            "body": { "ok": true, "data": { "$exact": { "app": "${app}", "components": [] } } }
+            "body": { "ok": true, "data": { "app": "${app}" } }
           }
         }
+      ]
+    },
+    {
+      "id": "auth-disabled-serves-a-bundle-without-a-token",
+      "title": "With no auth configured, a bundle file is served without a token",
+      "fixture": "auth-disabled",
+      "applies": ["rust-http", "python-http"],
+      "inapplicable": {
+        "rust-ipc": "An IPC response body is a JSON envelope, so it cannot carry bundle bytes — see `component-file-served`.",
+        "ts-client": "The client parses envelopes; a JavaScript bundle body is outside its surface."
+      },
+      "steps": [
+        {
+          "request": {
+            "method": "GET",
+            "path": "/api/components/${component_file}",
+            "auth": "none"
+          },
+          "expect": {
+            "status": 200,
+            "text": { "$contains": "export const widget" }
+          }
+        }
+      ]
+    },
+    {
+      "id": "auth-disabled-event-stream-is-open",
+      "title": "With no auth configured, the event stream opens without a token",
+      "kind": "sse",
+      "fixture": "auth-disabled",
+      "note": "The two streams read their token from a query parameter rather than from the header every other endpoint reads, and they do it in their own handlers rather than behind the middleware. That makes them the endpoints most likely to go on asking for one after auth is switched off, which is why auth-disabled mode is covered here as well as on the routes that sit behind the middleware.",
+      "applies": ["rust-http", "python-http"],
+      "inapplicable": {
+        "rust-ipc": "IPC delivers events as Tauri events, not as an HTTP event stream.",
+        "ts-client": "EventSource exposes neither the response status nor the content-type header this case asserts."
+      },
+      "steps": [
+        {
+          "request": { "method": "GET", "path": "/api/events", "auth": "none" },
+          "expect": {
+            "status": 200,
+            "headers": { "content-type": { "$prefix": "text/event-stream" } }
+          }
+        }
+      ]
+    },
+    {
+      "id": "auth-disabled-websocket-is-open",
+      "title": "With no auth configured, a websocket connects without a token",
+      "kind": "ws",
+      "fixture": "auth-disabled",
+      "note": "The ping and pong are what prove the socket is live rather than merely accepted: `ws-requires-token` shows the handshake is where the refusal lands, so a handshake that succeeds has to be answered on.",
+      "applies": ["rust-http", "python-http", "ts-client"],
+      "inapplicable": {
+        "rust-ipc": "IPC delivers events as Tauri events; there is no websocket handshake."
+      },
+      "steps": [
+        { "connect": { "path": "/api/ws", "auth": "none" } },
+        { "send": { "type": "ping" } },
+        { "await_frame": { "$exact": { "type": "pong" } } }
       ]
     }
   ]

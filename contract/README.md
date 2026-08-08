@@ -70,11 +70,13 @@ The four:
 | `absent-manifest` | A components directory with no `manifest.json`. |
 | `events-tuned` | A one-deep buffer and a one-second heartbeat, so the lag notification and the heartbeat are seen rather than waited for. |
 
-A fixture states:
+A fixture states `app` and `auth.enabled`; everything else defaults to off or
+empty, so a fixture carries only what its cases need.
 
 - `app` — the application name the backend reports.
-- `auth.enabled`, `auth.users` — auth on, with these users. The signing secret
-  is the driver's own business; nothing in the corpus observes it.
+- `auth.enabled`, `auth.users` — auth on, with these users (default none). The
+  signing secret is the driver's own business; nothing in the corpus observes
+  it.
   - `name`, `password` — the credentials a login sends.
   - `secret` — optional: how the backend **stores** the credential, in the
     `FORGE_AUTH_USERS` syntax (an argon2 PHC hash, or plaintext). Absent means
@@ -85,7 +87,7 @@ A fixture states:
   `{"buffer": n}` is how far a subscriber may fall behind before it is told it
   lagged, and `{"heartbeat_s": n}` the gap between heartbeat comments; both
   default to the backend's own, which are the contract's.
-- `actions` — the actions that must be registered:
+- `actions` — the actions that must be registered. Default none:
   - `echo` returns its payload unchanged.
   - `publish` takes `{topic, data}`, publishes `data` on `topic`, and returns
     `{"published": true, "topic": <topic>}`.
@@ -96,7 +98,7 @@ A fixture states:
   `components.manifest` is written to `manifest.json`; **absent** is the
   fixture that has a directory and no manifest. `components.files` are written
   beside it, name to content.
-- `frontend.files` — written to the static frontend directory.
+- `frontend.files` — written to the static frontend directory. Default none.
 
 ### Users go in through the variable
 
@@ -267,7 +269,7 @@ Each of these corresponds to something the old suite left unverified, or hid.
 
 | Case | What it reaches |
 |---|---|
-| `auth-disabled-health-reports-it`, `-has-no-login`, `-identity-is-anonymous`, `-protected-routes-are-open` | The mode the contract calls first-class. The old fixture needed a token, so it could not run the mode that has none. |
+| `auth-disabled-health-reports-it`, `-has-no-login`, `-identity-is-anonymous`, `-protected-routes-are-open`, `-serves-a-bundle-without-a-token`, `-event-stream-is-open`, `-websocket-is-open` | The mode the contract calls first-class, over every surface: the middleware routes, the bundle endpoint, and the two streams that read their token from a query parameter in their own handlers. The old fixture needed a token, so it could not run the mode that has none. |
 | `login-with-a-hashed-credential` | The shipped defect. Both demo configurations ship plaintext credentials, so no suite ever booted a backend with a hash whose parameters carry commas. |
 | `components-absent-manifest-is-an-empty-catalogue` | Where the two HTTP backends diverged, and where the suite guarding them skipped itself. |
 | `doc-name-rejected-on-read`, `-on-delete` | The name rule on the verbs that are not `PUT`. |
@@ -280,6 +282,13 @@ Each of these corresponds to something the old suite left unverified, or hid.
 loosely and passed while the two backends answered with different key sets —
 one carrying `iat` and dropping a null `iss`, the other the reverse. It now
 states the four members the contract names, and nothing else.
+
+That tightening left one difference the contract does not settle: what `exp`
+means for an identity that never came from a token. Rust mints a far-future
+expiry, Python answers null, and `docs/api-contract.md` says only that the
+anonymous identity is `sub = "anonymous"`, `roles = []`. Raised as issue #115
+rather than chosen here; `auth-disabled-identity-is-anonymous` states every
+other member, so `exp` is the only thing left open.
 
 ## The block kind registry
 

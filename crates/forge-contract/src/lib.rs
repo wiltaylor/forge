@@ -347,8 +347,8 @@ impl Corpus {
         self.cases.iter().filter(move |c| c.applies_to(transport))
     }
 
-    /// The fixture a case runs against. Validation has already proved it is
-    /// there, so a driver can take it.
+    /// The fixture a case runs against. Validation proves every case names one
+    /// that exists before anything else asks for it.
     pub fn fixture(&self, case: &Case) -> &Fixture {
         self.fixtures
             .get(&case.fixture)
