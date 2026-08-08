@@ -7,9 +7,8 @@ use axum::response::Response;
 use axum::routing::{get, post};
 use axum::Router;
 use serde::Deserialize;
-use serde_json::json;
 
-use crate::auth::jwt::{encode_token, Claims};
+use crate::auth::AUTH_DISABLED;
 use crate::envelope::{err, ok};
 use crate::state::ForgeState;
 
@@ -30,10 +29,12 @@ struct LoginBody {
 }
 
 async fn login(State(state): State<ForgeState>, body: Bytes) -> Response {
-    // Contract: 404 when auth is disabled. External-issuer mode (validator
-    // without a login config) also has no login endpoint.
-    let Some(config) = state.auth().and_then(|a| a.config.as_ref()) else {
-        return err(StatusCode::NOT_FOUND, "auth is disabled");
+    // Contract: 404 when auth is disabled. External-issuer mode (a validator
+    // without a login config) has no login endpoint either. Both are decided
+    // before the body is read: with no endpoint here, the body is nobody's
+    // business.
+    let Some(auth) = state.auth().filter(|a| a.can_login()) else {
+        return err(StatusCode::NOT_FOUND, AUTH_DISABLED);
     };
 
     let body: LoginBody = match serde_json::from_slice(&body) {
@@ -46,27 +47,8 @@ async fn login(State(state): State<ForgeState>, body: Bytes) -> Response {
         }
     };
 
-    let user = config
-        .users
-        .iter()
-        .find(|u| u.name == body.username)
-        .filter(|u| u.verify(&body.password));
-    let Some(user) = user else {
-        return err(StatusCode::UNAUTHORIZED, "invalid username or password");
-    };
-
-    let claims = Claims::new(
-        &user.name,
-        user.roles.clone(),
-        config.ttl_secs,
-        Some(config.iss.clone()),
-    );
-    match encode_token(&claims, &config.secret) {
-        Ok(token) => ok(json!({
-            "token": token,
-            "expires_at": claims.exp,
-            "user": { "name": user.name, "roles": user.roles },
-        })),
+    match auth.login(&body.username, &body.password) {
+        Ok(response) => ok(response),
         Err(e) => crate::error::error_response(e),
     }
 }

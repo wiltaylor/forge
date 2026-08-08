@@ -1,6 +1,6 @@
 [package]
 name = "forge-core"
-description = "Transport-agnostic core of the Forge backend: doc store, actions, events, claims, envelope shapes."
+description = "Transport-agnostic core of the Forge backend: doc store, actions, events, auth, envelope shapes."
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -21,6 +21,11 @@ widgets = ["term", "term-ssh", "vnc", "rdp"]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"
+# 11 ships no crypto backend by default (only `use_pem`); rust_crypto keeps
+# HS256 on the RustCrypto stack argon2 already pulls in, instead of adding
+# aws-lc-rs and its C/asm build.
+jsonwebtoken = { version = "11", features = ["rust_crypto"] }
+argon2 = { version = "0.5", features = ["std"] }
 tokio = { version = "1", features = ["fs", "sync", "macros", "rt"] }
 tracing = "0.1"
 # Widget backends — all optional, behind the cargo features above.

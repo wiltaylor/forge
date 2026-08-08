@@ -121,4 +121,23 @@ mod tests {
         assert!(u.verify("secret"));
         assert!(!u.verify("nope"));
     }
+
+    #[test]
+    fn argon2_hash_verify() {
+        // Real forge-hash output for "s3cret", pasted in: the test verifies a
+        // hash the tool produced rather than round-tripping its own hasher.
+        let hash = "$argon2id$v=19$m=19456,t=2,p=1$oIonqyWQKyCxWwPHZhDWFQ$\
+                    MatG+SWES3ScVBSWxHLZ6y0BwSH/jxcJYuHBHO3gME4";
+        let u = AuthUser::new("h", hash);
+        assert!(u.is_hashed());
+        assert!(u.verify("s3cret"));
+        assert!(!u.verify("nope"));
+    }
+
+    #[test]
+    fn malformed_hash_never_verifies() {
+        let u = AuthUser::new("h", "$argon2id$not-a-real-hash");
+        assert!(!u.verify("s3cret"));
+        assert!(!u.verify("$argon2id$not-a-real-hash"));
+    }
 }

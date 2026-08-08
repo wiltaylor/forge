@@ -9,7 +9,7 @@ use axum::http::{StatusCode, Uri};
 use axum::middleware::Next;
 use axum::response::Response;
 
-use crate::auth::jwt::Claims;
+use crate::auth::Claims;
 use crate::envelope;
 use crate::error::{error_response, ForgeError};
 use crate::state::ForgeState;
@@ -49,7 +49,7 @@ fn authenticate(
             "missing token (Authorization: Bearer or ?token=)".into(),
         ));
     };
-    auth.validator.validate(&token)
+    auth.validate(&token)
 }
 
 /// Extractor for the authenticated identity. Rejects with a 401 envelope

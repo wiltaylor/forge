@@ -8,7 +8,7 @@ use std::time::Instant;
 use axum::extract::FromRef;
 
 use crate::actions::BoxedAction;
-use crate::auth::AuthState;
+use crate::auth::Auth;
 use crate::docstore::DocStore;
 use crate::events::EventBus;
 use crate::frontend::Frontend;
@@ -16,7 +16,7 @@ use crate::frontend::Frontend;
 pub(crate) struct StateInner {
     pub app: String,
     pub start: Instant,
-    pub auth: Option<AuthState>,
+    pub auth: Option<Auth>,
     pub events: EventBus,
     pub docstore: Option<DocStore>,
     pub actions: BTreeMap<String, BoxedAction>,
@@ -69,7 +69,7 @@ impl ForgeState {
         self.inner.actions.keys().map(String::as_str).collect()
     }
 
-    pub(crate) fn auth(&self) -> Option<&AuthState> {
+    pub(crate) fn auth(&self) -> Option<&Auth> {
         self.inner.auth.as_ref()
     }
 }

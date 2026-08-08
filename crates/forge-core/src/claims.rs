@@ -1,5 +1,5 @@
-//! Forge identity claims. JWT encoding/decoding lives with the HTTP server;
-//! the claims shape itself is transport-agnostic.
+//! Forge identity claims — the one definition of the claim shape in Rust.
+//! Encoding, decoding and the user store live beside it in [`crate::auth`].
 
 use serde::{Deserialize, Serialize};
 

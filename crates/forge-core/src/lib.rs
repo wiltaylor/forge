@@ -2,12 +2,13 @@
 //!
 //! Holds everything the frozen Forge API contract (docs/api-contract.md)
 //! needs that is independent of how requests arrive: the JSON document
-//! store, the action registry types, the event bus, identity claims, the
-//! response-envelope shapes and the health payload. `forge-server` serves
-//! these over HTTP/SSE/WebSocket; `forge-tauri` serves the same semantics
-//! over Tauri IPC.
+//! store, the action registry types, the event bus, authentication (claims,
+//! token validation and the login user store), the response-envelope shapes
+//! and the health payload. `forge-server` serves these over
+//! HTTP/SSE/WebSocket; `forge-tauri` serves the same semantics over Tauri IPC.
 
 pub mod actions;
+pub mod auth;
 pub mod claims;
 pub mod docstore;
 pub mod envelope;
@@ -18,6 +19,7 @@ pub mod health;
 pub mod widgets;
 
 pub use actions::{box_action, unknown_action_error, ActionCtx, ActionFuture, BoxedAction};
+pub use auth::{Auth, AuthConfig, AuthUser, Hs256Validator, LoginResponse, TokenValidator};
 pub use claims::{unix_now, Claims};
 pub use docstore::{valid_doc_name, DocStore, NAME_PATTERN};
 pub use envelope::{err_value, ok_empty_value, ok_value};
