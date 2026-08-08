@@ -56,16 +56,30 @@ function starterArm(kind) {
  *
  * Arrays check as arrays only — their element structs stay unchecked. Every
  * scalar helper type in `wire.ts` is a string union on the wire, so a bare
- * capitalised name checks as a string; a helper that stops being one must
- * grow this mapping, and the throw makes that impossible to miss.
+ * capitalised name is its own shape and loading checks membership of the
+ * runtime list `wire.ts` exports beside the type; a helper that stops being
+ * a string union must grow this mapping, and the throw makes that
+ * impossible to miss.
  */
 function fieldShape(ts) {
   if (ts.endsWith('[]')) return 'array';
   if (ts === 'number' || /^\d+( \| \d+)*$/.test(ts)) return 'number';
-  if (ts === 'string' || /^[A-Z]\w*$/.test(ts)) return 'string';
-  if (ts === 'boolean') return 'boolean';
-  if (ts === 'unknown') return 'unknown';
+  if (/^[A-Z]\w*$/.test(ts)) return ts;
+  if (['string', 'boolean', 'unknown'].includes(ts)) return ts;
   throw new Error(`no runtime shape for wire type ${ts}`);
+}
+
+/** The enum shapes the field table uses, sorted — the `FieldShape` members
+    beyond the five base shapes. */
+function enumShapes() {
+  const names = new Set();
+  for (const kind of kinds) {
+    for (const field of kind.fields) {
+      const shape = fieldShape(field.ts);
+      if (/^[A-Z]/.test(shape)) names.add(shape);
+    }
+  }
+  return [...names].sort();
 }
 
 /** One kind's row in the field table. */
@@ -129,8 +143,16 @@ export function renderBlocksTypes() {
     '',
     '/** Coarse runtime shape of one wire field — what document loading checks a',
     "    field against. `'array'` says only that the field is an array; the",
-    '    element structs stay unchecked. */',
-    "export type FieldShape = 'string' | 'number' | 'boolean' | 'array' | 'unknown';",
+    '    element structs stay unchecked. A capitalised shape names a string-union',
+    '    helper type in `wire.ts`, and loading checks membership of the runtime',
+    '    list exported beside it. */',
+    'export type FieldShape =',
+    "  | 'string'",
+    "  | 'number'",
+    "  | 'boolean'",
+    "  | 'array'",
+    "  | 'unknown'",
+    ...enumShapes().map((name, i, all) => `  | ${quote(name)}${i === all.length - 1 ? ';' : ''}`),
     '',
     '/** One wire field of a kind: its name, whether serde may omit it, and its',
     '    coarse runtime shape. */',

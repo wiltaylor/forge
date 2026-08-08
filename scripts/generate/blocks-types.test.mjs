@@ -132,7 +132,7 @@ test('a field checks as an array exactly when its wire type is one', () => {
   for (const kind of kinds) {
     const rows = fieldRowsFor(kind.type);
     for (const field of kind.fields) {
-      const row = new RegExp(`name: '${field.name}',[^}]*shape: '([a-z]+)'`).exec(rows);
+      const row = new RegExp(`name: '${field.name}',[^}]*shape: '([A-Za-z]+)'`).exec(rows);
       assert.ok(row, `${kind.type}.${field.name} has no shape`);
       assert.equal(
         row[1] === 'array',
@@ -143,10 +143,26 @@ test('a field checks as an array exactly when its wire type is one', () => {
   }
 });
 
-test('scalar helper types check as the strings they are on the wire', () => {
-  // ListStyle, AdmonitionTone, the direction enums: string unions in wire.ts.
-  assert.ok(fieldRowsFor('list_item').includes("{ name: 'style', optional: false, shape: 'string' }"));
-  assert.ok(fieldRowsFor('admonition').includes("{ name: 'tone', optional: false, shape: 'string' }"));
+test('a scalar helper type is its own shape, for enum-membership checks', () => {
+  // ListStyle, AdmonitionTone, the direction enums: string unions in wire.ts,
+  // named so loading can check membership rather than admit any string.
+  assert.ok(fieldRowsFor('list_item').includes("{ name: 'style', optional: false, shape: 'ListStyle' }"));
+  assert.ok(fieldRowsFor('admonition').includes("{ name: 'tone', optional: false, shape: 'AdmonitionTone' }"));
+});
+
+test('the FieldShape union carries every shape the table uses, and no other', () => {
+  const union = section('export type FieldShape =', ';\n');
+  const declared = new Set((union.match(/'[A-Za-z]+'/g) ?? []).map((q) => q.slice(1, -1)));
+  const used = new Set(['string', 'number', 'boolean', 'array', 'unknown']);
+  for (const kind of kinds) {
+    for (const field of kind.fields) {
+      const row = new RegExp(`name: '${field.name}',[^}]*shape: '([A-Za-z]+)'`).exec(
+        fieldRowsFor(kind.type),
+      );
+      used.add(row[1]);
+    }
+  }
+  assert.deepEqual([...declared].sort(), [...used].sort());
 });
 
 test('a custom payload stays unchecked', () => {

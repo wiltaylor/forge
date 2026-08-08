@@ -230,8 +230,19 @@ export function createBlock(type: BlockType): Block {
 
 /** Coarse runtime shape of one wire field — what document loading checks a
     field against. `'array'` says only that the field is an array; the
-    element structs stay unchecked. */
-export type FieldShape = 'string' | 'number' | 'boolean' | 'array' | 'unknown';
+    element structs stay unchecked. A capitalised shape names a string-union
+    helper type in `wire.ts`, and loading checks membership of the runtime
+    list exported beside it. */
+export type FieldShape =
+  | 'string'
+  | 'number'
+  | 'boolean'
+  | 'array'
+  | 'unknown'
+  | 'AdmonitionTone'
+  | 'DiagramDirection'
+  | 'ListStyle'
+  | 'TimelineDirection';
 
 /** One wire field of a kind: its name, whether serde may omit it, and its
     coarse runtime shape. */
@@ -250,7 +261,7 @@ export const BLOCK_FIELDS: Record<BlockType, readonly BlockFieldSpec[]> = {
     { name: 'md', optional: false, shape: 'string' },
   ],
   list_item: [
-    { name: 'style', optional: false, shape: 'string' },
+    { name: 'style', optional: false, shape: 'ListStyle' },
     { name: 'checked', optional: true, shape: 'boolean' },
     { name: 'indent', optional: false, shape: 'number' },
     { name: 'md', optional: false, shape: 'string' },
@@ -266,7 +277,7 @@ export const BLOCK_FIELDS: Record<BlockType, readonly BlockFieldSpec[]> = {
     { name: 'rows', optional: false, shape: 'array' },
   ],
   admonition: [
-    { name: 'tone', optional: false, shape: 'string' },
+    { name: 'tone', optional: false, shape: 'AdmonitionTone' },
     { name: 'title', optional: false, shape: 'string' },
     { name: 'md', optional: false, shape: 'string' },
   ],
@@ -314,7 +325,7 @@ export const BLOCK_FIELDS: Record<BlockType, readonly BlockFieldSpec[]> = {
     { name: 'slices', optional: false, shape: 'array' },
   ],
   diagram: [
-    { name: 'direction', optional: true, shape: 'string' },
+    { name: 'direction', optional: true, shape: 'DiagramDirection' },
     { name: 'nodes', optional: false, shape: 'array' },
     { name: 'edges', optional: false, shape: 'array' },
   ],
@@ -334,7 +345,7 @@ export const BLOCK_FIELDS: Record<BlockType, readonly BlockFieldSpec[]> = {
   tree: [{ name: 'nodes', optional: false, shape: 'array' }],
   timeline: [
     { name: 'title', optional: true, shape: 'string' },
-    { name: 'direction', optional: true, shape: 'string' },
+    { name: 'direction', optional: true, shape: 'TimelineDirection' },
     { name: 'phases', optional: true, shape: 'array' },
     { name: 'items', optional: false, shape: 'array' },
   ],

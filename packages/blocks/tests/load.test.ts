@@ -72,6 +72,15 @@ describe('malformed blocks', () => {
       loadDocument(doc({ id: 'a', type: 'bar_chart', categories: [], series: 3 })),
     ).toThrowError(/"series".*array/);
   });
+  it('rejects an enum member the wire union does not hold, listing the members', () => {
+    // serde refuses these; admitting any string would silently cast them.
+    expect(() =>
+      loadDocument(doc({ id: 'a', type: 'list_item', style: 'wibble', indent: 0, md: '' })),
+    ).toThrowError(/"style" must be one of 'bullet', 'number', 'todo', got "wibble"/);
+    expect(() =>
+      loadDocument(doc({ id: 'a', type: 'admonition', tone: 'loud', title: '', md: '' })),
+    ).toThrowError(/"tone" must be one of 'info'/);
+  });
   it('throws DocumentLoadError, not a bare Error', () => {
     expect(() => loadDocument(doc({}))).toThrowError(DocumentLoadError);
   });

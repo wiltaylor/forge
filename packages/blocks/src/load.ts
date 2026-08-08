@@ -9,12 +9,21 @@
    blockless, and columns hold no nested columns and no empty cells.
 
    Validation is presence and coarse shape, driven by the generated
-   `BLOCK_FIELDS` table so the kind list has one author. Element structs
-   inside arrays (chart series, diagram nodes, …) stay unchecked, as does the
-   range of numeric fields — matching what the renderers tolerate. Fields the
-   schema does not declare are dropped, as serde drops them. */
+   `BLOCK_FIELDS` table so the kind list has one author; a field typed as a
+   wire enum must hold one of its members. Element structs inside arrays
+   (chart series, diagram nodes, …) stay unchecked, as does the range of
+   numeric fields — matching what the renderers tolerate. Fields the schema
+   does not declare are dropped, as serde drops them. */
 import type { Block, BlockDocument, BlockFieldSpec, FieldShape } from './types';
-import { BLOCK_FIELDS, DOC_VERSION, createBlock } from './types';
+import {
+  ADMONITION_TONES,
+  BLOCK_FIELDS,
+  DIAGRAM_DIRECTIONS,
+  DOC_VERSION,
+  LIST_STYLES,
+  TIMELINE_DIRECTIONS,
+  createBlock,
+} from './types';
 
 /** What `loadDocument` throws; `message` says what was wrong and where. */
 export class DocumentLoadError extends Error {
@@ -38,7 +47,10 @@ function describe(v: unknown): string {
   return `a ${typeof v}`;
 }
 
-const SHAPE_CHECK: Record<FieldShape, (v: unknown) => boolean> = {
+type BaseShape = 'string' | 'number' | 'boolean' | 'array' | 'unknown';
+type EnumShape = Exclude<FieldShape, BaseShape>;
+
+const BASE_CHECK: Record<BaseShape, (v: unknown) => boolean> = {
   string: (v) => typeof v === 'string',
   number: (v) => typeof v === 'number' && Number.isFinite(v),
   boolean: (v) => typeof v === 'boolean',
@@ -46,13 +58,35 @@ const SHAPE_CHECK: Record<FieldShape, (v: unknown) => boolean> = {
   unknown: () => true,
 };
 
-const SHAPE_WANTED: Record<FieldShape, string> = {
+const BASE_WANTED: Record<BaseShape, string> = {
   string: 'a string',
   number: 'a number',
   boolean: 'a boolean',
   array: 'an array',
   unknown: 'anything',
 };
+
+/* The members behind each enum shape, from `wire.ts` where the types derive
+   from these same lists. The `EnumShape` key makes a registry enum this
+   record misses a compile error, not a silent pass. */
+const ENUM_MEMBERS: Record<EnumShape, readonly string[]> = {
+  AdmonitionTone: ADMONITION_TONES,
+  DiagramDirection: DIAGRAM_DIRECTIONS,
+  ListStyle: LIST_STYLES,
+  TimelineDirection: TIMELINE_DIRECTIONS,
+};
+
+const isEnumShape = (shape: FieldShape): shape is EnumShape => shape in ENUM_MEMBERS;
+
+const checkShape = (shape: FieldShape, v: unknown): boolean =>
+  isEnumShape(shape)
+    ? typeof v === 'string' && (ENUM_MEMBERS[shape] as readonly string[]).includes(v)
+    : BASE_CHECK[shape](v);
+
+const wantedShape = (shape: FieldShape): string =>
+  isEnumShape(shape)
+    ? `one of ${ENUM_MEMBERS[shape].map((m) => `'${m}'`).join(', ')}`
+    : BASE_WANTED[shape];
 
 /** One field checked and copied onto `out`; a dropped field copies nothing. */
 function readField(
@@ -68,8 +102,9 @@ function readField(
   }
   // A null optional field reads as absent, the way serde reads Option::None.
   if (v === null && field.optional && field.shape !== 'unknown') return;
-  if (!SHAPE_CHECK[field.shape](v)) {
-    fail(`${at}: field "${field.name}" must be ${SHAPE_WANTED[field.shape]}, got ${describe(v)}`);
+  if (!checkShape(field.shape, v)) {
+    const got = typeof v === 'string' ? JSON.stringify(v) : describe(v);
+    fail(`${at}: field "${field.name}" must be ${wantedShape(field.shape)}, got ${got}`);
   }
   out[field.name] = v;
 }

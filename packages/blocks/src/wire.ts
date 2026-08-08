@@ -8,8 +8,13 @@
    tests/schema.rs for the literal fixtures. */
 import type { Block } from './types.gen';
 
-export type ListStyle = 'bullet' | 'number' | 'todo';
-export type AdmonitionTone = 'info' | 'success' | 'warning' | 'danger';
+/* The enums a kind uses directly as a field carry their member list as a
+   runtime value (the type derives from it), so document loading can refuse a
+   member serde would refuse rather than admit any string. */
+export const LIST_STYLES = ['bullet', 'number', 'todo'] as const;
+export type ListStyle = (typeof LIST_STYLES)[number];
+export const ADMONITION_TONES = ['info', 'success', 'warning', 'danger'] as const;
+export type AdmonitionTone = (typeof ADMONITION_TONES)[number];
 
 export interface BlockColumn {
   ratio: number;
@@ -34,7 +39,8 @@ export interface PieSlice {
   value: number;
 }
 
-export type DiagramDirection = 'right' | 'down';
+export const DIAGRAM_DIRECTIONS = ['right', 'down'] as const;
+export type DiagramDirection = (typeof DIAGRAM_DIRECTIONS)[number];
 export type DiagramNodeKind = 'process' | 'decision' | 'terminator' | 'node';
 export type DiagramEdgeKind = 'solid' | 'dashed';
 
@@ -99,7 +105,8 @@ export interface TreeNode {
   children?: TreeNode[];
 }
 
-export type TimelineDirection = 'horizontal' | 'vertical';
+export const TIMELINE_DIRECTIONS = ['horizontal', 'vertical'] as const;
+export type TimelineDirection = (typeof TIMELINE_DIRECTIONS)[number];
 export type TimelineSide = 'near' | 'far';
 
 /** `from`/`to`/`on` are ISO-8601 date strings. */
