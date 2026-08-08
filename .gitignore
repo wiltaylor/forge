@@ -1,6 +1,8 @@
 node_modules/
 dist/
 dist-remote/
+# Not a build output: the rust-embed fixture the frontend tests compile against.
+!crates/forge-server/tests/fixtures/dist/
 target/
 .turbo/
 *.log
