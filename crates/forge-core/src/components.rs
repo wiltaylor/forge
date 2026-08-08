@@ -79,7 +79,13 @@ impl Components {
             }
             // An array manifest is treated as the components list.
             Value::Array(components) => json!({"app": app, "components": components}),
-            other => other,
+            // Anything else cannot carry the app name, and the contract states
+            // one response shape for this endpoint.
+            _ => {
+                return Err(ForgeError::Internal(
+                    "manifest.json must be an object or an array".into(),
+                ))
+            }
         })
     }
 
@@ -186,6 +192,18 @@ mod tests {
             .manifest("demo")
             .await
             .expect_err("corrupt manifest");
+        assert_eq!(err.status(), 500);
+    }
+
+    #[tokio::test]
+    async fn manifest_that_is_neither_object_nor_array_is_a_500() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        std::fs::write(dir.path().join("manifest.json"), r#""hello""#).expect("write manifest");
+
+        let err = Components::new(dir.path())
+            .manifest("demo")
+            .await
+            .expect_err("scalar manifest");
         assert_eq!(err.status(), 500);
     }
 }

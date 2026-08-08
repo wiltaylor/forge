@@ -35,8 +35,9 @@ def fail(message: str, status: int = 400, headers: dict | None = None) -> JSONRe
 
 
 def install_handlers(app: FastAPI) -> None:
-    """Convert domain errors, HTTPExceptions and request-validation errors to
-    the envelope. This is where a core rule's verdict becomes a status."""
+    """Convert domain errors, HTTPExceptions and validation errors to the envelope.
+
+    This is where a core rule's verdict becomes a status."""
 
     @app.exception_handler(ForgeError)
     async def _forge_error(request: Request, exc: ForgeError):

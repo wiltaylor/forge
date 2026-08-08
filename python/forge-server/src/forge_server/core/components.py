@@ -36,7 +36,7 @@ class Components:
     def __init__(self, directory: str | Path) -> None:
         self.directory = Path(directory)
 
-    def manifest(self, app: str) -> Any:
+    def manifest(self, app: str) -> dict[str, Any]:
         """The federation manifest with ``app`` injected.
 
         No ``manifest.json`` is an empty catalogue — ``{app, components: []}``
@@ -56,7 +56,9 @@ class Components:
         if isinstance(data, list):
             # An array manifest is treated as the components list.
             return {"app": app, "components": data}
-        return data
+        # Anything else cannot carry the app name, and the contract states one
+        # response shape for this endpoint.
+        raise Internal("manifest.json must be an object or an array")
 
     def file_path(self, name: str) -> Path:
         """Path of a bundle file, once its name passes the filename rule.

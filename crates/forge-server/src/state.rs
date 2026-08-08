@@ -64,7 +64,7 @@ impl ForgeState {
         self.inner.docstore.as_ref()
     }
 
-    /// Component federation directory, when configured.
+    /// Component federation, when configured.
     pub fn components(&self) -> Option<&Components> {
         self.inner.components.as_ref()
     }

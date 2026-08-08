@@ -12,22 +12,9 @@ from typing import Callable
 from fastapi import Depends, FastAPI
 from fastapi.responses import FileResponse
 
-from .core.components import (  # re-exported: one rule, one implementation
-    ALLOWED_EXTENSIONS,
-    FILE_PATTERN,
-    Components,
-    valid_component_file,
-)
+from .core.components import Components
 from .core.error import NotFound
 from .envelope import ok
-
-__all__ = [
-    "ALLOWED_EXTENSIONS",
-    "Components",
-    "FILE_PATTERN",
-    "register_routes",
-    "valid_component_file",
-]
 
 
 def register_routes(

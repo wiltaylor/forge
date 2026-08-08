@@ -73,6 +73,13 @@ def test_corrupt_manifest_is_a_500(tmp_path):
     assert e.value.status == 500
 
 
+def test_manifest_that_is_neither_object_nor_array_is_a_500(tmp_path):
+    (tmp_path / "manifest.json").write_text('"hello"')
+    with pytest.raises(ForgeError) as e:
+        Components(tmp_path).manifest("demo")
+    assert e.value.status == 500
+
+
 def make_client(tmp_path):
     from fastapi.testclient import TestClient
 
@@ -106,10 +113,12 @@ def test_endpoint_serves_a_bundle(tmp_path):
     assert "export const widget" in r.text
 
 
-@pytest.mark.parametrize("bad", ["..secret.js", "evil.sh", ".hidden.js"])
+@pytest.mark.parametrize(
+    "bad", ["%2E%2E%2Fsecret.js", "..secret.js", "evil.sh", ".hidden.js", "a/b.js"]
+)
 def test_endpoint_rejects_a_name_the_rule_refuses(tmp_path, bad):
-    # Names that reach the route intact; the corpus covers the percent-encoded
-    # traversal, which the test client decodes before routing sees it.
+    # The route takes the whole path tail, so a decoded separator reaches the
+    # rule rather than missing the route. See the comment in components.py.
     r = make_client(tmp_path).get(f"/api/components/{bad}")
     assert r.status_code == 400, r.text
     assert r.json()["ok"] is False
