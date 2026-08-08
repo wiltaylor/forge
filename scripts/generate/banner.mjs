@@ -7,11 +7,17 @@
  */
 import { SOURCE_PATH } from '../../packages/tokens/tokens.source.mjs';
 
-/** @returns {string[]} the banner text, one entry per line. */
-export function bannerLines() {
+/**
+ * @param {string} [source] the authored file the artifact derives from.
+ * @param {string} [via] the file the generator actually reads, when the source
+ *   is not one Node can read — the block registry is Rust, dumped to JSON.
+ * @returns {string[]} the banner text, one entry per line.
+ */
+export function bannerLines(source = SOURCE_PATH, via = undefined) {
   return [
     'GENERATED FILE — do not edit by hand.',
-    `Source:     ${SOURCE_PATH}`,
+    `Source:     ${source}`,
+    ...(via ? [`Read from:  ${via}   (\`just generate-blocks\` rewrites it)`] : []),
     'Regenerate: just generate   (`just check` fails while this file is stale)',
   ];
 }

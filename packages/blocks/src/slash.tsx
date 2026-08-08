@@ -5,8 +5,9 @@ import type { JSX } from 'solid-js';
 import { findBlock, replaceBlock, insertAfter, wrapInColumns } from './ops';
 import { useBlocks } from './context';
 import type { EditorCtx } from './context';
-import type { Block, BlockData, BlockType } from './types';
-import { createBlock, newId } from './types';
+import type { Block, BlockData } from './types';
+import { newId } from './types';
+import { SLASH_BUILTINS } from './slash.gen';
 
 export interface SlashItem {
   label: string;
@@ -16,53 +17,23 @@ export interface SlashItem {
   columns?: 2 | 3;
 }
 
-const BUILTINS: { label: string; hint?: string; type: BlockType; patch?: object }[] = [
-  { label: 'Text', type: 'paragraph' },
-  { label: 'Heading 1', hint: '#', type: 'heading', patch: { level: 1 } },
-  { label: 'Heading 2', hint: '##', type: 'heading', patch: { level: 2 } },
-  { label: 'Heading 3', hint: '###', type: 'heading', patch: { level: 3 } },
-  { label: 'Heading 4', hint: '####', type: 'heading', patch: { level: 4 } },
-  { label: 'Bullet list', hint: '-', type: 'list_item', patch: { style: 'bullet' } },
-  { label: 'Numbered list', hint: '1.', type: 'list_item', patch: { style: 'number' } },
-  { label: 'To-do list', hint: '[]', type: 'list_item', patch: { style: 'todo', checked: false } },
-  { label: 'Quote', hint: '>', type: 'quote' },
-  { label: 'Divider', hint: '---', type: 'divider' },
-  { label: 'Code', hint: '```', type: 'code' },
-  { label: 'Table', type: 'table' },
-  { label: 'Callout', hint: ':::', type: 'admonition' },
-  { label: 'Image', hint: '![]', type: 'image' },
-  { label: 'Video', hint: 'embed', type: 'video' },
-  { label: 'Math', hint: '$$', type: 'math' },
-  { label: 'Bar chart', type: 'bar_chart' },
-  { label: 'Line chart', type: 'line_chart' },
-  { label: 'Pie chart', type: 'pie_chart' },
-  { label: 'Diagram', hint: 'flow', type: 'diagram' },
-  { label: 'Sequence diagram', type: 'sequence_diagram' },
-  { label: 'State diagram', type: 'state_diagram' },
-  { label: 'Node table', type: 'node_table' },
-  { label: 'Tree', type: 'tree' },
-  { label: 'Timeline', type: 'timeline' },
-  { label: 'Chapter header', type: 'chapter_header' },
-  { label: 'Footnote', hint: '[^]', type: 'footnote' },
-];
+/** The filtered item list for the block's current query.
 
-/** The filtered item list for the block's current query. */
+    The built-in rows are generated from the Rust kind registry, so this kit
+    offers the same list in the same order as the TUI and egui editors. What is
+    decided here is context: a block already inside a column cannot hold more
+    columns, and only this kit knows which custom kinds the host registered. */
 export function slashItems(ctx: EditorCtx, blockId: string): SlashItem[] {
   const q = slashQuery(ctx, blockId).toLowerCase();
   const loc = findBlock(ctx.doc(), blockId);
   const inColumn = loc?.parent.kind === 'column';
 
-  const items: SlashItem[] = BUILTINS.map((b) => ({
+  const items: SlashItem[] = SLASH_BUILTINS.filter((b) => !(inColumn && b.columns)).map((b) => ({
     label: b.label,
     hint: b.hint,
-    make: () => {
-      const { id: _, ...rest } = { ...createBlock(b.type), ...(b.patch ?? {}) } as Block;
-      return rest;
-    },
+    make: b.make,
+    columns: b.columns,
   }));
-  if (!inColumn) {
-    items.push({ label: '2 columns', columns: 2 }, { label: '3 columns', columns: 3 });
-  }
   for (const [kind, def] of Object.entries(ctx.customBlocks())) {
     items.push({
       label: def.label,

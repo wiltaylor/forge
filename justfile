@@ -39,10 +39,17 @@ tauri-demo-build: frontend-install
 auth-build: frontend-build
 	cargo build --release -p forge-auth
 
-# Regenerate every file derived from the token source (packages/tokens/tokens.source.mjs)
+# Regenerate every generated file (design tokens, block types, starters, slash palette, emoji)
 [group('build')]
 generate:
 	node scripts/generate.mjs
+
+# Re-dump the block kind registry to contract/*.json, which `just generate` reads.
+# Needed only after editing crates/forge-blocks (`cargo test` fails while it is stale).
+[group('build')]
+generate-blocks:
+	cargo run -q -p forge-blocks --bin dump-contract
+	just generate
 
 # Build everything
 [group('build')]
@@ -57,7 +64,7 @@ check: generate-test generate-check
 generate-test:
 	node --test 'scripts/**/*.test.mjs'
 
-# Fail when a generated file no longer matches the token source
+# Fail when a generated file no longer matches its source
 [group('test')]
 generate-check:
 	node scripts/generate.mjs --check

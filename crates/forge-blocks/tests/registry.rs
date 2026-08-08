@@ -3,7 +3,9 @@
 //! serde, so a new variant with no registry entry fails here rather than
 //! waiting for a kit to notice.
 
-use forge_blocks::{kind_entry, starter_kind, BlockKind, KINDS};
+use forge_blocks::{
+    kind_entry, palette_row, palette_rows, starter_kind, BlockKind, PaletteAction, KINDS,
+};
 
 /// Every wire `type` name the schema accepts, taken from serde's own list of
 /// expected variants (the error text for an unknown tag). No hand-kept copy.
@@ -132,6 +134,162 @@ fn starter_kind_serves_the_shared_starters() {
         }
     }
     assert!(starter_kind("nope").is_none());
+}
+
+/* ---------------- the wire shape ----------------------------------------- */
+
+#[test]
+fn declared_fields_match_what_a_starter_serializes() {
+    // The generated TypeScript union is these field lists. A field the schema
+    // writes and the entry does not declare would be missing from the union;
+    // a required field the schema stopped writing would be a lie in it.
+    //
+    // A starter is minimal, so it proves the required fields and cannot prove
+    // the optional ones — `registry::fields_are_exhaustive` is the compile-time
+    // half that fails when a variant's field set changes at all.
+    for entry in KINDS {
+        let value = serde_json::to_value((entry.starter)()).unwrap();
+        let object = value.as_object().expect("a kind serializes as an object");
+        let declared: Vec<&str> = entry.fields.iter().map(|f| f.name).collect();
+
+        for key in object.keys().filter(|k| *k != "type") {
+            assert!(
+                declared.contains(&key.as_str()),
+                "`{}` serializes `{key}`, which the registry does not declare",
+                entry.type_name
+            );
+        }
+        for field in entry.fields.iter().filter(|f| !f.optional) {
+            assert!(
+                object.contains_key(field.name),
+                "`{}` declares `{}` required, but the starter omits it",
+                entry.type_name,
+                field.name
+            );
+        }
+        assert!(
+            entry.fields.iter().all(|f| !f.ts.is_empty()),
+            "`{}` has a field with no TypeScript type",
+            entry.type_name
+        );
+    }
+}
+
+#[test]
+fn no_kind_declares_a_field_twice() {
+    for entry in KINDS {
+        let mut names: Vec<&str> = entry.fields.iter().map(|f| f.name).collect();
+        let count = names.len();
+        names.sort_unstable();
+        names.dedup();
+        assert_eq!(
+            names.len(),
+            count,
+            "`{}` declares a field twice",
+            entry.type_name
+        );
+    }
+}
+
+/* ---------------- the slash palette --------------------------------------- */
+
+#[test]
+fn every_palette_row_makes_the_kind_it_belongs_to() {
+    for entry in KINDS {
+        for row in entry.palette {
+            let PaletteAction::Insert(make) = row.action else {
+                continue;
+            };
+            assert_eq!(
+                make().type_name(),
+                entry.type_name,
+                "the palette row `{}` sits under `{}` but makes another kind",
+                row.id,
+                entry.type_name
+            );
+        }
+    }
+}
+
+#[test]
+fn palette_rows_are_unique_and_reachable() {
+    let rows = palette_rows();
+    assert!(
+        rows.len() > KINDS.len(),
+        "a palette this short lists no variants"
+    );
+    for row in &rows {
+        assert!(!row.label.is_empty(), "the row `{}` has no label", row.id);
+        let found = palette_row(row.id).unwrap_or_else(|| panic!("`{}` is unreachable", row.id));
+        assert!(
+            std::ptr::eq(found, *row),
+            "`{}` resolves to another row",
+            row.id
+        );
+    }
+    for key in [
+        rows.iter().map(|r| r.id).collect::<Vec<_>>(),
+        rows.iter().map(|r| r.label).collect::<Vec<_>>(),
+    ] {
+        let mut sorted = key.clone();
+        sorted.sort_unstable();
+        sorted.dedup();
+        assert_eq!(
+            sorted.len(),
+            key.len(),
+            "two palette rows share a key: {key:?}"
+        );
+    }
+    assert!(palette_row("nope").is_none());
+}
+
+#[test]
+fn the_wrap_actions_come_last() {
+    // Every kit lists the column commands at the end of the palette. They are
+    // commands rather than kinds, so `palette_rows` moves them there whatever
+    // order the registry declares its kinds in.
+    let rows = palette_rows();
+    let first_wrap = rows
+        .iter()
+        .position(|r| matches!(r.action, PaletteAction::WrapColumns(_)))
+        .expect("the palette offers columns");
+    assert!(
+        rows[first_wrap..]
+            .iter()
+            .all(|r| matches!(r.action, PaletteAction::WrapColumns(_))),
+        "an insert row sits after a wrap action"
+    );
+    assert_eq!(
+        rows[first_wrap..].iter().map(|r| r.id).collect::<Vec<_>>(),
+        ["col2", "col3"]
+    );
+}
+
+#[test]
+fn every_kind_but_custom_reaches_the_palette() {
+    // `custom` is the exception: a kit lists one row per kind the host
+    // registered, so the registry cannot name them.
+    for entry in KINDS {
+        assert_eq!(
+            entry.palette.is_empty(),
+            entry.type_name == "custom",
+            "`{}` and the palette disagree",
+            entry.type_name
+        );
+    }
+}
+
+#[test]
+fn a_data_kind_inserts_the_shared_starter() {
+    // The palette is where a starter divergence used to show up: one kit's
+    // table was two by one while the others' was three by two.
+    for entry in KINDS.iter().filter(|e| e.is_data) {
+        let row = entry.palette.first().expect(entry.type_name);
+        let PaletteAction::Insert(make) = row.action else {
+            panic!("`{}` offers no insert row", entry.type_name);
+        };
+        assert_eq!(make(), starter_kind(entry.type_name).unwrap());
+    }
 }
 
 #[test]
