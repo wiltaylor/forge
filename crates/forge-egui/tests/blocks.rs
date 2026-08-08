@@ -190,9 +190,14 @@ fn slash_palette_converts_an_empty_paragraph() {
     // The empty paragraph renders as a one-space label; click to focus.
     harness.get_by_label(" ").click();
     harness.run();
-    let node = harness.get_by_role(egui::accesskit::Role::MultilineTextInput);
-    node.type_text("/head");
-    harness.run();
+    // One character per event, because that is what typing is: the palette
+    // opens on the keypress the shared resolver reads, and a multi-character
+    // text event is a paste or an IME commit, not a `/`.
+    for c in "/head".chars() {
+        harness.get_by_role(egui::accesskit::Role::MultilineTextInput);
+        harness.input_mut().events.push(egui::Event::Text(c.into()));
+        harness.run();
+    }
     // Enter applies the highlighted palette row (first match: Heading 1).
     harness.key_press(egui::Key::Enter);
     harness.run();
@@ -294,4 +299,121 @@ fn data_block_renders_and_opens_json_editor() {
     ));
     // Starter payloads exist for every data kind the palette offers.
     assert!(starter_kind("pie_chart").is_some());
+}
+
+/* ---------------- block-selection mode ---------------- */
+
+/// With a block selected and no caret anywhere, the structural keys are the
+/// shared resolver's: ↑/↓ step the selection, Delete removes, Escape leaves.
+#[test]
+fn selection_keys_step_the_selection_and_remove_the_block() {
+    use forge_egui::forge_blocks::{Address, Block};
+    let doc = Document::from_blocks(vec![
+        Block::new(BlockKind::Paragraph { md: "a".into() }),
+        Block::new(BlockKind::Paragraph { md: "b".into() }),
+        Block::new(BlockKind::Paragraph { md: "c".into() }),
+    ]);
+    let state = RefCell::new(BlockEditorState::new(doc));
+    state.borrow_mut().select(Address::Root(0));
+    let mut harness = themed_harness(|ui| {
+        let mut s = state.borrow_mut();
+        let _ = BlockEditor::new(&mut s).show(ui);
+    });
+
+    harness.key_press(egui::Key::ArrowDown);
+    harness.run();
+    assert_eq!(state.borrow().focused(), Some(Address::Root(1)));
+
+    harness.key_press(egui::Key::Delete);
+    harness.run();
+    assert_eq!(
+        state
+            .borrow()
+            .doc
+            .blocks
+            .iter()
+            .filter_map(|b| b.kind.md())
+            .collect::<Vec<_>>(),
+        vec!["a", "c"],
+        "Delete must remove the selected block"
+    );
+
+    harness.key_press(egui::Key::Escape);
+    harness.run();
+    drop(harness);
+    assert_eq!(
+        state.borrow().focused(),
+        None,
+        "Escape must leave the editor"
+    );
+}
+
+/// `c` on a selected block wraps it in two columns — a palette action the
+/// other kits already bind to the key, and one this kit reaches now that the
+/// resolver decides what a key means.
+#[test]
+fn c_wraps_the_selected_block_in_two_columns() {
+    use forge_egui::forge_blocks::{Address, Block};
+    let doc = Document::from_blocks(vec![Block::new(BlockKind::Paragraph { md: "a".into() })]);
+    let state = RefCell::new(BlockEditorState::new(doc));
+    state.borrow_mut().select(Address::Root(0));
+    let mut harness = themed_harness(|ui| {
+        let mut s = state.borrow_mut();
+        let _ = BlockEditor::new(&mut s).show(ui);
+    });
+    harness
+        .input_mut()
+        .events
+        .push(egui::Event::Text("c".into()));
+    harness.run();
+    drop(harness);
+    let state = state.borrow();
+    let BlockKind::Columns { ref columns } = state.doc.blocks[0].kind else {
+        panic!(
+            "expected a columns block, got {:?}",
+            state.doc.blocks[0].kind
+        );
+    };
+    assert_eq!(columns.len(), 2);
+    assert_eq!(columns[0].blocks[0].kind.md(), Some("a"));
+}
+
+/* ---------------- a buffer of the kit's own ---------------- */
+
+/// A code body holds the block's content in a buffer of this kit's own, and
+/// the block-level keys still apply inside it: Alt+↓ moves the block.
+#[test]
+fn alt_down_moves_the_block_from_inside_the_code_buffer() {
+    use forge_egui::forge_blocks::{Address, Block};
+    let doc = Document::from_blocks(vec![
+        Block::new(BlockKind::Code {
+            lang: "rs".into(),
+            code: "fn main() {}".into(),
+        }),
+        Block::new(BlockKind::Paragraph { md: "after".into() }),
+    ]);
+    let state = RefCell::new(BlockEditorState::new(doc));
+    state.borrow_mut().edit(Address::Root(0), 0);
+    let mut harness = themed_harness(|ui| {
+        let mut s = state.borrow_mut();
+        let _ = BlockEditor::new(&mut s).show(ui);
+    });
+    // One frame for the body to take the focus it asked for.
+    harness.run();
+    harness.key_press_modifiers(egui::Modifiers::ALT, egui::Key::ArrowDown);
+    harness.run();
+    {
+        let state = state.borrow();
+        assert_eq!(state.doc.blocks[0].kind.md(), Some("after"));
+        assert!(matches!(state.doc.blocks[1].kind, BlockKind::Code { .. }));
+    }
+
+    // Escape leaves the buffer, which means handing the keyboard back.
+    harness.key_press(egui::Key::Escape);
+    harness.run();
+    assert_eq!(
+        harness.ctx.memory(|m| m.focused()),
+        None,
+        "Escape must surrender the code body's focus"
+    );
 }

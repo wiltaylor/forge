@@ -5,7 +5,7 @@
 //! keys are only intercepted while the JSON body owns focus.
 
 use super::inline::{inline_job, InlineStyle};
-use super::{Action, BlockEditorState, CaretHint, Ecx};
+use super::{keys, Action, BlockEditorState, CaretHint, Ecx};
 use crate::theme::{series_color, FontWeight, Surface, TextRole};
 use crate::widgets::charts::{BarChart, BarGroup, LineChart, LineSeries, PieChart, PieSlice};
 use crate::widgets::specialty::code::highlight_job;
@@ -14,7 +14,7 @@ use crate::widgets::Tone as WidgetTone;
 use egui::{
     Align2, CornerRadius, Frame, Key, Margin, Modifiers, Pos2, Rect, Sense, Shape, Stroke, Ui, Vec2,
 };
-use forge_blocks::{Address, BlockKind, Document, MessageKind};
+use forge_blocks::{Address, BlockKind, Document, MessageKind, Mode};
 
 /* ---------------- dispatch ---------------- */
 
@@ -209,16 +209,27 @@ fn json_edit(
     let body_id = id.with("json-body");
 
     // Key interception only while the JSON body owns focus (the code-block
-    // contract): Esc commits/discards, Alt+arrows move the block. Nothing
-    // here touches selection_keys or the shell's chords.
+    // contract). A JSON draft owns Esc — it validates and commits, or
+    // discards on a second press — so that one key never reaches the shared
+    // key model; the rest of the buffer's block-level keys do.
     if ui.ctx().memory(|m| m.has_focus(body_id)) {
-        let (esc, alt_up, alt_down) = ui.ctx().input_mut(|i| {
-            (
-                i.consume_key(Modifiers::NONE, Key::Escape),
-                i.consume_key(Modifiers::ALT, Key::ArrowUp),
-                i.consume_key(Modifiers::ALT, Key::ArrowDown),
-            )
-        });
+        let esc = ui
+            .ctx()
+            .input_mut(|i| i.consume_key(Modifiers::NONE, Key::Escape));
+        if !esc {
+            keys::handle(
+                ui,
+                ecx,
+                st,
+                doc,
+                keys::Focused {
+                    addr,
+                    mode: Mode::Buffer,
+                    buffer: Some(body_id),
+                    selection: false,
+                },
+            );
+        }
         if esc {
             match serde_json::from_str::<BlockKind>(&st.json_draft) {
                 Ok(kind) => {
@@ -242,12 +253,6 @@ fn json_edit(
                     }
                 }
             }
-        }
-        if alt_up {
-            ecx.actions.push(Action::MoveBlock { addr, dir: -1 });
-        }
-        if alt_down {
-            ecx.actions.push(Action::MoveBlock { addr, dir: 1 });
         }
     }
 

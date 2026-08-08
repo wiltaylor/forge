@@ -3,15 +3,13 @@
 //! columns with drag grips, and consumer-registered custom blocks.
 
 use super::inline::{inline_job, text_style, InlineStyle};
-use super::{render_block, text, Action, BlockEditorState, CaretHint, Ecx};
+use super::{keys, render_block, text, Action, BlockEditorState, CaretHint, Ecx};
 use crate::theme::{FontWeight, Severity, Surface, TextRole};
 use crate::widgets::specialty::code::highlight_job;
-use egui::{
-    Align, CornerRadius, Frame, Key, Layout, Margin, Modifiers, Pos2, Rect, Sense, Stroke, Ui, Vec2,
-};
+use egui::{Align, CornerRadius, Frame, Layout, Margin, Pos2, Rect, Sense, Stroke, Ui, Vec2};
 use forge_blocks::{
     set_column_ratios, table_insert_col, table_insert_row, table_remove_col, table_remove_row,
-    Address, BlockKind, Document, Tone,
+    Address, BlockKind, Document, Mode, Tone,
 };
 
 fn severity(tone: Tone) -> Severity {
@@ -63,26 +61,22 @@ pub(super) fn code_block(
     let t = ecx.t;
     let body_id = id.with("code-body");
 
-    // Key interception for the focused body (Escape exits to selection,
-    // Alt+arrows move the block); Enter stays native — it's a newline.
+    // The code body is a buffer of this kit's own: the resolver answers the
+    // block-level keys (Escape leaves, Alt+arrows move the block) and leaves
+    // the rest — Enter included, it is a newline in here — to the buffer.
     if !ecx.read_only && ui.ctx().memory(|m| m.has_focus(body_id)) {
-        let (esc, alt_up, alt_down) = ui.ctx().input_mut(|i| {
-            (
-                i.consume_key(Modifiers::NONE, Key::Escape),
-                i.consume_key(Modifiers::ALT, Key::ArrowUp),
-                i.consume_key(Modifiers::ALT, Key::ArrowDown),
-            )
-        });
-        if esc {
-            st.editing = false;
-            ui.ctx().memory_mut(|m| m.surrender_focus(body_id));
-        }
-        if alt_up {
-            ecx.actions.push(Action::MoveBlock { addr, dir: -1 });
-        }
-        if alt_down {
-            ecx.actions.push(Action::MoveBlock { addr, dir: 1 });
-        }
+        keys::handle(
+            ui,
+            ecx,
+            st,
+            doc,
+            keys::Focused {
+                addr,
+                mode: Mode::Buffer,
+                buffer: Some(body_id),
+                selection: false,
+            },
+        );
     }
 
     let Some(BlockKind::Code { lang, code }) = doc.block_mut(addr).map(|b| &mut b.kind) else {
@@ -333,41 +327,22 @@ fn table_edit(
         _ => return,
     };
 
-    // Cell navigation keys, judged against last frame's focused cell.
-    // Shift+Tab is consumed before Tab: `consume_key` ignores extra Shift, so
-    // the plainer binding would swallow it and step the wrong way.
-    if let Some((r, c)) = st.cell {
-        let (shift_tab, tab, enter, esc) = ui.ctx().input_mut(|i| {
-            (
-                i.consume_key(Modifiers::SHIFT, Key::Tab),
-                i.consume_key(Modifiers::NONE, Key::Tab),
-                i.consume_key(Modifiers::NONE, Key::Enter),
-                i.consume_key(Modifiers::NONE, Key::Escape),
-            )
-        });
-        let request = |st: &mut BlockEditorState, r: usize, c: usize| {
-            st.pending_cell = Some((r, c));
-        };
-        if tab {
-            let flat = r * ncols + c + 1;
-            if flat < (nrows + 1) * ncols {
-                request(st, flat / ncols, flat % ncols);
-            }
-        } else if shift_tab {
-            let flat = (r * ncols + c).saturating_sub(1);
-            request(st, flat / ncols, flat % ncols);
-        } else if enter {
-            if r < nrows {
-                request(st, r + 1, c);
-            } else {
-                ecx.actions.push(Action::AppendTableRow { addr, col: c });
-            }
-        } else if esc {
-            st.editing = false;
-            st.cell = None;
-            ui.ctx()
-                .memory_mut(|m| m.surrender_focus(table_cell_id(id, r, c)));
-        }
+    // Cell keys, judged against last frame's focused cell. Walking the cells
+    // and growing the table are the resolver's call; the text inside a cell
+    // is the cell `TextEdit`'s.
+    if let Some((row, col)) = st.cell {
+        keys::handle(
+            ui,
+            ecx,
+            st,
+            doc,
+            keys::Focused {
+                addr,
+                mode: Mode::Cell { row, col },
+                buffer: Some(table_cell_id(id, row, col)),
+                selection: false,
+            },
+        );
     }
 
     let mut focused_cell: Option<(usize, usize)> = None;
@@ -621,12 +596,9 @@ pub(super) fn admonition(
             doc.block_mut(addr).map(|b| &mut b.kind)
         {
             if cycle_tone {
-                *tone = match *tone {
-                    Tone::Info => Tone::Success,
-                    Tone::Success => Tone::Warning,
-                    Tone::Warning => Tone::Danger,
-                    Tone::Danger => Tone::Info,
-                };
+                // One cycle order, in the shared crate — the same one
+                // `Op::CycleTone` walks.
+                *tone = tone.next();
             }
             if title_changed {
                 *title = title_buf;

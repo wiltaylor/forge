@@ -1,15 +1,17 @@
 //! The text-block path: list/quote markers, the unfocused inline-markdown
-//! label, and the focused frameless `TextEdit` with the shared keyboard
-//! model (Enter splits, Backspace-at-0 and Delete-at-end merge, boundary
-//! arrows hop blocks, Tab indents lists, `/` opens the palette, `:pre`
-//! completes emoji).
+//! label, and the focused frameless `TextEdit`.
+//!
+//! What a key means here is [`forge_blocks::resolve_key`]'s call, reached
+//! through [`super::keys`]. What is left is the two things only this kit
+//! knows: the popups, which take the keyboard while they are up, and the
+//! wrapped caret geometry, which decides when ↑/↓ leave the block.
 
 use super::inline::{inline_job, text_style, InlineStyle};
-use super::{byte_of_char, popups, siblings, Action, BlockEditorState, CaretHint, Ecx};
+use super::{byte_of_char, keys, popups, siblings, Action, BlockEditorState, CaretHint, Ecx};
 use crate::theme::{FontWeight, TextRole};
 use egui::text::{CCursor, CCursorRange};
 use egui::{Key, Modifiers, Pos2, Rect, Sense, Stroke, Ui, Vec2};
-use forge_blocks::{line_start_shortcut, Address, BlockKind, Document, ListStyle};
+use forge_blocks::{Address, BlockKind, Document, ListStyle, Mode};
 
 /// A plain text block row: indent + marker + body.
 pub(super) fn text_row(
@@ -197,12 +199,13 @@ fn edit_body(
 ) {
     let ctx = ui.ctx().clone();
     let t = ecx.t;
-    let kind_now = doc.block(addr).map(|b| b.kind.clone());
-    let is_list = matches!(kind_now, Some(BlockKind::ListItem { .. }));
-    let is_paragraph = matches!(kind_now, Some(BlockKind::Paragraph { .. }));
+    let is_paragraph = matches!(
+        doc.block(addr).map(|b| &b.kind),
+        Some(BlockKind::Paragraph { .. })
+    );
 
     if ctx.memory(|m| m.has_focus(id)) {
-        handle_keys(ui, ecx, st, doc, addr, id, is_list);
+        handle_keys(ui, ecx, st, doc, addr, id);
     }
 
     let mut draft = std::mem::take(&mut st.draft);
@@ -223,45 +226,15 @@ fn edit_body(
         .margin(egui::Margin::ZERO)
         .show(ui);
 
+    // Commit the draft. The markdown line-start shortcuts fire before the
+    // character reaches this buffer — the resolver reads the keypress and
+    // answers `Op::Convert`, which lands as `Action::Shortcut` — so what
+    // arrives here is always plain typing.
     if out.response.changed() {
-        // "/" typed into an empty paragraph opens the palette; the slash
-        // stays in the draft and the tail becomes the filter query. The doc
-        // still holds the pre-change source here (commit happens below), so
-        // "was empty" is read from it.
-        let was_empty = doc
-            .block(addr)
-            .and_then(|b| b.kind.md())
-            .is_some_and(str::is_empty);
-        if st.slash.is_none() && is_paragraph && was_empty && draft.starts_with('/') {
-            st.slash = Some(super::SlashState { addr, hl: 0 });
-        }
-        let shortcut = if is_paragraph && st.slash.is_none() {
-            line_start_shortcut(&draft)
-        } else {
-            None
-        };
-        match shortcut {
-            Some(hit) => {
-                let caret_char = out
-                    .state
-                    .cursor
-                    .char_range()
-                    .map(|r| r.primary.index.0)
-                    .unwrap_or(draft.chars().count());
-                let caret = byte_of_char(&draft, caret_char).saturating_sub(hit.prefix_len);
-                ecx.actions.push(Action::Shortcut {
-                    addr,
-                    kind: hit.kind,
-                    caret,
-                });
-            }
-            None => {
-                if let Some(md) = doc.block_mut(addr).and_then(|b| b.kind.md_mut()) {
-                    if *md != draft {
-                        *md = draft.clone();
-                        st.changed = true;
-                    }
-                }
+        if let Some(md) = doc.block_mut(addr).and_then(|b| b.kind.md_mut()) {
+            if *md != draft {
+                *md = draft.clone();
+                st.changed = true;
             }
         }
     }
@@ -361,133 +334,161 @@ fn edit_body(
     popups::emoji_popup(ui, ecx, st, doc, addr, id);
 }
 
-/// The per-key booleans we may consume this frame. Consumption is
-/// conditional: boundary arrows only at the galley's first/last row,
-/// Backspace only with the caret at 0, Delete only with it at the end, and
-/// popups take nav keys first.
+/// Keys for the focused text block, in the order the kit hands them out: the
+/// popups first (they own the keyboard while they are up), then the shared
+/// resolver, then the wrapped caret's own ↑/↓ off the galley's edge rows.
+///
+/// The resolver goes before those arrows on purpose — Alt+↑/↓ moves the
+/// block, and only the plain arrows it leaves behind are the caret's.
+///
+/// Interception runs *before* the `TextEdit`, over last frame's caret cache
+/// — that is the only reading of the caret available this early.
 fn handle_keys(
-    ui: &mut Ui,
+    ui: &Ui,
     ecx: &mut Ecx,
     st: &mut BlockEditorState,
     doc: &mut Document,
     addr: Address,
     id: egui::Id,
-    is_list: bool,
 ) {
-    let slash_open = st.slash.as_ref().is_some_and(|s| s.addr == addr);
-    let emoji = if slash_open {
-        None
-    } else {
-        popups::emoji_prefix(&st.draft, st.caret.char_idx)
-            .filter(|(_, p)| st.emoji_dismissed.as_deref() != Some(p.as_str()))
-    };
-    let popup = slash_open || emoji.is_some();
-    let at_start = st.caret.char_idx == 0 && !st.caret.has_selection;
-    let at_end = st.caret.char_idx >= st.draft.chars().count() && !st.caret.has_selection;
-    let on_first = st.caret.row == 0;
-    let on_last = st.caret.row + 1 >= st.caret.rows.max(1);
-
-    struct Keys {
-        enter: bool,
-        tab: bool,
-        shift_tab: bool,
-        alt_up: bool,
-        alt_down: bool,
-        up: bool,
-        down: bool,
-        backspace: bool,
-        delete: bool,
-        esc: bool,
-    }
-    // Order matters: `consume_key` ignores *extra* Shift and Alt, so the more
-    // specific binding has to consume the event first or the plainer one
-    // swallows it (Shift+Tab would read as Tab and indent instead of outdent).
-    let keys = ui.ctx().input_mut(|i| Keys {
-        alt_up: i.consume_key(Modifiers::ALT, Key::ArrowUp),
-        alt_down: i.consume_key(Modifiers::ALT, Key::ArrowDown),
-        enter: i.consume_key(Modifiers::NONE, Key::Enter),
-        shift_tab: i.consume_key(Modifiers::SHIFT, Key::Tab),
-        tab: i.consume_key(Modifiers::NONE, Key::Tab),
-        up: (popup || on_first) && i.consume_key(Modifiers::NONE, Key::ArrowUp),
-        down: (popup || on_last) && i.consume_key(Modifiers::NONE, Key::ArrowDown),
-        backspace: at_start && !popup && i.consume_key(Modifiers::NONE, Key::Backspace),
-        delete: at_end && !popup && i.consume_key(Modifiers::NONE, Key::Delete),
-        esc: i.consume_key(Modifiers::NONE, Key::Escape),
-    });
-
-    if slash_open {
-        let query = st.draft.strip_prefix('/').unwrap_or("").to_lowercase();
-        let n = popups::slash_choices(st, addr.in_column(), &query).len();
-        if let Some(slash) = st.slash.as_mut() {
-            if keys.down && n > 0 {
-                slash.hl = (slash.hl + 1).min(n - 1);
-            }
-            if keys.up {
-                slash.hl = slash.hl.saturating_sub(1);
-            }
-        }
-        if keys.enter {
-            let hl = st.slash.as_ref().map(|s| s.hl).unwrap_or(0);
-            let mut choices = popups::slash_choices(st, addr.in_column(), &query);
-            if hl < choices.len() {
-                let (_, choice) = choices.swap_remove(hl);
-                ecx.actions.push(Action::ApplySlash { addr, choice });
-            }
-        }
-        if keys.esc {
-            st.slash = None;
-        }
+    if slash_keys(ui, ecx, st, addr) {
         return;
     }
-
-    if let Some((start, prefix)) = emoji {
-        let hits = forge_blocks::search_emoji(&prefix, popups::EMOJI_LIMIT);
-        if !hits.is_empty() {
-            if keys.down {
-                st.emoji_hl = (st.emoji_hl + 1).min(hits.len() - 1);
-            }
-            if keys.up {
-                st.emoji_hl = st.emoji_hl.saturating_sub(1);
-            }
-            if keys.enter || keys.tab {
-                let (code, _) = hits[st.emoji_hl.min(hits.len() - 1)];
-                popups::complete_emoji(ui.ctx(), st, doc, addr, id, start, code);
-                return;
-            }
-        }
-        if keys.esc {
-            st.emoji_dismissed = Some(prefix);
-            return;
-        }
-        // Fall through: Backspace/arrows behave normally while typing a code.
+    if emoji_keys(ui, st, doc, addr, id) {
+        return;
     }
+    let took = keys::handle(
+        ui,
+        ecx,
+        st,
+        doc,
+        keys::Focused {
+            addr,
+            mode: Mode::Text {
+                caret: byte_of_char(&st.draft, st.caret.char_idx),
+            },
+            buffer: Some(id),
+            selection: st.caret.has_selection,
+        },
+    );
+    if !took {
+        nav_keys(ui, ecx, st, addr);
+    }
+}
 
-    if keys.enter {
-        ecx.actions.push(Action::Split(addr));
-    } else if keys.backspace {
-        ecx.actions.push(Action::BackspaceAt0(addr));
-    } else if keys.delete {
-        ecx.actions.push(Action::DeleteAtEnd(addr));
-    } else if keys.up {
+/// The block palette, while it is open: ↑/↓ highlight, Enter picks, Esc
+/// closes. Everything else is the draft's — typing filters the list — so the
+/// palette takes the keyboard until it goes away.
+fn slash_keys(ui: &Ui, ecx: &mut Ecx, st: &mut BlockEditorState, addr: Address) -> bool {
+    if !st.slash.as_ref().is_some_and(|s| s.addr == addr) {
+        return false;
+    }
+    let (up, down, enter, esc) = ui.ctx().input_mut(|i| {
+        // Tab means nothing to the palette, but it is not the draft's
+        // either: a multiline `TextEdit` would answer it with a tab
+        // character in the query.
+        i.consume_key(Modifiers::NONE, Key::Tab);
+        (
+            i.consume_key(Modifiers::NONE, Key::ArrowUp),
+            i.consume_key(Modifiers::NONE, Key::ArrowDown),
+            i.consume_key(Modifiers::NONE, Key::Enter),
+            i.consume_key(Modifiers::NONE, Key::Escape),
+        )
+    });
+    let query = st.draft.strip_prefix('/').unwrap_or("").to_lowercase();
+    let n = popups::slash_choices(st, addr.in_column(), &query).len();
+    if let Some(slash) = st.slash.as_mut() {
+        if down && n > 0 {
+            slash.hl = (slash.hl + 1).min(n - 1);
+        }
+        if up {
+            slash.hl = slash.hl.saturating_sub(1);
+        }
+    }
+    if enter {
+        let hl = st.slash.as_ref().map(|s| s.hl).unwrap_or(0);
+        let mut choices = popups::slash_choices(st, addr.in_column(), &query);
+        if hl < choices.len() {
+            let (_, choice) = choices.swap_remove(hl);
+            ecx.actions.push(Action::ApplySlash { addr, choice });
+        }
+    }
+    if esc {
+        st.slash = None;
+    }
+    true
+}
+
+/// Emoji completion, while the popup is up: ↑/↓ highlight, Enter/Tab
+/// completes, Esc dismisses the prefix. Anything else — typing more of the
+/// code, Backspace over it — falls through to the buffer and the resolver.
+fn emoji_keys(
+    ui: &Ui,
+    st: &mut BlockEditorState,
+    doc: &mut Document,
+    addr: Address,
+    id: egui::Id,
+) -> bool {
+    let Some((start, prefix)) = popups::emoji_prefix(&st.draft, st.caret.char_idx)
+        .filter(|(_, p)| st.emoji_dismissed.as_deref() != Some(p.as_str()))
+    else {
+        return false;
+    };
+    let hits = forge_blocks::search_emoji(&prefix, popups::EMOJI_LIMIT);
+    if !hits.is_empty() {
+        let (up, down, enter, tab) = ui.ctx().input_mut(|i| {
+            (
+                i.consume_key(Modifiers::NONE, Key::ArrowUp),
+                i.consume_key(Modifiers::NONE, Key::ArrowDown),
+                i.consume_key(Modifiers::NONE, Key::Enter),
+                i.consume_key(Modifiers::NONE, Key::Tab),
+            )
+        });
+        if down {
+            st.emoji_hl = (st.emoji_hl + 1).min(hits.len() - 1);
+            return true;
+        }
+        if up {
+            st.emoji_hl = st.emoji_hl.saturating_sub(1);
+            return true;
+        }
+        if enter || tab {
+            let (code, _) = hits[st.emoji_hl.min(hits.len() - 1)];
+            popups::complete_emoji(ui.ctx(), st, doc, addr, id, start, code);
+            return true;
+        }
+    }
+    if ui
+        .ctx()
+        .input_mut(|i| i.consume_key(Modifiers::NONE, Key::Escape))
+    {
+        st.emoji_dismissed = Some(prefix);
+        return true;
+    }
+    false
+}
+
+/// ↑/↓ off the galley's first or last wrapped row, which leave the block for
+/// its neighbour at the same screen column. The resolver leaves these here
+/// on purpose: only the kit knows where the text wrapped.
+fn nav_keys(ui: &Ui, ecx: &mut Ecx, st: &mut BlockEditorState, addr: Address) {
+    let on_first = st.caret.row == 0;
+    let on_last = st.caret.row + 1 >= st.caret.rows.max(1);
+    let (up, down) = ui.ctx().input_mut(|i| {
+        (
+            on_first && i.consume_key(Modifiers::NONE, Key::ArrowUp),
+            on_last && i.consume_key(Modifiers::NONE, Key::ArrowDown),
+        )
+    });
+    if up {
         ecx.actions.push(Action::NavPrev {
             addr,
             x: Some(st.caret.x),
         });
-    } else if keys.down {
+    } else if down {
         ecx.actions.push(Action::NavNext {
             addr,
             x: Some(st.caret.x),
         });
-    } else if keys.alt_up {
-        ecx.actions.push(Action::MoveBlock { addr, dir: -1 });
-    } else if keys.alt_down {
-        ecx.actions.push(Action::MoveBlock { addr, dir: 1 });
-    } else if keys.tab && is_list {
-        ecx.actions.push(Action::Indent { addr, delta: 1 });
-    } else if keys.shift_tab && is_list {
-        ecx.actions.push(Action::Indent { addr, delta: -1 });
-    } else if keys.esc {
-        st.editing = false;
-        ui.ctx().memory_mut(|m| m.surrender_focus(id));
     }
 }

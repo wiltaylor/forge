@@ -2,183 +2,15 @@
 //!
 //! The protocol ([`forge_core::widgets::proto::DesktopClientMsg::Key`]) wants
 //! `KeyboardEvent.code` (layout-independent physical key) plus the produced
-//! character in `key`. egui gives us [`egui::Key`] — logical, but with
-//! `physical_key` preferred by the caller — so this module is the static
-//! US-layout bridge, exactly the v1 approximation the web widget ships
-//! (docs/widgets-protocol.md "Keymap is US-layout v1").
+//! character in `key`. That pair comes off [`crate::keys`], the crate's one
+//! US-layout bridge — the block editor's key adapter reads the same table.
 //!
 //! Every string returned by [`code_str`] must resolve through **both**
 //! forge-core keymaps (`keysym` for VNC, `scancode` for RDP) — enforced by
 //! the tests below. That is why F13+ and media keys map to `None`: they'd be
 //! dead codes on the wire.
 
-use egui::Key;
-
-/// `KeyboardEvent.code` for a key. `None` = not representable (skip it).
-///
-/// Plain modifier keys (Shift/Control/Alt) return `None` on purpose: the
-/// widget synthesizes their transitions from [`egui::Modifiers`] diffs.
-/// Super/Meta is the exception — `Modifiers` has no super field off macOS,
-/// so the physical key events are forwarded directly.
-pub(super) fn code_str(key: Key) -> Option<&'static str> {
-    use Key::*;
-    Some(match key {
-        // Commands / navigation.
-        ArrowDown => "ArrowDown",
-        ArrowLeft => "ArrowLeft",
-        ArrowRight => "ArrowRight",
-        ArrowUp => "ArrowUp",
-        Escape => "Escape",
-        Tab => "Tab",
-        Backspace => "Backspace",
-        Enter => "Enter",
-        Space => "Space",
-        Insert => "Insert",
-        Delete => "Delete",
-        Home => "Home",
-        End => "End",
-        PageUp => "PageUp",
-        PageDown => "PageDown",
-        // Punctuation: shifted logical keys collapse onto their physical key.
-        Colon | Semicolon => "Semicolon",
-        Comma => "Comma",
-        Backslash | Pipe => "Backslash",
-        Slash | Questionmark => "Slash",
-        Exclamationmark => "Digit1",
-        OpenBracket | OpenCurlyBracket => "BracketLeft",
-        CloseBracket | CloseCurlyBracket => "BracketRight",
-        Backtick => "Backquote",
-        Minus => "Minus",
-        Period => "Period",
-        Plus | Equals => "Equal",
-        Quote => "Quote",
-        // Digits (egui does not distinguish the numpad).
-        Num0 => "Digit0",
-        Num1 => "Digit1",
-        Num2 => "Digit2",
-        Num3 => "Digit3",
-        Num4 => "Digit4",
-        Num5 => "Digit5",
-        Num6 => "Digit6",
-        Num7 => "Digit7",
-        Num8 => "Digit8",
-        Num9 => "Digit9",
-        // Letters.
-        A => "KeyA",
-        B => "KeyB",
-        C => "KeyC",
-        D => "KeyD",
-        E => "KeyE",
-        F => "KeyF",
-        G => "KeyG",
-        H => "KeyH",
-        I => "KeyI",
-        J => "KeyJ",
-        K => "KeyK",
-        L => "KeyL",
-        M => "KeyM",
-        N => "KeyN",
-        O => "KeyO",
-        P => "KeyP",
-        Q => "KeyQ",
-        R => "KeyR",
-        S => "KeyS",
-        T => "KeyT",
-        U => "KeyU",
-        V => "KeyV",
-        W => "KeyW",
-        X => "KeyX",
-        Y => "KeyY",
-        Z => "KeyZ",
-        // Function keys: F13+ resolve in neither forge-core keymap.
-        F1 => "F1",
-        F2 => "F2",
-        F3 => "F3",
-        F4 => "F4",
-        F5 => "F5",
-        F6 => "F6",
-        F7 => "F7",
-        F8 => "F8",
-        F9 => "F9",
-        F10 => "F10",
-        F11 => "F11",
-        F12 => "F12",
-        // Super/Meta: forwarded from physical key events (see module docs).
-        SuperLeft => "MetaLeft",
-        SuperRight => "MetaRight",
-        // ISO 102nd key.
-        IntlBackslash => "IntlBackslash",
-        _ => return None,
-    })
-}
-
-/// The character a key produces on a US layout (the protocol's `key` field).
-/// `None` for non-printables — the VNC keysym path falls back to the code
-/// table for those.
-pub(super) fn us_char(key: Key, shift: bool) -> Option<char> {
-    use Key::*;
-    let pair = |plain: char, shifted: char| Some(if shift { shifted } else { plain });
-    match key {
-        Space => Some(' '),
-        // Punctuation rows. The already-shifted logical variants (Colon,
-        // Pipe, …) ignore `shift`: egui resolved the character for us.
-        Minus => pair('-', '_'),
-        Equals => pair('=', '+'),
-        Plus => Some('+'),
-        OpenBracket => pair('[', '{'),
-        CloseBracket => pair(']', '}'),
-        OpenCurlyBracket => Some('{'),
-        CloseCurlyBracket => Some('}'),
-        Backslash | IntlBackslash => pair('\\', '|'),
-        Pipe => Some('|'),
-        Semicolon => pair(';', ':'),
-        Colon => Some(':'),
-        Quote => pair('\'', '"'),
-        Backtick => pair('`', '~'),
-        Comma => pair(',', '<'),
-        Period => pair('.', '>'),
-        Slash => pair('/', '?'),
-        Questionmark => Some('?'),
-        Exclamationmark => Some('!'),
-        Num0 => pair('0', ')'),
-        Num1 => pair('1', '!'),
-        Num2 => pair('2', '@'),
-        Num3 => pair('3', '#'),
-        Num4 => pair('4', '$'),
-        Num5 => pair('5', '%'),
-        Num6 => pair('6', '^'),
-        Num7 => pair('7', '&'),
-        Num8 => pair('8', '*'),
-        Num9 => pair('9', '('),
-        A => pair('a', 'A'),
-        B => pair('b', 'B'),
-        C => pair('c', 'C'),
-        D => pair('d', 'D'),
-        E => pair('e', 'E'),
-        F => pair('f', 'F'),
-        G => pair('g', 'G'),
-        H => pair('h', 'H'),
-        I => pair('i', 'I'),
-        J => pair('j', 'J'),
-        K => pair('k', 'K'),
-        L => pair('l', 'L'),
-        M => pair('m', 'M'),
-        N => pair('n', 'N'),
-        O => pair('o', 'O'),
-        P => pair('p', 'P'),
-        Q => pair('q', 'Q'),
-        R => pair('r', 'R'),
-        S => pair('s', 'S'),
-        T => pair('t', 'T'),
-        U => pair('u', 'U'),
-        V => pair('v', 'V'),
-        W => pair('w', 'W'),
-        X => pair('x', 'X'),
-        Y => pair('y', 'Y'),
-        Z => pair('z', 'Z'),
-        _ => None,
-    }
-}
+pub(super) use crate::keys::{code_str, us_char};
 
 /// Modifier code strings the widget synthesizes from [`egui::Modifiers`]
 /// diffs (plus the Meta pair forwarded from physical key events).
@@ -189,6 +21,7 @@ pub(super) const MOD_ALT: &str = "AltLeft";
 #[cfg(test)]
 mod tests {
     use super::*;
+    use egui::Key;
 
     /// Every code string this widget can emit, paired with a plausible
     /// produced char — from the key table or the modifier synthesizer.
@@ -244,21 +77,6 @@ mod tests {
         assert_eq!(code_str(Key::ShiftLeft), None);
         assert_eq!(code_str(Key::ControlRight), None);
         assert_eq!(code_str(Key::AltLeft), None);
-    }
-
-    #[test]
-    fn us_shift_pairs() {
-        assert_eq!(us_char(Key::A, false), Some('a'));
-        assert_eq!(us_char(Key::A, true), Some('A'));
-        assert_eq!(us_char(Key::Num1, false), Some('1'));
-        assert_eq!(us_char(Key::Num1, true), Some('!'));
-        assert_eq!(us_char(Key::Semicolon, false), Some(';'));
-        assert_eq!(us_char(Key::Semicolon, true), Some(':'));
-        assert_eq!(us_char(Key::Backtick, true), Some('~'));
-        assert_eq!(us_char(Key::Space, true), Some(' '));
-        // Non-printables carry no `key` field.
-        assert_eq!(us_char(Key::Enter, false), None);
-        assert_eq!(us_char(Key::ArrowUp, false), None);
     }
 
     /// The digit/punctuation shift pairs must agree with the VNC keysym
