@@ -59,7 +59,7 @@
   border-bottom: 1px solid var(--border-subtle);
   display: flex; align-items: center;
   padding: 0 16px; gap: 14px;
-  position: sticky; top: 0; z-index: 10;
+  position: sticky; top: 0; z-index: var(--layer-topbar);
 }
 .ftopbar-brand { display: flex; align-items: center; gap: 10px; color: var(--fg-0); }
 .ftopbar-brand img { height: 22px; }
@@ -286,7 +286,7 @@
 
 /* ---------------- Modal ---------------------------------------------------- */
 .fmodal {
-  position: fixed; inset: 0; z-index: 50;  /* above the sidebar drawer (30) */
+  position: fixed; inset: 0; z-index: var(--layer-modal);
   display: grid; place-items: center; padding: 16px;
   background: rgb(0 0 0 / 0.5);
   backdrop-filter: blur(4px);
@@ -399,7 +399,7 @@
 .fselect.is-open .fselect-btn { border-color: var(--accent); }
 .fselect-pop {
   position: absolute; top: calc(100% + 4px); left: 0; right: 0;
-  z-index: 60;  /* must beat .fmodal (50) so selects work inside modals */
+  z-index: var(--layer-pop);
   background: var(--bg-4); border: 1px solid var(--border-strong); border-radius: var(--r-md);
   max-height: 240px; overflow-y: auto; padding: 4px;
   animation: fmodal-in var(--dur-2) var(--ease-out);
@@ -483,11 +483,11 @@
 .fseg-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* ---------------- Tooltip --------------------------------------------------- */
-/* Text-only, CSS-driven: shows on hover and keyboard focus. z 80 tops all. */
+/* Text-only, CSS-driven: shows on hover and keyboard focus. */
 .ftip { position: relative; display: inline-flex; }
 .ftip::after {
   content: attr(data-tip);
-  position: absolute; z-index: 80;
+  position: absolute; z-index: var(--layer-tip);
   background: var(--bg-4); color: var(--fg-0);
   border: 1px solid var(--border-strong); border-radius: var(--r-sm);
   padding: 3px 8px; font-size: 11px; white-space: nowrap;
@@ -507,7 +507,7 @@
    In-place absolute like .fselect-pop — clips inside scroll containers. */
 .fpop {
   position: absolute; top: calc(100% + 4px); left: 0;
-  z-index: 60;  /* beats .fmodal (50) so popovers work inside modals */
+  z-index: var(--layer-pop);
   background: var(--bg-4); border: 1px solid var(--border-strong); border-radius: var(--r-md);
   padding: 4px;
   animation: fmodal-in var(--dur-2) var(--ease-out);
@@ -533,7 +533,7 @@
 
 /* ---------------- Command palette ------------------------------------------- */
 .fcmd {
-  position: fixed; inset: 0; z-index: 50;  /* modal layer — don't open both */
+  position: fixed; inset: 0; z-index: var(--layer-modal);
   display: flex; justify-content: center; align-items: flex-start;
   padding: 96px 16px 16px;
   background: rgb(0 0 0 / 0.5);
@@ -572,7 +572,7 @@
 .fcmd-empty { color: var(--fg-2); text-align: center; padding: 24px; font-size: 13px; }
 
 /* ---------------- Sheet ----------------------------------------------------- */
-.fsheet { position: fixed; inset: 0; z-index: 40; }  /* above drawer, below modal */
+.fsheet { position: fixed; inset: 0; z-index: var(--layer-sheet); }
 .fsheet-scrim { position: absolute; inset: 0; background: rgb(0 0 0 / 0.5); }
 .fsheet-panel {
   position: absolute; top: 0; bottom: 0; right: 0;
@@ -599,14 +599,14 @@
 
 /* ---------------- Particle FX layer ----------------------------------------- */
 .ffx-layer {
-  position: fixed; inset: 0; z-index: 90;  /* above toaster (70) and menus (80) */
+  position: fixed; inset: 0; z-index: var(--layer-fx);
   width: 100vw; height: 100vh;
   pointer-events: none;
 }
 
 /* ---------------- Toaster --------------------------------------------------- */
 .ftoaster {
-  position: fixed; right: 16px; bottom: 16px; z-index: 70;  /* above modal */
+  position: fixed; right: 16px; bottom: 16px; z-index: var(--layer-toast);
   display: flex; flex-direction: column; gap: 8px; align-items: flex-end;
   pointer-events: none;
 }
@@ -824,7 +824,7 @@
     border-right: 1px solid var(--border);
     transform: translateX(-100%);
     transition: transform var(--dur-2) var(--ease-out);
-    z-index: 30;
+    z-index: var(--layer-drawer);
     overflow-y: auto;
   }
   .app-shell.is-sidebar-open .fsidebar { transform: translateX(0); }
@@ -832,7 +832,7 @@
     position: fixed;
     inset: var(--topbar-h) 0 0 0;
     background: rgb(0 0 0 / 0.5);
-    z-index: 20;
+    z-index: var(--layer-scrim);
   }
   .app-shell.is-sidebar-open .fscrim { display: block; }
   .fsidebar-toggle { display: inline-flex; }

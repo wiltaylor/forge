@@ -3,8 +3,7 @@
 
 import { Show, For } from 'solid-js';
 import type { Accessor, JSX, Setter } from 'solid-js';
-import { Portal } from 'solid-js/web';
-import { useOverlay } from '@forge/ui';
+import { OverlayPortal, useOverlay } from '@forge/ui';
 import type { EditorState, Extension } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import type { Diagnostic } from '@codemirror/lint';
@@ -83,7 +82,7 @@ export function CodeMenu(props: CodeMenuProps): JSX.Element {
   });
   return (
     <Show when={props.pos()}>
-      <Portal>
+      <OverlayPortal>
         <div ref={menu} class="fpop fmenu-pop fcode-menu" role="menu"
              style={{
                left: `${Math.min(props.pos()!.x, window.innerWidth - 200)}px`,
@@ -104,7 +103,7 @@ export function CodeMenu(props: CodeMenuProps): JSX.Element {
             )}
           </For>
         </div>
-      </Portal>
+      </OverlayPortal>
     </Show>
   );
 }

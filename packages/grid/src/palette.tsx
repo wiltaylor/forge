@@ -10,11 +10,12 @@
      <BlockGrid ... onBlockAdd={(pos, template) => append block} />
    </GridDndProvider>
 
-   Imports only solid-js — no coupling to @forge/ui. */
+   The floating ghost portals through @forge/ui's overlay mount seam, so a
+   grid inside a shadow root keeps the ghost — and its styles — inside it. */
 
 import { Show, createContext, createSignal, useContext } from 'solid-js';
 import type { Accessor, Context, JSX } from 'solid-js';
-import { Portal } from 'solid-js/web';
+import { OverlayPortal } from '@forge/ui';
 
 /** Block blueprint carried by a palette drag; w/h in grid units. Extra fields
     pass through untouched to BlockGrid's onBlockAdd. */
@@ -96,7 +97,7 @@ export function PaletteItem(props: { template: PaletteTemplate; children?: JSX.E
       {props.children}
       <Show when={ghost()}>
         {(g) => (
-          <Portal>
+          <OverlayPortal>
             <div
               class="fpalette-ghost"
               style={{
@@ -108,7 +109,7 @@ export function PaletteItem(props: { template: PaletteTemplate; children?: JSX.E
             >
               {props.children}
             </div>
-          </Portal>
+          </OverlayPortal>
         )}
       </Show>
     </div>

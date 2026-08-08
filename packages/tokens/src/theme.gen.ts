@@ -190,6 +190,29 @@ export interface ThemeShell {
   topbarH: string;
 }
 
+/** The z-index scale, bottom to top. The modal and the command palette share
+    `modal`: both are modal surfaces, so only one of them is open at a time. */
+export interface ThemeLayer {
+  /** `--layer-topbar` — sticky shell chrome. */
+  topbar: string;
+  /** `--layer-scrim` — backdrop behind the drawer. */
+  scrim: string;
+  /** `--layer-drawer` — off-canvas sidebar. */
+  drawer: string;
+  /** `--layer-sheet` — above the drawer, below the modal. */
+  sheet: string;
+  /** `--layer-modal` — modal and command palette. */
+  modal: string;
+  /** `--layer-pop` — anchored popovers; above the modal so they work inside one. */
+  pop: string;
+  /** `--layer-toast` — above the modal. */
+  toast: string;
+  /** `--layer-tip` — tooltips top every interactive surface. */
+  tip: string;
+  /** `--layer-fx` — non-interactive particle canvas. */
+  fx: string;
+}
+
 /** A complete theme: every token the web kit declares, as a typed value.
 
     A theme is applied whole. `defineTheme` derives one from another with a
@@ -240,6 +263,8 @@ export interface Theme {
   control: ThemeControl;
   /** Shell dimensions. */
   shell: ThemeShell;
+  /** The z-index scale. */
+  layer: ThemeLayer;
   /** Escape hatch: custom properties written verbatim, after the tokens.
 
       Every declared token has a typed field above, so this is for the
@@ -318,6 +343,17 @@ export const darkTheme: Theme = {
   duration: { 1: '80ms', 2: '160ms', 3: '240ms' },
   control: { sm: '28px', md: '32px', lg: '36px', xl: '40px' },
   shell: { sidebarW: '240px', topbarH: '48px' },
+  layer: {
+    topbar: '10',
+    scrim: '20',
+    drawer: '30',
+    sheet: '40',
+    modal: '50',
+    pop: '60',
+    toast: '70',
+    tip: '80',
+    fx: '90',
+  },
 };
 
 /** The built-in light ramp — the `[data-theme="light"]` block of `css/tokens.css`, as a value. */
@@ -390,6 +426,17 @@ export const lightTheme: Theme = {
   duration: { 1: '80ms', 2: '160ms', 3: '240ms' },
   control: { sm: '28px', md: '32px', lg: '36px', xl: '40px' },
   shell: { sidebarW: '240px', topbarH: '48px' },
+  layer: {
+    topbar: '10',
+    scrim: '20',
+    drawer: '30',
+    sheet: '40',
+    modal: '50',
+    pop: '60',
+    toast: '70',
+    tip: '80',
+    fx: '90',
+  },
 };
 
 /** Flatten a theme into the custom properties the stylesheets read.
@@ -477,6 +524,15 @@ export function themeToVars(t: Theme): Record<string, string> {
     '--h-xl': t.control.xl,
     '--sidebar-w': t.shell.sidebarW,
     '--topbar-h': t.shell.topbarH,
+    '--layer-topbar': t.layer.topbar,
+    '--layer-scrim': t.layer.scrim,
+    '--layer-drawer': t.layer.drawer,
+    '--layer-sheet': t.layer.sheet,
+    '--layer-modal': t.layer.modal,
+    '--layer-pop': t.layer.pop,
+    '--layer-toast': t.layer.toast,
+    '--layer-tip': t.layer.tip,
+    '--layer-fx': t.layer.fx,
   };
   if (t.vars) Object.assign(vars, t.vars);
   return vars;

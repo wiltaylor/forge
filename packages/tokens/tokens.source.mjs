@@ -22,8 +22,8 @@
  * A token belongs to every kit in `KITS` unless it names the ones it belongs to:
  *   { name: 'sidebar-rail-w', only: ['egui'], … }
  * `only` is for a dimension one kit has and the others have no equivalent of.
- * Such a token gets no CSS custom property, and reading it from a kit it is not
- * scoped to is an error rather than a silent value.
+ * A token scoped away from the web kit gets no CSS custom property, and reading
+ * a token from a kit it is not scoped to is an error rather than a silent value.
  *
  * Values
  * ------
@@ -243,6 +243,27 @@ export const groups = [
       // are scoped to that kit rather than declared as custom properties.
       { name: 'sidebar-rail-w', note: 'collapsed sidebar', only: ['egui'], value: raw('56px') },
       { name: 'statusbar-h', only: ['egui'], value: raw('28px') },
+    ],
+  },
+  {
+    comment: [
+      'Layering — the z-index scale of the shell and its overlays, bottom to',
+      'top. Every surface on this ladder takes its layer from here rather than',
+      'declaring its own number; stacking local to one component (grid cells,',
+      'drag ghosts) stays in that component\'s stylesheet. The modal and the',
+      'command palette share the modal layer: both are modal surfaces, so only',
+      'one of them is open at a time.',
+    ],
+    tokens: [
+      { name: 'layer-topbar', note: 'sticky shell chrome', only: ['web'], value: raw('10') },
+      { name: 'layer-scrim', note: 'backdrop behind the drawer', only: ['web'], value: raw('20') },
+      { name: 'layer-drawer', note: 'off-canvas sidebar', only: ['web'], value: raw('30') },
+      { name: 'layer-sheet', note: 'above the drawer, below the modal', only: ['web'], value: raw('40') },
+      { name: 'layer-modal', note: 'modal and command palette', only: ['web'], value: raw('50') },
+      { name: 'layer-pop', note: 'anchored popovers; above the modal so they work inside one', only: ['web'], value: raw('60') },
+      { name: 'layer-toast', note: 'above the modal', only: ['web'], value: raw('70') },
+      { name: 'layer-tip', note: 'tooltips top every interactive surface', only: ['web'], value: raw('80') },
+      { name: 'layer-fx', note: 'non-interactive particle canvas', only: ['web'], value: raw('90') },
     ],
   },
 ];

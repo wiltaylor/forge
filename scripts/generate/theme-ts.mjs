@@ -243,6 +243,27 @@ export const GROUPS = [
       ['topbarH', 'topbar-h'],
     ],
   },
+  {
+    field: 'layer',
+    type: 'ThemeLayer',
+    typeDoc: [
+      'The z-index scale, bottom to top. The modal and the command palette share',
+      '`modal`: both are modal surfaces, so only one of them is open at a time.',
+    ],
+    doc: 'The z-index scale.',
+    prefix: 'layer-',
+    fields: [
+      ['topbar', 'layer-topbar'],
+      ['scrim', 'layer-scrim'],
+      ['drawer', 'layer-drawer'],
+      ['sheet', 'layer-sheet'],
+      ['modal', 'layer-modal'],
+      ['pop', 'layer-pop'],
+      ['toast', 'layer-toast'],
+      ['tip', 'layer-tip'],
+      ['fx', 'layer-fx'],
+    ],
+  },
 ];
 
 const SCHEMES = [
