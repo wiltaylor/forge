@@ -7,16 +7,14 @@
 //! `packages/tokens/tokens.source.mjs`. Edit that file, then `just generate`.
 //!
 //! Install a theme once with [`Theme::apply`]; widgets read it back with
-//! [`Theme::of`]. Overrides use plain struct-update syntax — Rust's native
-//! "DeepPartial":
+//! [`Theme::of`]. Derive a brand theme with [`Theme::with_accent`], then
+//! adjust the public token fields in place:
 //!
 //! ```
-//! use forge_egui::theme::{Accent, Theme};
+//! use forge_egui::theme::Theme;
 //! use egui::Color32;
-//! let custom = Theme {
-//!     accent: Accent { base: Color32::from_rgb(0x8A, 0x63, 0xD2), ..Theme::dark().accent },
-//!     ..Theme::dark()
-//! };
+//! let mut custom = Theme::dark().with_accent(Color32::from_rgb(0x8A, 0x63, 0xD2));
+//! custom.border.strong = custom.accent.base;
 //! ```
 
 mod apply;
@@ -131,14 +129,17 @@ pub struct BorderTokens {
 
 /// The full Forge token set. Field layout mirrors the web `Theme` interface
 /// and forge-tui: `bg` rises page(0) → popover(4), `fg` descends primary(0)
-/// → disabled(3). Read those two ramps through [`Theme::surface`] and
-/// [`Theme::text`], which name each step.
+/// → disabled(3). The two ramps are private so the mapping from role to step
+/// cannot be re-decided at a call site; read them through [`Theme::surface`]
+/// and [`Theme::text`], which name each step.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Theme {
     pub name: &'static str,
     pub scheme: Scheme,
-    pub bg: [Color32; 5],
-    pub fg: [Color32; 4],
+    /// Private: read through [`Theme::surface`].
+    bg: [Color32; 5],
+    /// Private: read through [`Theme::text`].
+    fg: [Color32; 4],
     pub border: BorderTokens,
     pub accent: Accent,
     pub success: SemanticTriple,
