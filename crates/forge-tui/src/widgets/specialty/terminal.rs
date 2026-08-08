@@ -460,6 +460,10 @@ mod tests {
     /// Totality: every crossterm variant either resolves through the shared
     /// table or is on the unrepresented list. Nothing falls through by
     /// accident.
+    ///
+    /// Both halves reach the wire: a represented key must produce bytes, and
+    /// an unrepresented key must produce nothing — not a plausible-looking
+    /// wrong code.
     #[test]
     fn the_key_adapter_is_total_over_the_crossterm_enum() {
         let unresolved: Vec<KeyCode> = ALL_KEY_CODES
@@ -468,12 +472,19 @@ mod tests {
             .filter(|code| xterm_key(*code).is_none())
             .collect();
         assert_eq!(unresolved, UNREPRESENTED);
-        for code in UNREPRESENTED {
-            assert_eq!(
-                key_bytes(*code, Modifiers::NONE, CursorKeys::Normal),
-                None,
-                "{code:?} must send nothing"
-            );
+        for code in ALL_KEY_CODES {
+            if UNREPRESENTED.contains(code) {
+                assert_eq!(
+                    key_bytes(*code, Modifiers::NONE, CursorKeys::Normal),
+                    None,
+                    "{code:?} must send nothing"
+                );
+            } else {
+                assert!(
+                    key_bytes(*code, Modifiers::NONE, CursorKeys::Normal).is_some(),
+                    "{code:?} must reach the wire"
+                );
+            }
         }
     }
 

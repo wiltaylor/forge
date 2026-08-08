@@ -1113,6 +1113,10 @@ mod tests {
     /// (by itself, or as a Ctrl/Alt chord) or is on the list above. The
     /// unrepresented keys must send nothing — not a plausible-looking wrong
     /// code.
+    ///
+    /// The represented keys must reach the wire: a named key produces bytes
+    /// on its own, and a character key produces them as an Alt chord. Alt,
+    /// not Ctrl, because Ctrl and a digit fold to no control byte by design.
     #[test]
     fn the_key_adapter_is_total_over_the_egui_key_enum() {
         let unresolved: Vec<&str> = Key::ALL
@@ -1135,6 +1139,13 @@ mod tests {
                         key.name()
                     );
                 }
+            } else {
+                assert!(
+                    encode_key(key, egui::Modifiers::NONE, CursorKeys::Normal).is_some()
+                        || encode_key(key, egui::Modifiers::ALT, CursorKeys::Normal).is_some(),
+                    "{} must reach the wire",
+                    key.name()
+                );
             }
         }
     }
