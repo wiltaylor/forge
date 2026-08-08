@@ -309,6 +309,28 @@ fn table_starter_is_three_by_two() {
     assert!(rows.iter().all(|row| row.len() == 3));
 }
 
+#[test]
+fn the_palette_offers_heading_levels_one_to_four() {
+    // The other shape a divergence took: one kit offered three heading levels
+    // while the others offered four. Every kit reads these rows, so the levels
+    // it offers are the levels named here.
+    let levels: Vec<u8> = kind_entry("heading")
+        .unwrap()
+        .palette
+        .iter()
+        .map(|row| {
+            let PaletteAction::Insert(make) = row.action else {
+                panic!("the heading row `{}` does not insert", row.id);
+            };
+            match make() {
+                BlockKind::Heading { level, .. } => level,
+                other => panic!("the heading row `{}` makes {other:?}", row.id),
+            }
+        })
+        .collect();
+    assert_eq!(levels, [1, 2, 3, 4]);
+}
+
 /// The markdown one starter block writes, and the kinds it reads back as.
 #[cfg(feature = "md")]
 fn round_trip(kind: BlockKind) -> (String, Vec<BlockKind>) {

@@ -5,10 +5,11 @@
 //! Unfocused text blocks show styled inline markdown (via
 //! `forge_blocks::parse_inline`); clicking one swaps in a frameless
 //! `TextEdit` bound to the raw markdown source. The keyboard model is the
-//! shared Forge contract: Enter splits, Backspace-at-0 merges, Tab indents
-//! list items, Alt+↑/↓ moves blocks, `/` on an empty block opens the block
-//! palette, and `:pre` pops emoji completion. All document mutations go
-//! through `forge_blocks::ops`, so every platform edits identically.
+//! shared Forge contract: Enter splits, Backspace-at-0 and Delete-at-end
+//! merge, Tab indents list items, Alt+↑/↓ moves blocks, `/` on an empty
+//! block opens the block palette, and `:pre` pops emoji completion. All
+//! document mutations go through `forge_blocks::ops`, so every platform
+//! edits identically.
 //!
 //! ```ignore
 //! let mut state = BlockEditorState::new(Document::new());
@@ -258,6 +259,7 @@ pub(crate) enum Action {
     Select(Address),
     Split(Address),
     BackspaceAt0(Address),
+    DeleteAtEnd(Address),
     Shortcut {
         addr: Address,
         kind: BlockKind,
@@ -470,6 +472,18 @@ fn apply(st: &mut BlockEditorState, doc: &mut Document, action: Action) {
                     }
                 }
                 _ => {}
+            }
+        }
+        // Delete at the end of a block is Backspace-at-0 of the block below
+        // it, so it goes through the same shared merge. The merge only fires
+        // when the navigation-order next block really is our next sibling
+        // (its merge target is its previous sibling, which is then us).
+        Action::DeleteAtEnd(addr) => {
+            if let Some(next) = next_address(doc, addr) {
+                if let Some(merge) = merge_with_previous(doc, next) {
+                    st.changed = true;
+                    focus_block(st, doc, merge.focus, CaretHint::Byte(merge.caret));
+                }
             }
         }
         Action::Shortcut { addr, kind, caret } => {
