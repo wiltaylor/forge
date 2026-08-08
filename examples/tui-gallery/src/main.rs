@@ -52,7 +52,7 @@ pub struct Gallery {
 impl Gallery {
     fn new() -> Gallery {
         Gallery {
-            mode: ColorMode::detect(),
+            mode: ColorMode::detect(&TermEnv::from_process()),
             shell: ShellState::new(),
             forms: Default::default(),
             pickers: Default::default(),

@@ -11,12 +11,13 @@
 //! particles fly under dialog scrims).
 //!
 //! Accessibility & performance: the requested [`Motion`] resolves once at
-//! startup (`FORGE_TUI_MOTION` env → explicit option → environment
-//! heuristics), and a per-tick timing monitor degrades or fast-forwards
-//! effects when the loop can't keep up. Reduced motion turns every effect
-//! into a two-tick dim-flash; `Off` makes them instant no-ops — callers never
-//! branch.
+//! startup from a [`TermEnv`] captured at the edge — an explicit setting is
+//! honoured as-is, and [`Motion::Auto`] documents the heuristics — and a
+//! per-tick timing monitor degrades or fast-forwards effects when the loop
+//! can't keep up. Reduced motion turns every effect into a two-tick
+//! dim-flash; `Off` makes them instant no-ops — callers never branch.
 
+use crate::env::TermEnv;
 use crate::theme::color::{approx_rgb, quantize};
 use crate::theme::{blend, ColorMode, Surface, TextRole, Theme};
 use ratatui::layout::Rect;
@@ -29,8 +30,9 @@ use unicode_width::UnicodeWidthStr;
 /// Motion preference for particle effects.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Motion {
-    /// Resolve from the environment: `TERM=dumb`, 16-color terminals,
-    /// `NO_COLOR`, or a tick rate above 250ms all select [`Motion::Reduced`].
+    /// Resolve from the captured environment: `FORGE_TUI_MOTION` overrides,
+    /// then `TERM=dumb`, 16-color terminals, `NO_COLOR`, or a tick rate above
+    /// 250ms all select [`Motion::Reduced`].
     #[default]
     Auto,
     Full,
@@ -41,10 +43,15 @@ pub enum Motion {
 }
 
 impl Motion {
-    /// Resolve `Auto` (and apply the `FORGE_TUI_MOTION` override) against the
-    /// detected terminal capabilities. Called once by the runtime at startup.
-    pub fn resolve(self, mode: ColorMode, tick_rate: Duration) -> Motion {
-        if let Ok(v) = std::env::var("FORGE_TUI_MOTION") {
+    /// Resolve `Auto` against a captured [`TermEnv`] and the detected
+    /// terminal capabilities — a pure function of its inputs, called once by
+    /// the runtime at startup. An explicit setting (anything but `Auto`) is
+    /// honoured over the environment value.
+    pub fn resolve(self, env: &TermEnv, mode: ColorMode, tick_rate: Duration) -> Motion {
+        if self != Motion::Auto {
+            return self;
+        }
+        if let Some(v) = &env.motion {
             match v.to_ascii_lowercase().as_str() {
                 "full" => return Motion::Full,
                 "reduced" | "reduce" => return Motion::Reduced,
@@ -52,12 +59,12 @@ impl Motion {
                 _ => {}
             }
         }
-        if self != Motion::Auto {
-            return self;
-        }
-        let dumb = matches!(std::env::var("TERM").as_deref(), Ok("dumb"));
-        let no_color = std::env::var("NO_COLOR").is_ok_and(|v| !v.is_empty());
-        if dumb || no_color || mode == ColorMode::Ansi16 || tick_rate > Duration::from_millis(250) {
+        let dumb = env.term.as_deref() == Some("dumb");
+        if dumb
+            || env.no_color
+            || mode == ColorMode::Ansi16
+            || tick_rate > Duration::from_millis(250)
+        {
             Motion::Reduced
         } else {
             Motion::Full
@@ -249,10 +256,13 @@ impl Fx {
     }
 
     /// Late configuration once the terminal is known. The runtime calls this
-    /// from `run()`; call it yourself when driving `Fx` in your own loop.
+    /// from `run()` with an already-resolved motion; call it yourself when
+    /// driving `Fx` in your own loop. Resolve `Auto` first with
+    /// [`Motion::resolve`] — passed through unresolved, it behaves as
+    /// [`Motion::Full`].
     pub fn configure(&mut self, tick_rate: Duration, motion: Motion, mode: ColorMode) {
         self.tick_rate = tick_rate;
-        self.motion = motion.resolve(mode, tick_rate);
+        self.motion = motion;
         self.mode = mode;
     }
 
@@ -594,24 +604,9 @@ mod tests {
     use ratatui::backend::TestBackend;
     use ratatui::widgets::Paragraph;
     use ratatui::Terminal;
-    use std::sync::{Mutex, PoisonError};
-
-    /// `Motion::resolve` reads FORGE_TUI_MOTION/TERM/NO_COLOR, and the process
-    /// environment is shared by every test thread. `motion_resolution` sets
-    /// FORGE_TUI_MOTION="off" for the length of one assertion; without this
-    /// lock a concurrent `configure()` resolves to `Motion::Off`, `draw` then
-    /// clears `pending`, and the effect under test never spawns at all.
-    /// Every test that reaches the resolver takes it.
-    static ENV_LOCK: Mutex<()> = Mutex::new(());
-
-    fn env_guard() -> std::sync::MutexGuard<'static, ()> {
-        // Don't let one test's panic poison the lock into failing the rest.
-        ENV_LOCK.lock().unwrap_or_else(PoisonError::into_inner)
-    }
 
     #[test]
     fn recreate_particles_land_home() {
-        let _env = env_guard();
         let theme = Theme::dark();
         let mut fx = Fx::with_seed(9);
         fx.configure(
@@ -649,7 +644,6 @@ mod tests {
 
     #[test]
     fn explode_scatters_and_finishes() {
-        let _env = env_guard();
         let theme = Theme::dark();
         let mut fx = Fx::with_seed(3);
         fx.configure(
@@ -712,32 +706,105 @@ mod tests {
         assert_eq!(fx.ticks_for(800), 2);
     }
 
-    // One test for all env-dependent behavior — parallel test threads share
-    // the process environment, so these must not run as separate #[test]s.
-    #[test]
-    fn motion_resolution() {
-        let _env = env_guard();
-        std::env::set_var("FORGE_TUI_MOTION", "off");
-        let m = Motion::Full.resolve(ColorMode::TrueColor, Duration::from_millis(80));
-        std::env::remove_var("FORGE_TUI_MOTION");
-        assert_eq!(m, Motion::Off);
+    fn motion_env(motion: &str) -> TermEnv {
+        TermEnv {
+            motion: Some(motion.into()),
+            ..TermEnv::default()
+        }
+    }
 
-        std::env::remove_var("NO_COLOR");
+    // `Motion::resolve` is a pure function of its inputs, so these run as
+    // separate #[test]s in parallel with no environment lock.
+    #[test]
+    fn explicit_motion_wins_over_environment() {
         assert_eq!(
-            Motion::Auto.resolve(ColorMode::Ansi16, Duration::from_millis(80)),
-            Motion::Reduced
-        );
-        assert_eq!(
-            Motion::Auto.resolve(ColorMode::TrueColor, Duration::from_millis(300)),
-            Motion::Reduced
-        );
-        assert_eq!(
-            Motion::Auto.resolve(ColorMode::TrueColor, Duration::from_millis(80)),
+            Motion::Full.resolve(
+                &motion_env("off"),
+                ColorMode::TrueColor,
+                Duration::from_millis(80)
+            ),
             Motion::Full
         );
-        // Explicit choice sticks.
         assert_eq!(
-            Motion::Full.resolve(ColorMode::Ansi16, Duration::from_millis(80)),
+            Motion::Off.resolve(
+                &motion_env("full"),
+                ColorMode::TrueColor,
+                Duration::from_millis(80)
+            ),
+            Motion::Off
+        );
+    }
+
+    #[test]
+    fn explicit_motion_wins_over_capability_heuristics() {
+        assert_eq!(
+            Motion::Full.resolve(
+                &TermEnv::default(),
+                ColorMode::Ansi16,
+                Duration::from_millis(80)
+            ),
+            Motion::Full
+        );
+    }
+
+    #[test]
+    fn auto_honours_env_override() {
+        let tick = Duration::from_millis(80);
+        assert_eq!(
+            Motion::Auto.resolve(&motion_env("off"), ColorMode::TrueColor, tick),
+            Motion::Off
+        );
+        assert_eq!(
+            Motion::Auto.resolve(&motion_env("reduced"), ColorMode::TrueColor, tick),
+            Motion::Reduced
+        );
+        assert_eq!(
+            Motion::Auto.resolve(&motion_env("full"), ColorMode::Ansi16, tick),
+            Motion::Full
+        );
+    }
+
+    #[test]
+    fn auto_degrades_on_limited_terminals() {
+        let tick = Duration::from_millis(80);
+        assert_eq!(
+            Motion::Auto.resolve(&TermEnv::default(), ColorMode::Ansi16, tick),
+            Motion::Reduced
+        );
+        assert_eq!(
+            Motion::Auto.resolve(
+                &TermEnv::default(),
+                ColorMode::TrueColor,
+                Duration::from_millis(300)
+            ),
+            Motion::Reduced
+        );
+        let dumb = TermEnv {
+            term: Some("dumb".into()),
+            ..TermEnv::default()
+        };
+        assert_eq!(
+            Motion::Auto.resolve(&dumb, ColorMode::TrueColor, tick),
+            Motion::Reduced
+        );
+        let no_color = TermEnv {
+            no_color: true,
+            ..TermEnv::default()
+        };
+        assert_eq!(
+            Motion::Auto.resolve(&no_color, ColorMode::TrueColor, tick),
+            Motion::Reduced
+        );
+    }
+
+    #[test]
+    fn auto_defaults_to_full() {
+        assert_eq!(
+            Motion::Auto.resolve(
+                &TermEnv::default(),
+                ColorMode::TrueColor,
+                Duration::from_millis(80)
+            ),
             Motion::Full
         );
     }

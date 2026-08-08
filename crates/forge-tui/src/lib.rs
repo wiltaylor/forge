@@ -19,6 +19,7 @@
 //! `markdown` (pulldown-cmark), `chat` (implies markdown), `code` (syntect),
 //! `calendar` (time), `term` (portable-pty + vt100), or `full` for everything.
 
+pub mod env;
 pub mod error;
 pub mod event;
 pub mod runtime;
@@ -30,6 +31,7 @@ pub use error::{Error, Result};
 
 /// One-stop imports for building a forge-tui app.
 pub mod prelude {
+    pub use crate::env::TermEnv;
     pub use crate::event::{
         clicked, in_area, is_press, left_down, mouse_pos, scroll_delta, KeyCombo, Keymap, Outcome,
     };

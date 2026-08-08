@@ -20,6 +20,7 @@ pub use overlay::{dim, Overlay, OverlayOutcome, OverlayStack};
 pub use shell::{AppShell, NavSection, ShellState};
 pub use toaster::{Toast, ToastHandle, Toaster};
 
+use crate::env::TermEnv;
 use crate::error::Result;
 use crate::event::is_press;
 use crate::theme::{set_ambient_theme, set_default_theme, ColorMode, Theme};
@@ -50,10 +51,9 @@ pub struct RunOptions {
     pub mouse: bool,
     /// Bracketed paste (`Event::Paste`). On by default.
     pub paste: bool,
-    /// Particle-effect motion preference. `Auto` (default) resolves from the
-    /// environment: `FORGE_TUI_MOTION` overrides, then `TERM=dumb`,
-    /// `NO_COLOR`, 16-color terminals and tick rates above 250ms degrade to
-    /// [`Motion::Reduced`].
+    /// Particle-effect motion preference. An explicit setting is honoured
+    /// as-is; `Auto` (default) resolves from the environment captured at
+    /// startup — see [`Motion::Auto`] for the heuristics.
     pub motion: Motion,
 }
 
@@ -237,7 +237,11 @@ impl Drop for TerminalGuard {
 /// on the next frame. Assigning [`Ctx::theme`] alone repaints the runtime's
 /// chrome and nothing else.
 pub fn run(app: &mut dyn App, theme: Theme, opts: RunOptions) -> Result<()> {
-    let mode = opts.color_mode.unwrap_or_else(ColorMode::detect);
+    // The one place the process environment is read — the resolvers below
+    // are pure functions of this snapshot.
+    let env = TermEnv::from_process();
+    let mode = opts.color_mode.unwrap_or_else(|| ColorMode::detect(&env));
+    let motion = opts.motion.resolve(&env, mode, opts.tick_rate);
     let theme = theme.quantized(mode);
     set_ambient_theme(theme.clone());
     let _ = set_default_theme(theme.clone());
@@ -245,7 +249,7 @@ pub fn run(app: &mut dyn App, theme: Theme, opts: RunOptions) -> Result<()> {
     let guard = TerminalGuard::new(&opts)?;
     let mut terminal = Terminal::new(CrosstermBackend::new(io::stdout()))?;
     let mut ctx = Ctx::new(theme);
-    ctx.fx.configure(opts.tick_rate, opts.motion, mode);
+    ctx.fx.configure(opts.tick_rate, motion, mode);
     let mut last_tick = Instant::now();
 
     while !ctx.quit {
