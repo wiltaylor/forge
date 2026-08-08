@@ -16,11 +16,14 @@
     "build": "tsup && tsc -p tsconfig.build.json",
     "prepare": "node ../../scripts/prepare-package.mjs",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:corpus": "vitest run tests/corpus.test.ts"
   },
   "devDependencies": {
+    "@types/node": "^26.1.2",
     "tsup": "^8.5.1",
     "typescript": "^7.0.0",
+    "undici": "^7.18.2",
     "vitest": "^4.1.10"
   }
 }

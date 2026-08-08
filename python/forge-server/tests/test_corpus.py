@@ -126,6 +126,7 @@ class Harness:
     def __init__(self, server: uvicorn.Server, thread: threading.Thread, port: int, variables: Vars):
         self.server = server
         self.thread = thread
+        self.port = port
         self.base = f"http://127.0.0.1:{port}"
         self.ws_base = f"ws://127.0.0.1:{port}"
         self.vars = variables

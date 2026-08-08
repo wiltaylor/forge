@@ -260,12 +260,18 @@ importers:
 
   packages/client:
     devDependencies:
+      '@types/node':
+        specifier: ^26.1.2
+        version: 26.1.2
       tsup:
         specifier: ^8.5.1
         version: 8.5.1(postcss@8.5.23)(typescript@7.0.2)
       typescript:
         specifier: ^7.0.0
         version: 7.0.2
+      undici:
+        specifier: ^7.18.2
+        version: 7.29.0
       vitest:
         specifier: ^4.1.10
         version: 4.1.10(@types/node@26.1.2)(happy-dom@20.11.1)(vite@8.1.5(@types/node@26.1.2)(esbuild@0.27.7))
@@ -1997,6 +2003,10 @@ packages:
   undici-types@8.3.0:
     resolution: {integrity: sha512-j375ScV60dom+YkPFIfTLcOiPxkN/buHz5GobjLhixFuANaNs3C9l4GmrWqejgXWJ7BbJcFYpTEUkS1Ge8bpZQ==}
 
+  undici@7.29.0:
+    resolution: {integrity: sha512-IDxfleLmmbSskfWSUATiN1nfn2rDuvnMOqb5CWR92iIfojA0Ud+ulOAAEQ57LPr9rWmsreUyf5lwyao+7GNNVw==}
+    engines: {node: '>=20.18.1'}
+
   update-browserslist-db@1.2.3:
     resolution: {integrity: sha512-Js0m9cx+qOgDxo0eMiFGEueWztz+d4+M3rGlmKPT+T4IS/jP4ylw3Nwpu6cpTTP8R1MAC1kF4VbdLt3ARf209w==}
     hasBin: true
@@ -3475,6 +3485,8 @@ snapshots:
   ufo@1.6.4: {}
 
   undici-types@8.3.0: {}
+
+  undici@7.29.0: {}
 
   update-browserslist-db@1.2.3(browserslist@4.28.5):
     dependencies:
