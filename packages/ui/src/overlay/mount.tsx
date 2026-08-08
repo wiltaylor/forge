@@ -1,5 +1,6 @@
 import { createContext, useContext } from 'solid-js';
 import type { JSX } from 'solid-js';
+import { Portal } from 'solid-js/web';
 
 /**
  * Overlay mount context — where Portal-based overlays (Modal, Sheet, Command,
@@ -23,4 +24,17 @@ export function OverlayMountProvider(props: { mount: Node; children: JSX.Element
 /** The current overlay mount node, or undefined to use `document.body`. */
 export function useOverlayMount(): Node | undefined {
   return useContext(OverlayMountContext);
+}
+
+export interface OverlayPortalProps {
+  children: JSX.Element;
+}
+
+/**
+ * Portal an overlay through the mount seam. Use this rather than `Portal`
+ * directly, or the overlay escapes the shadow root and loses its styles.
+ */
+export function OverlayPortal(props: OverlayPortalProps): JSX.Element {
+  const mount = useOverlayMount();
+  return <Portal mount={mount}>{props.children}</Portal>;
 }

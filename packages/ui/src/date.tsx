@@ -1,7 +1,7 @@
 import { For, Show, createSignal } from 'solid-js';
 import type { JSX } from 'solid-js';
 import { CalendarSvg, ChevronDown, ChevronLeftSvg, ChevronRightSvg } from './internal/icons';
-import { useDismiss } from './internal/dismiss';
+import { useOverlay } from './overlay';
 import { MONTHS, isoOf } from './internal/date';
 
 /* Dates are ISO YYYY-MM-DD strings; weeks start Monday; min/max compare
@@ -78,7 +78,7 @@ export interface DatePickerProps extends CalendarProps {
 export function DatePicker(props: DatePickerProps): JSX.Element {
   const [open, setOpen] = createSignal(false);
   let root!: HTMLDivElement;
-  useDismiss(open, () => setOpen(false), () => root);
+  useOverlay({ open, surface: () => root, onDismiss: () => setOpen(false) });
   return (
     <div class="ffield">
       <Show when={props.label}>

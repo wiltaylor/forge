@@ -23,7 +23,7 @@ import { fallbackRaster, rasterizeElement, resolveColor } from './rasterize';
 import type { PixelRaster } from './rasterize';
 import { detectFxTier as detectTier, GLOBAL_BUDGET, tierBudget, tierDurationScale } from './tier';
 import type { FxGlobalConfig, FxMode, FxTier } from './tier';
-import { useOverlayMount } from '../overlay-mount';
+import { useOverlayMount } from '../overlay';
 
 export type { FxMode, FxTier };
 

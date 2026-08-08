@@ -1,8 +1,7 @@
 import { For, Show, createSignal } from 'solid-js';
 import type { Accessor, JSX, Setter } from 'solid-js';
-import { Portal } from 'solid-js/web';
 import { XSvg } from './internal/icons';
-import { useOverlayMount } from './overlay-mount';
+import { OverlayPortal } from './overlay';
 import { Icon } from './primitives';
 import type { IconComponent, Tone } from './types';
 
@@ -59,9 +58,8 @@ function removeToast(store: ToastStore, id: number): void {
 }
 
 function ToastList(props: { store: ToastStore }) {
-  const mount = useOverlayMount();
   return (
-    <Portal mount={mount}>
+    <OverlayPortal>
       <div class="ftoaster">
         <For each={props.store.items()}>
           {(t) => (
@@ -77,7 +75,7 @@ function ToastList(props: { store: ToastStore }) {
           )}
         </For>
       </div>
-    </Portal>
+    </OverlayPortal>
   );
 }
 

@@ -12,5 +12,5 @@ export * from './feedback';
 export * from './toaster';
 export * from './data';
 export * from './theme';
-export * from './overlay-mount';
+export * from './overlay';
 export * from './fx';
