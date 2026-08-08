@@ -1,7 +1,7 @@
-import { For, Show, createEffect, createSignal, createUniqueId, mergeProps, onCleanup, splitProps } from 'solid-js';
+import { For, Show, createEffect, createSignal, createUniqueId, mergeProps, splitProps } from 'solid-js';
 import type { JSX } from 'solid-js';
 import { CheckDash, CheckMark, ChevronDown, SearchSvg } from './internal/icons';
-import { useDismiss } from './internal/dismiss';
+import { useOverlay } from './overlay';
 import { Icon } from './primitives';
 import type { IconComponent, Option } from './types';
 
@@ -171,6 +171,7 @@ export function Select<T = string>(props: SelectProps<T>): JSX.Element {
   const [open, setOpen] = createSignal(false);
   const [activeIdx, setActiveIdx] = createSignal(-1);
   let root!: HTMLDivElement;
+  useOverlay({ open, surface: () => root, onDismiss: () => setOpen(false) });
 
   const selected = () => local.options?.find((o) => o.value === local.value);
   const enabledIdx = (from: number, dir: number) => {
@@ -192,19 +193,12 @@ export function Select<T = string>(props: SelectProps<T>): JSX.Element {
       if (['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(e.key)) { e.preventDefault(); openAt(); }
       return;
     }
-    if (e.key === 'Escape') setOpen(false);
-    else if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIdx((i) => { const n = enabledIdx(Math.min(i + 1, local.options.length - 1), 1); return n >= 0 ? n : i; }); }
+    if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIdx((i) => { const n = enabledIdx(Math.min(i + 1, local.options.length - 1), 1); return n >= 0 ? n : i; }); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIdx((i) => { const n = enabledIdx(Math.max(i - 1, 0), -1); return n >= 0 ? n : i; }); }
     else if (e.key === 'Home') { e.preventDefault(); setActiveIdx(enabledIdx(0, 1)); }
     else if (e.key === 'End') { e.preventDefault(); setActiveIdx(enabledIdx(local.options.length - 1, -1)); }
     else if (e.key === 'Enter') { e.preventDefault(); commit(activeIdx()); }
   };
-  createEffect(() => {
-    if (!open()) return;
-    const onDown = (e: PointerEvent) => { if (!root.contains(e.target as Node)) setOpen(false); };
-    document.addEventListener('pointerdown', onDown);
-    onCleanup(() => document.removeEventListener('pointerdown', onDown));
-  });
 
   return (
     <div class="ffield">
@@ -387,7 +381,7 @@ export function Combobox<T = string>(props: ComboboxProps<T>): JSX.Element {
   const [activeIdx, setActiveIdx] = createSignal(-1);
   let root!: HTMLDivElement;
   let input!: HTMLInputElement;
-  useDismiss(open, () => { setOpen(false); setQuery(null); }, () => root);
+  useOverlay({ open, surface: () => root, onDismiss: () => { setOpen(false); setQuery(null); } });
 
   const selected = () => props.options?.find((o) => o.value === props.value);
   const filtered = () => {
@@ -405,7 +399,6 @@ export function Combobox<T = string>(props: ComboboxProps<T>): JSX.Element {
     if (e.key === 'ArrowDown') { e.preventDefault(); setOpen(true); setActiveIdx((i) => Math.min(i + 1, filtered().length - 1)); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIdx((i) => Math.max(i - 1, 0)); }
     else if (e.key === 'Enter') { e.preventDefault(); commit(filtered()[activeIdx()]); }
-    else if (e.key === 'Escape') { setOpen(false); setQuery(null); }
   };
 
   return (

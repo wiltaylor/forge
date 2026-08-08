@@ -107,9 +107,11 @@ Git-dep gotchas (pnpm; vmlab is the reference consumer):
   allowlisted in `onlyBuiltDependencies`
   (`"@forge/ui@https://codeload.github.com/wiltaylor/forge/tar.gz/<rev>#path:packages/ui"`
   — bare package names don't match git deps).
-- Add an `overrides` entry pinning `@forge/tokens` to the git dep: `@forge/ui`
-  declares it as `workspace:^`, which packs to `^0.1.0` and would otherwise
-  resolve against the foreign npmjs `@forge` scope.
+- Add an `overrides` entry for every `@forge/*` package another one depends
+  on: `@forge/ui` declares `@forge/tokens` as `workspace:^`, and `@forge/code`,
+  `@forge/chat`, `@forge/kanban` and `@forge/blocks` declare `@forge/ui` the
+  same way. Those pack to `^0.1.0` and would otherwise resolve against the
+  foreign npmjs `@forge` scope.
 - Don't commit the consuming app's `pnpm-lock.yaml`: pnpm 10.34 installs
   `path:` git deps FROM a lockfile as the raw monorepo tarball on a cold
   store (no subdir extraction, no prepare).

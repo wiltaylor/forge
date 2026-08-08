@@ -1,9 +1,10 @@
 /* Shared private helpers for CodeEditor/DiffEditor: language resolution,
    annotation → diagnostic mapping, and the Forge context menu. */
 
-import { Show, For, createEffect, onCleanup } from 'solid-js';
+import { Show, For } from 'solid-js';
 import type { Accessor, JSX, Setter } from 'solid-js';
 import { Portal } from 'solid-js/web';
+import { useOverlay } from '@forge/ui';
 import type { EditorState, Extension } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import type { Diagnostic } from '@codemirror/lint';
@@ -74,22 +75,16 @@ export interface CodeMenuProps {
 
 /* Forge context menu rendered at the pointer (uses round-4 .fmenu classes). */
 export function CodeMenu(props: CodeMenuProps): JSX.Element {
-  createEffect(() => {
-    if (!props.pos()) return;
-    const close = () => props.setPos(null);
-    const onDown = (e: PointerEvent) => { if (!(e.target as Element).closest('.fcode-menu')) close(); };
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
-    document.addEventListener('pointerdown', onDown);
-    document.addEventListener('keydown', onKey);
-    onCleanup(() => {
-      document.removeEventListener('pointerdown', onDown);
-      document.removeEventListener('keydown', onKey);
-    });
+  let menu: HTMLDivElement | undefined;
+  useOverlay({
+    open: () => !!props.pos(),
+    surface: () => menu,
+    onDismiss: () => props.setPos(null),
   });
   return (
     <Show when={props.pos()}>
       <Portal>
-        <div class="fpop fmenu-pop fcode-menu" role="menu"
+        <div ref={menu} class="fpop fmenu-pop fcode-menu" role="menu"
              style={{
                left: `${Math.min(props.pos()!.x, window.innerWidth - 200)}px`,
                top: `${Math.min(props.pos()!.y, window.innerHeight - 40 * (props.items?.length ?? 1))}px`,

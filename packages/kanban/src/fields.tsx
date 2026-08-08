@@ -6,7 +6,7 @@
    Known limitation: Select/DatePicker popovers render inline (absolute), so
    they clip against the column body's overflow-y scroll — options stay
    reachable because the open popover extends the scroll extent. The proper
-   fix is portal-based popovers in @forge/ui (overlay-mount), not here. */
+   fix is portal-based popovers in @forge/ui's overlay module, not here. */
 
 import { For, Match, Show, Switch } from 'solid-js';
 import type { JSX } from 'solid-js';

@@ -1,10 +1,8 @@
-import { For, Show, createEffect, createSignal, mergeProps, onCleanup } from 'solid-js';
+import { For, Show, createEffect, createSignal, mergeProps } from 'solid-js';
 import type { JSX } from 'solid-js';
-import { Portal } from 'solid-js/web';
 import { SearchSvg, XSvg } from './internal/icons';
-import { useDismiss } from './internal/dismiss';
 import { MenuList } from './internal/menu';
-import { useOverlayMount } from './overlay-mount';
+import { OverlayPortal, useOverlay } from './overlay';
 import { Button, Icon, Kbd } from './primitives';
 import type { CommandItem, ControlSize, IconComponent, MenuItem } from './types';
 
@@ -22,18 +20,19 @@ export interface ModalProps {
 }
 
 export function Modal(props: ModalProps): JSX.Element {
-  const mount = useOverlayMount();
-  createEffect(() => {
-    if (!props.open) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') props.onClose?.(); };
-    document.addEventListener('keydown', onKey);
-    onCleanup(() => document.removeEventListener('keydown', onKey));
+  let backdrop: HTMLDivElement | undefined;
+  let panel: HTMLDivElement | undefined;
+  useOverlay({
+    open: () => !!props.open,
+    surface: () => panel,
+    backdrop: () => backdrop,
+    onDismiss: () => props.onClose?.(),
   });
   return (
     <Show when={props.open}>
-      <Portal mount={mount}>
-        <div class="fmodal" onClick={(e) => { if (e.target === e.currentTarget) props.onClose?.(); }}>
-          <div class="fmodal-panel" classList={{ 'is-lg': props.size === 'lg', 'is-xl': props.size === 'xl' }} role="dialog" aria-modal="true" aria-label={props.title}>
+      <OverlayPortal>
+        <div ref={backdrop} class="fmodal">
+          <div ref={panel} class="fmodal-panel" classList={{ 'is-lg': props.size === 'lg', 'is-xl': props.size === 'xl' }} role="dialog" aria-modal="true" aria-label={props.title}>
             <header class="fmodal-head">
               <h3>{props.title}</h3>
               <button class="ftopbar-icon-btn" aria-label="Close" onClick={() => props.onClose?.()}>
@@ -46,7 +45,7 @@ export function Modal(props: ModalProps): JSX.Element {
             </Show>
           </div>
         </div>
-      </Portal>
+      </OverlayPortal>
     </Show>
   );
 }
@@ -62,19 +61,20 @@ export interface SheetProps {
 }
 
 export function Sheet(props: SheetProps): JSX.Element {
-  const mount = useOverlayMount();
-  createEffect(() => {
-    if (!props.open) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') props.onClose?.(); };
-    document.addEventListener('keydown', onKey);
-    onCleanup(() => document.removeEventListener('keydown', onKey));
+  let backdrop: HTMLDivElement | undefined;
+  let panel: HTMLDivElement | undefined;
+  useOverlay({
+    open: () => !!props.open,
+    surface: () => panel,
+    backdrop: () => backdrop,
+    onDismiss: () => props.onClose?.(),
   });
   return (
     <Show when={props.open}>
-      <Portal mount={mount}>
-        <div class="fsheet" classList={{ 'is-left': props.side === 'left' }}>
-          <div class="fsheet-scrim" onClick={() => props.onClose?.()} />
-          <div class="fsheet-panel" role="dialog" aria-label={props.title}>
+      <OverlayPortal>
+        <div ref={backdrop} class="fsheet" classList={{ 'is-left': props.side === 'left' }}>
+          <div class="fsheet-scrim" />
+          <div ref={panel} class="fsheet-panel" role="dialog" aria-label={props.title}>
             <header class="fsheet-head">
               <h3>{props.title}</h3>
               <button class="ftopbar-icon-btn" aria-label="Close" onClick={() => props.onClose?.()}>
@@ -87,7 +87,7 @@ export function Sheet(props: SheetProps): JSX.Element {
             </Show>
           </div>
         </div>
-      </Portal>
+      </OverlayPortal>
     </Show>
   );
 }
@@ -123,7 +123,7 @@ export function Popover(props: PopoverProps): JSX.Element {
   const merged = mergeProps({ variant: 'secondary' as const, size: 'md' as const, align: 'start' as const }, props);
   const [open, setOpen] = createSignal(false);
   let root!: HTMLDivElement;
-  useDismiss(open, () => setOpen(false), () => root);
+  useOverlay({ open, surface: () => root, onDismiss: () => setOpen(false) });
   return (
     <div class="fpopover" ref={root}>
       <Button variant={merged.variant} size={merged.size} icon={merged.icon}
@@ -156,7 +156,7 @@ export function DropdownMenu(props: DropdownMenuProps): JSX.Element {
   const [open, setOpen] = createSignal(false);
   const [activeIdx, setActiveIdx] = createSignal(-1);
   let root!: HTMLDivElement;
-  useDismiss(open, () => setOpen(false), () => root);
+  useOverlay({ open, surface: () => root, onDismiss: () => setOpen(false) });
 
   const selectable = (i: number) => {
     const it = merged.items[i];
@@ -214,7 +214,7 @@ export function ContextMenu(props: ContextMenuProps): JSX.Element {
   const [pos, setPos] = createSignal<{ x: number; y: number } | null>(null);
   const [activeIdx, setActiveIdx] = createSignal(-1);
   let root!: HTMLDivElement;
-  useDismiss(() => !!pos(), () => setPos(null), () => root);
+  useOverlay({ open: () => !!pos(), surface: () => root, onDismiss: () => setPos(null) });
   const commit = (i: number) => {
     const it = props.items[i];
     if (!it || it.separator || it.disabled) return;
@@ -251,10 +251,19 @@ export interface CommandProps {
 }
 
 export function Command(props: CommandProps): JSX.Element {
-  const mount = useOverlayMount();
   const [query, setQuery] = createSignal('');
   const [activeIdx, setActiveIdx] = createSignal(0);
   let input: HTMLInputElement | undefined;
+  let backdrop: HTMLDivElement | undefined;
+  let panel: HTMLDivElement | undefined;
+
+  const close = () => { props.onClose?.(); setQuery(''); };
+  useOverlay({
+    open: () => !!props.open,
+    surface: () => panel,
+    backdrop: () => backdrop,
+    onDismiss: close,
+  });
 
   const filtered = () => {
     const q = query().toLowerCase();
@@ -278,8 +287,7 @@ export function Command(props: CommandProps): JSX.Element {
   };
   const onKeyDown = (e: KeyboardEvent) => {
     const n = filtered().length;
-    if (e.key === 'Escape') { props.onClose?.(); setQuery(''); }
-    else if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIdx((i) => (i + 1) % Math.max(1, n)); }
+    if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIdx((i) => (i + 1) % Math.max(1, n)); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIdx((i) => (i - 1 + n) % Math.max(1, n)); }
     else if (e.key === 'Enter') { e.preventDefault(); commit(filtered()[activeIdx()]); }
   };
@@ -287,9 +295,9 @@ export function Command(props: CommandProps): JSX.Element {
 
   return (
     <Show when={props.open}>
-      <Portal mount={mount}>
-        <div class="fcmd" onClick={(e) => { if (e.target === e.currentTarget) { props.onClose?.(); setQuery(''); } }}>
-          <div class="fcmd-panel" role="dialog" aria-label="Command palette">
+      <OverlayPortal>
+        <div ref={backdrop} class="fcmd">
+          <div ref={panel} class="fcmd-panel" role="dialog" aria-label="Command palette">
             <div class="fcmd-input">
               <SearchSvg />
               <input ref={input} placeholder={props.placeholder ?? 'Type a command…'}
@@ -329,7 +337,7 @@ export function Command(props: CommandProps): JSX.Element {
             </div>
           </div>
         </div>
-      </Portal>
+      </OverlayPortal>
     </Show>
   );
 }
