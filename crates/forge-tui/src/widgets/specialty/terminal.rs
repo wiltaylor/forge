@@ -7,6 +7,12 @@
 use crate::event::{in_area, is_press, Outcome};
 use crate::theme::{Surface, TextRole};
 use crate::widgets::paint;
+use forge_xterm::key::{self, CursorKeys, Key};
+use forge_xterm::mouse::{
+    self, MouseEncoding, MouseMode, MouseReport, BUTTON_LEFT, BUTTON_MIDDLE, BUTTON_NONE,
+    BUTTON_RIGHT, WHEEL_DOWN, WHEEL_LEFT, WHEEL_RIGHT, WHEEL_UP,
+};
+use forge_xterm::Modifiers;
 use portable_pty::{native_pty_system, ChildKiller, CommandBuilder, PtySize};
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{
@@ -153,40 +159,18 @@ impl TerminalState {
     }
 
     /// Forward a key to the PTY. Tab/BackTab are left to the app (focus
-    /// traversal); everything else is encoded xterm-style.
+    /// traversal); everything else goes through the shared xterm table,
+    /// honouring the cursor-key mode (DECCKM) the running program set.
     pub fn handle_key(&mut self, key: KeyEvent) -> Outcome {
         if !is_press(&key) || self.exited {
             return Outcome::Ignored;
         }
-        let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
-        let bytes: Vec<u8> = match key.code {
-            KeyCode::Tab | KeyCode::BackTab => return Outcome::Ignored,
-            KeyCode::Char(c) if ctrl => {
-                let u = c.to_ascii_uppercase();
-                if u.is_ascii_uppercase() {
-                    vec![(u as u8) & 0x1f]
-                } else {
-                    return Outcome::Ignored;
-                }
-            }
-            KeyCode::Char(c) => {
-                let mut b = [0u8; 4];
-                c.encode_utf8(&mut b).as_bytes().to_vec()
-            }
-            KeyCode::Enter => b"\r".to_vec(),
-            KeyCode::Backspace => vec![0x7f],
-            KeyCode::Esc => vec![0x1b],
-            KeyCode::Up => b"\x1b[A".to_vec(),
-            KeyCode::Down => b"\x1b[B".to_vec(),
-            KeyCode::Right => b"\x1b[C".to_vec(),
-            KeyCode::Left => b"\x1b[D".to_vec(),
-            KeyCode::Home => b"\x1b[H".to_vec(),
-            KeyCode::End => b"\x1b[F".to_vec(),
-            KeyCode::PageUp => b"\x1b[5~".to_vec(),
-            KeyCode::PageDown => b"\x1b[6~".to_vec(),
-            KeyCode::Delete => b"\x1b[3~".to_vec(),
-            KeyCode::Insert => b"\x1b[2~".to_vec(),
-            _ => return Outcome::Ignored,
+        if matches!(key.code, KeyCode::Tab | KeyCode::BackTab) {
+            return Outcome::Ignored;
+        }
+        let cursor = cursor_keys(self.parser.screen());
+        let Some(bytes) = key_bytes(key.code, to_modifiers(key.modifiers), cursor) else {
+            return Outcome::Ignored;
         };
         let _ = self.writer.write_all(&bytes);
         let _ = self.writer.flush();
@@ -204,11 +188,11 @@ impl TerminalState {
         let (mode, encoding) = {
             let screen = self.parser.screen();
             (
-                screen.mouse_protocol_mode(),
-                screen.mouse_protocol_encoding(),
+                mouse_mode(screen.mouse_protocol_mode()),
+                mouse_encoding(screen.mouse_protocol_encoding()),
             )
         };
-        if mode == vt100::MouseProtocolMode::None || !in_area(&ev, self.last_area) {
+        if mode == MouseMode::None || !in_area(&ev, self.last_area) {
             return Outcome::Ignored;
         }
         let (button, motion, release) = match ev.kind {
@@ -221,28 +205,23 @@ impl TerminalState {
             MouseEventKind::ScrollLeft => (WHEEL_LEFT, false, false),
             MouseEventKind::ScrollRight => (WHEEL_RIGHT, false, false),
         };
-        if !mode_allows(mode, button, motion, release) {
-            return Outcome::Ignored;
-        }
-        let col = ev.column.saturating_sub(self.last_area.x);
-        let row = ev.row.saturating_sub(self.last_area.y);
-        // Button-motion / any-motion modes fire once per cell crossing.
-        if motion && self.last_mouse_cell == Some((col, row)) {
-            return Outcome::Ignored;
-        }
-        self.last_mouse_cell = Some((col, row));
-        let m = ev.modifiers;
-        let bytes = encode_mouse(
-            encoding,
+        let report = MouseReport {
             button,
             motion,
             release,
-            col,
-            row,
-            m.contains(KeyModifiers::SHIFT),
-            m.contains(KeyModifiers::ALT),
-            m.contains(KeyModifiers::CONTROL),
-        );
+            col: ev.column.saturating_sub(self.last_area.x),
+            row: ev.row.saturating_sub(self.last_area.y),
+            modifiers: to_modifiers(ev.modifiers),
+        };
+        if !mouse::is_reported(&report, mode) {
+            return Outcome::Ignored;
+        }
+        // Button-motion / any-motion modes fire once per cell crossing.
+        if motion && self.last_mouse_cell == Some((report.col, report.row)) {
+            return Outcome::Ignored;
+        }
+        self.last_mouse_cell = Some((report.col, report.row));
+        let bytes = mouse::encode(&report, encoding);
         let _ = self.writer.write_all(&bytes);
         let _ = self.writer.flush();
         Outcome::Consumed
@@ -255,109 +234,93 @@ impl Drop for TerminalState {
     }
 }
 
-// xterm mouse button codes (the low bits of `cb`, before modifier/motion bits).
-const BUTTON_NONE: u16 = 3; // no button held (bare motion, X10 release)
-const WHEEL_UP: u16 = 64;
-const WHEEL_DOWN: u16 = 65;
-const WHEEL_LEFT: u16 = 66;
-const WHEEL_RIGHT: u16 = 67;
+/// crossterm's key vocabulary mapped onto the shared table's ([`Key`]).
+/// `None` = the key has no bytes to send, so the kit sends nothing. The match
+/// is exhaustive on purpose: a new crossterm variant fails compilation here
+/// rather than silently sending nothing.
+fn xterm_key(code: KeyCode) -> Option<Key> {
+    Some(match code {
+        KeyCode::Char(c) => Key::Char(c),
+        KeyCode::Enter => Key::Enter,
+        KeyCode::Backspace => Key::Backspace,
+        KeyCode::Tab => Key::Tab,
+        KeyCode::Esc => Key::Escape,
+        KeyCode::Up => Key::Up,
+        KeyCode::Down => Key::Down,
+        KeyCode::Right => Key::Right,
+        KeyCode::Left => Key::Left,
+        KeyCode::Home => Key::Home,
+        KeyCode::End => Key::End,
+        KeyCode::PageUp => Key::PageUp,
+        KeyCode::PageDown => Key::PageDown,
+        KeyCode::Insert => Key::Insert,
+        KeyCode::Delete => Key::Delete,
+        KeyCode::F(n) => Key::Function(n),
+        // BackTab never reaches the table — `handle_key` keeps both tab forms
+        // for focus traversal — and the rest have no xterm bytes to send.
+        KeyCode::BackTab
+        | KeyCode::Null
+        | KeyCode::CapsLock
+        | KeyCode::ScrollLock
+        | KeyCode::NumLock
+        | KeyCode::PrintScreen
+        | KeyCode::Pause
+        | KeyCode::Menu
+        | KeyCode::KeypadBegin
+        | KeyCode::Media(_)
+        | KeyCode::Modifier(_) => return None,
+    })
+}
+
+/// The bytes a crossterm key sends, through the shared table.
+fn key_bytes(code: KeyCode, modifiers: Modifiers, cursor: CursorKeys) -> Option<Vec<u8>> {
+    key::encode(xterm_key(code)?, modifiers, cursor)
+}
+
+/// The cursor-key mode the running program asked for (DECCKM `?1h`/`?1l`).
+fn cursor_keys(screen: &vt100::Screen) -> CursorKeys {
+    if screen.application_cursor() {
+        CursorKeys::Application
+    } else {
+        CursorKeys::Normal
+    }
+}
+
+/// crossterm's modifier set in the shared crate's vocabulary.
+fn to_modifiers(m: KeyModifiers) -> Modifiers {
+    Modifiers {
+        shift: m.contains(KeyModifiers::SHIFT),
+        alt: m.contains(KeyModifiers::ALT),
+        ctrl: m.contains(KeyModifiers::CONTROL),
+    }
+}
 
 fn button_code(b: MouseButton) -> u16 {
     match b {
-        MouseButton::Left => 0,
-        MouseButton::Middle => 1,
-        MouseButton::Right => 2,
+        MouseButton::Left => BUTTON_LEFT,
+        MouseButton::Middle => BUTTON_MIDDLE,
+        MouseButton::Right => BUTTON_RIGHT,
     }
 }
 
-/// Does the active tracking mode want to report this event? Mirrors xterm:
-/// `Press` reports button-down + wheel only; `PressRelease` adds releases;
-/// `ButtonMotion` adds drags (motion with a button); `AnyMotion` adds bare
-/// motion. Wheel is a "press" and is reported by every non-`None` mode.
-fn mode_allows(mode: vt100::MouseProtocolMode, button: u16, motion: bool, release: bool) -> bool {
-    use vt100::MouseProtocolMode as M;
-    let wheel = button >= WHEEL_UP;
+/// vt100's tracking-mode vocabulary in the shared crate's.
+fn mouse_mode(mode: vt100::MouseProtocolMode) -> MouseMode {
     match mode {
-        M::None => false,
-        M::Press => !release && (!motion || wheel),
-        M::PressRelease => !motion || wheel,
-        M::ButtonMotion => wheel || !(motion && button == BUTTON_NONE),
-        M::AnyMotion => true,
+        vt100::MouseProtocolMode::None => MouseMode::None,
+        vt100::MouseProtocolMode::Press => MouseMode::Press,
+        vt100::MouseProtocolMode::PressRelease => MouseMode::PressRelease,
+        vt100::MouseProtocolMode::ButtonMotion => MouseMode::ButtonMotion,
+        vt100::MouseProtocolMode::AnyMotion => MouseMode::AnyMotion,
     }
 }
 
-/// Build an xterm mouse report in the screen's active encoding. `col`/`row` are
-/// 0-based cells; the wire format is 1-based. `button` is the base code
-/// (0/1/2, [`BUTTON_NONE`], or a `WHEEL_*`); modifier and motion bits are added
-/// here.
-#[allow(clippy::too_many_arguments)]
-fn encode_mouse(
-    encoding: vt100::MouseProtocolEncoding,
-    button: u16,
-    motion: bool,
-    release: bool,
-    col: u16,
-    row: u16,
-    shift: bool,
-    alt: bool,
-    ctrl: bool,
-) -> Vec<u8> {
-    let mut cb = button;
-    if shift {
-        cb += 4;
-    }
-    if alt {
-        cb += 8;
-    }
-    if ctrl {
-        cb += 16;
-    }
-    if motion {
-        cb += 32;
-    }
+/// vt100's encoding vocabulary in the shared crate's.
+fn mouse_encoding(encoding: vt100::MouseProtocolEncoding) -> MouseEncoding {
     match encoding {
-        vt100::MouseProtocolEncoding::Sgr => {
-            let final_byte = if release { 'm' } else { 'M' };
-            format!("\x1b[<{};{};{}{}", cb, col + 1, row + 1, final_byte).into_bytes()
-        }
-        vt100::MouseProtocolEncoding::Utf8 => {
-            // Release drops the button id to "none" (X10 has no release byte).
-            let cb = if release {
-                (cb & !0b11) | BUTTON_NONE
-            } else {
-                cb
-            };
-            let mut out = vec![0x1b, b'[', b'M'];
-            push_utf8(&mut out, cb + 32);
-            push_utf8(&mut out, col + 1 + 32);
-            push_utf8(&mut out, row + 1 + 32);
-            out
-        }
-        // Default (X10): single printable byte per field, saturating at 255.
-        _ => {
-            let cb = if release {
-                (cb & !0b11) | BUTTON_NONE
-            } else {
-                cb
-            };
-            vec![
-                0x1b,
-                b'[',
-                b'M',
-                (cb + 32).min(255) as u8,
-                (col + 1 + 32).min(255) as u8,
-                (row + 1 + 32).min(255) as u8,
-            ]
-        }
+        vt100::MouseProtocolEncoding::Default => MouseEncoding::Default,
+        vt100::MouseProtocolEncoding::Utf8 => MouseEncoding::Utf8,
+        vt100::MouseProtocolEncoding::Sgr => MouseEncoding::Sgr,
     }
-}
-
-/// Append `v` as a UTF-8 code point (the `?1005` encoding widens coords past
-/// the 223-cell wall the single-byte form hits).
-fn push_utf8(out: &mut Vec<u8>, v: u16) {
-    let ch = char::from_u32(v as u32).unwrap_or('\u{fffd}');
-    let mut buf = [0u8; 4];
-    out.extend_from_slice(ch.encode_utf8(&mut buf).as_bytes());
 }
 
 fn map_color(c: vt100::Color, default: Color) -> Color {
@@ -437,69 +400,129 @@ impl StatefulWidget for Terminal {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vt100::{MouseProtocolEncoding as Enc, MouseProtocolMode as Mode};
+    use ratatui::crossterm::event::{MediaKeyCode, ModifierKeyCode};
+    use vt100::MouseProtocolMode as Mode;
 
-    fn sgr(button: u16, motion: bool, release: bool, col: u16, row: u16) -> String {
-        String::from_utf8(encode_mouse(
-            Enc::Sgr,
-            button,
-            motion,
-            release,
-            col,
-            row,
-            false,
-            false,
-            false,
-        ))
-        .unwrap()
+    // The encoding tests (bytes per event, mode gating) live in forge-xterm's
+    // corpora now. What is left to test here is the adapter: crossterm's key
+    // vocabulary onto the shared table, and vt100's modes onto the shared
+    // crate's.
+
+    /// Every crossterm `KeyCode` variant, with a sample payload where one is
+    /// needed. The exhaustive match in [`xterm_key`] is the compile-time
+    /// guard; this list is the runtime half, so keep the two in step.
+    const ALL_KEY_CODES: &[KeyCode] = &[
+        KeyCode::Backspace,
+        KeyCode::Enter,
+        KeyCode::Left,
+        KeyCode::Right,
+        KeyCode::Up,
+        KeyCode::Down,
+        KeyCode::Home,
+        KeyCode::End,
+        KeyCode::PageUp,
+        KeyCode::PageDown,
+        KeyCode::Tab,
+        KeyCode::BackTab,
+        KeyCode::Delete,
+        KeyCode::Insert,
+        KeyCode::F(1),
+        KeyCode::Char('a'),
+        KeyCode::Null,
+        KeyCode::Esc,
+        KeyCode::CapsLock,
+        KeyCode::ScrollLock,
+        KeyCode::NumLock,
+        KeyCode::PrintScreen,
+        KeyCode::Pause,
+        KeyCode::Menu,
+        KeyCode::KeypadBegin,
+        KeyCode::Media(MediaKeyCode::Play),
+        KeyCode::Modifier(ModifierKeyCode::LeftShift),
+    ];
+
+    /// The variants with no xterm bytes. They must produce nothing — not a
+    /// plausible-looking wrong code.
+    const UNREPRESENTED: &[KeyCode] = &[
+        KeyCode::BackTab,
+        KeyCode::Null,
+        KeyCode::CapsLock,
+        KeyCode::ScrollLock,
+        KeyCode::NumLock,
+        KeyCode::PrintScreen,
+        KeyCode::Pause,
+        KeyCode::Menu,
+        KeyCode::KeypadBegin,
+        KeyCode::Media(MediaKeyCode::Play),
+        KeyCode::Modifier(ModifierKeyCode::LeftShift),
+    ];
+
+    /// Totality: every crossterm variant either resolves through the shared
+    /// table or is on the unrepresented list. Nothing falls through by
+    /// accident.
+    #[test]
+    fn the_key_adapter_is_total_over_the_crossterm_enum() {
+        let unresolved: Vec<KeyCode> = ALL_KEY_CODES
+            .iter()
+            .copied()
+            .filter(|code| xterm_key(*code).is_none())
+            .collect();
+        assert_eq!(unresolved, UNREPRESENTED);
+        for code in UNREPRESENTED {
+            assert_eq!(
+                key_bytes(*code, Modifiers::NONE, CursorKeys::Normal),
+                None,
+                "{code:?} must send nothing"
+            );
+        }
     }
 
+    /// The divergence this ticket closes: the old local table had no function
+    /// keys. F1 to F12 resolve; F0 and F13 up send nothing.
     #[test]
-    fn sgr_press_release_and_coords() {
-        // Left press at cell (0,0) → 1-based coords, final 'M'.
-        assert_eq!(sgr(0, false, false, 0, 0), "\x1b[<0;1;1M");
-        // Left release → same cb, final 'm'.
-        assert_eq!(sgr(0, false, true, 4, 2), "\x1b[<0;5;3m");
-        // Right button drag sets the motion bit (+32) and keeps button id.
-        assert_eq!(sgr(2, true, false, 9, 1), "\x1b[<34;10;2M");
+    fn function_keys_reach_the_wire() {
+        assert_eq!(
+            key_bytes(KeyCode::F(1), Modifiers::NONE, CursorKeys::Normal),
+            Some(b"\x1bOP".to_vec())
+        );
+        assert_eq!(
+            key_bytes(KeyCode::F(5), Modifiers::NONE, CursorKeys::Normal),
+            Some(b"\x1b[15~".to_vec())
+        );
+        for n in 1..=12u8 {
+            assert!(
+                key_bytes(KeyCode::F(n), Modifiers::NONE, CursorKeys::Normal).is_some(),
+                "F{n} must resolve"
+            );
+        }
+        for n in [0u8, 13, 255] {
+            assert_eq!(
+                key_bytes(KeyCode::F(n), Modifiers::NONE, CursorKeys::Normal),
+                None,
+                "F{n} must send nothing"
+            );
+        }
     }
 
+    /// The other half of the divergence: DECCKM is read from the screen, and
+    /// the arrows switch to SS3 while it is set.
     #[test]
-    fn sgr_modifiers_and_wheel() {
-        // Ctrl(+16)+Shift(+4) left press = cb 20.
-        let bytes = encode_mouse(Enc::Sgr, 0, false, false, 0, 0, true, false, true);
-        assert_eq!(String::from_utf8(bytes).unwrap(), "\x1b[<20;1;1M");
-        // Wheel up is a press with cb 64.
-        assert_eq!(sgr(WHEEL_UP, false, false, 3, 3), "\x1b[<64;4;4M");
-    }
+    fn application_cursor_mode_is_honoured() {
+        let mut parser = vt100::Parser::new(24, 80, 0);
+        assert_eq!(cursor_keys(parser.screen()), CursorKeys::Normal);
+        parser.process(b"\x1b[?1h");
+        assert_eq!(cursor_keys(parser.screen()), CursorKeys::Application);
+        parser.process(b"\x1b[?1l");
+        assert_eq!(cursor_keys(parser.screen()), CursorKeys::Normal);
 
-    #[test]
-    fn x10_default_bytes() {
-        // Left press at (0,0): ESC [ M then 32+cb, 32+col+1, 32+row+1.
-        let b = encode_mouse(Enc::Default, 0, false, false, 0, 0, false, false, false);
-        assert_eq!(b, vec![0x1b, b'[', b'M', 32, 33, 33]);
-        // Release drops the button id to "none" (3), regardless of press button.
-        let b = encode_mouse(Enc::Default, 2, false, true, 0, 0, false, false, false);
-        assert_eq!(b, vec![0x1b, b'[', b'M', 32 + 3, 33, 33]);
-    }
-
-    #[test]
-    fn mode_gating() {
-        // Press-only mode: down + wheel yes; up/drag/move no.
-        assert!(mode_allows(Mode::Press, 0, false, false)); // down
-        assert!(mode_allows(Mode::Press, WHEEL_UP, false, false)); // wheel
-        assert!(!mode_allows(Mode::Press, 0, false, true)); // up
-        assert!(!mode_allows(Mode::Press, 0, true, false)); // drag
-                                                            // PressRelease: up yes, bare motion no.
-        assert!(mode_allows(Mode::PressRelease, 0, false, true));
-        assert!(!mode_allows(Mode::PressRelease, 0, true, false));
-        // ButtonMotion: drag (button held) yes, bare move no.
-        assert!(mode_allows(Mode::ButtonMotion, 0, true, false));
-        assert!(!mode_allows(Mode::ButtonMotion, BUTTON_NONE, true, false));
-        // AnyMotion: bare move yes.
-        assert!(mode_allows(Mode::AnyMotion, BUTTON_NONE, true, false));
-        // None: nothing.
-        assert!(!mode_allows(Mode::None, 0, false, false));
+        assert_eq!(
+            key_bytes(KeyCode::Up, Modifiers::NONE, CursorKeys::Normal),
+            Some(b"\x1b[A".to_vec())
+        );
+        assert_eq!(
+            key_bytes(KeyCode::Up, Modifiers::NONE, CursorKeys::Application),
+            Some(b"\x1bOA".to_vec())
+        );
     }
 
     fn left_down(col: u16, row: u16) -> MouseEvent {
