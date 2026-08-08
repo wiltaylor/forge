@@ -84,10 +84,16 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, state: &mut EffectsSta
         let inner = card.inner(r);
         frame.render_widget(card, r);
         let lines = vec![
-            Line::styled("GPU util        87%   ▂▄▆█▆▄▂", t.fg[0]),
-            Line::styled("VRAM         61 GiB   a100 × 8", t.fg[1]),
+            Line::styled("GPU util        87%   ▂▄▆█▆▄▂", t.text(TextRole::Primary)),
+            Line::styled(
+                "VRAM         61 GiB   a100 × 8",
+                t.text(TextRole::Secondary),
+            ),
             Line::styled("status      running   uptime 41d", t.success.base),
-            Line::styled("queue depth       3   p95 142ms", t.fg[2]),
+            Line::styled(
+                "queue depth       3   p95 142ms",
+                t.text(TextRole::Tertiary),
+            ),
             Line::styled("● healthy — last probe 2s ago", t.accent.base),
         ];
         frame.render_widget(Paragraph::new(lines), inner);
@@ -116,10 +122,10 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, state: &mut EffectsSta
     if let Some(r) = row(2, 0, &mut y) {
         let status = if ctx.fx_idle() { "idle" } else { "running" };
         let lines = vec![
-            Line::styled(format!("fx: {status}"), t.fg[2]),
+            Line::styled(format!("fx: {status}"), t.text(TextRole::Tertiary)),
             Line::styled(
                 "FORGE_TUI_MOTION=off|reduced|full overrides · auto degrades on dumb/16-color terminals & slow ticks",
-                t.fg[3],
+                t.text(TextRole::Disabled),
             ),
         ];
         frame.render_widget(Paragraph::new(lines), r);

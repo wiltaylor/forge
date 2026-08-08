@@ -182,13 +182,17 @@ impl Overlay for SheetDemo {
                 inner.x + 1,
                 y,
                 *k,
-                ratatui::style::Style::new().fg(theme.fg[2]).bg(theme.bg[1]),
+                ratatui::style::Style::new()
+                    .fg(theme.text(TextRole::Tertiary))
+                    .bg(theme.surface(Surface::Card)),
             );
             buf.set_string(
                 inner.x + 12,
                 y,
                 *v,
-                ratatui::style::Style::new().fg(theme.fg[0]).bg(theme.bg[1]),
+                ratatui::style::Style::new()
+                    .fg(theme.text(TextRole::Primary))
+                    .bg(theme.surface(Surface::Card)),
             );
         }
     }
@@ -265,13 +269,17 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, state: &mut OverlaysSt
                 inner.x + 1,
                 yy,
                 *k,
-                ratatui::style::Style::new().fg(t.fg[2]).bg(t.bg[4]),
+                ratatui::style::Style::new()
+                    .fg(t.text(TextRole::Tertiary))
+                    .bg(t.surface(Surface::Popover)),
             );
             buf.set_string(
                 inner.x + 10,
                 yy,
                 *v,
-                ratatui::style::Style::new().fg(t.fg[0]).bg(t.bg[4]),
+                ratatui::style::Style::new()
+                    .fg(t.text(TextRole::Primary))
+                    .bg(t.surface(Surface::Popover)),
             );
         }
     }

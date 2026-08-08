@@ -57,7 +57,9 @@ impl CustomBlock for CounterBlock {
             area.x + 2,
             area.y + 1,
             forge_tui::text::truncate(&label, w.saturating_sub(4)),
-            Style::new().fg(t.fg[0]).add_modifier(Modifier::BOLD),
+            Style::new()
+                .fg(t.text(TextRole::Primary))
+                .add_modifier(Modifier::BOLD),
         );
     }
 
@@ -126,7 +128,7 @@ pub fn draw(frame: &mut Frame, area: Rect, ctx: &mut Ctx, state: &mut BlocksStat
     frame.render_widget(
         Line::from(Span::styled(
             forge_tui::text::truncate(help, area.width as usize).into_owned(),
-            Style::new().fg(t.fg[2]),
+            Style::new().fg(t.text(TextRole::Tertiary)),
         )),
         Rect::new(area.x, area.y + area.height - 1, area.width, 1),
     );
