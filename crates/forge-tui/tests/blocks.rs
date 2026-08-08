@@ -298,9 +298,16 @@ fn data_blocks_snapshot() {
     let mut state = BlockEditorState::new(doc(blocks));
     let buf = render(&mut state, 80, 90, true);
     let text = buffer_text(&buf);
-    // The viewport has to hold the last block. A tail that scrolled out of it
-    // would drop a kind from the snapshot as quietly as the copied list did.
-    assert!(text.contains("[^note-1]"), "the last starter is clipped");
+    // The paint has to stop short of the last row. A tail that ran past it
+    // would drop a kind from the snapshot as quietly as the copied list did,
+    // and naming the kind that has to survive would be another copy — empty
+    // rows below the last block are the proof that nothing was cut off.
+    let slack = text
+        .lines()
+        .rev()
+        .take_while(|line| line.is_empty())
+        .count();
+    assert!(slack >= 4, "the viewport is full: a starter is clipped");
     insta::assert_snapshot!(text);
 }
 

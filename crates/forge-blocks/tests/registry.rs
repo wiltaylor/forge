@@ -315,7 +315,7 @@ fn the_palette_offers_heading_levels_one_to_four() {
     // while the others offered four. Every kit reads these rows, so the levels
     // it offers are the levels named here.
     let levels: Vec<u8> = kind_entry("heading")
-        .unwrap()
+        .expect("the registry knows headings")
         .palette
         .iter()
         .map(|row| {
@@ -328,7 +328,11 @@ fn the_palette_offers_heading_levels_one_to_four() {
             }
         })
         .collect();
-    assert_eq!(levels, [1, 2, 3, 4]);
+    assert_eq!(
+        levels,
+        [1, 2, 3, 4],
+        "the heading rows offer other levels than every kit expects"
+    );
 }
 
 /// The markdown one starter block writes, and the kinds it reads back as.

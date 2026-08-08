@@ -457,12 +457,7 @@ fn apply(st: &mut BlockEditorState, doc: &mut Document, action: Action) {
         Action::BackspaceAt0(addr) => {
             let kind = doc.block(addr).map(|b| b.kind.clone());
             match kind {
-                Some(BlockKind::Paragraph { .. }) => {
-                    if let Some(merge) = merge_with_previous(doc, addr) {
-                        st.changed = true;
-                        focus_block(st, doc, merge.focus, CaretHint::Byte(merge.caret));
-                    }
-                }
+                Some(BlockKind::Paragraph { .. }) => merge_up(st, doc, addr),
                 // The shared keyboard rule: non-paragraph text kinds first
                 // demote to a paragraph (caret stays at 0, same block).
                 Some(k) if k.is_text() => {
@@ -475,15 +470,12 @@ fn apply(st: &mut BlockEditorState, doc: &mut Document, action: Action) {
             }
         }
         // Delete at the end of a block is Backspace-at-0 of the block below
-        // it, so it goes through the same shared merge. The merge only fires
+        // it, so it is the same merge one address further on. It only fires
         // when the navigation-order next block really is our next sibling
         // (its merge target is its previous sibling, which is then us).
         Action::DeleteAtEnd(addr) => {
             if let Some(next) = next_address(doc, addr) {
-                if let Some(merge) = merge_with_previous(doc, next) {
-                    st.changed = true;
-                    focus_block(st, doc, merge.focus, CaretHint::Byte(merge.caret));
-                }
+                merge_up(st, doc, next);
             }
         }
         Action::Shortcut { addr, kind, caret } => {
@@ -610,6 +602,16 @@ fn apply(st: &mut BlockEditorState, doc: &mut Document, action: Action) {
                 st.pending_cell = Some((rows + 1, col));
             }
         }
+    }
+}
+
+/// Merge the paragraph at `addr` into the block above it and follow the
+/// caret to the seam. The one merge both binding sites use: Backspace-at-0
+/// passes the focused block, Delete-at-end passes the one below it.
+fn merge_up(st: &mut BlockEditorState, doc: &mut Document, addr: Address) {
+    if let Some(merge) = merge_with_previous(doc, addr) {
+        st.changed = true;
+        focus_block(st, doc, merge.focus, CaretHint::Byte(merge.caret));
     }
 }
 

@@ -83,8 +83,9 @@ pub fn draw(ui: &mut egui::Ui, state: &mut BlocksState) {
     ui.add_space(12.0);
     ui.label(
         egui::RichText::new(
-            "Enter split · Backspace-at-0 merge · Tab indent lists · Alt+↑/↓ move · \
-             '/' on an empty block for the palette · ':ro' for emoji · Esc select",
+            "Enter split · Backspace-at-0 / Delete-at-end merge · Tab indent lists · \
+             Alt+↑/↓ move · '/' on an empty block for the palette · ':ro' for emoji · \
+             Esc select",
         )
         .font(t.font(
             ui.ctx(),
