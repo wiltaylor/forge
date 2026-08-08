@@ -64,7 +64,8 @@ system as an egui widget kit with native streaming widgets, see
 just build            # pnpm packages + cargo build
 just rust-demo        # gallery on http://127.0.0.1:8899 (login admin/admin)
 just python-demo      # same app on the Python backend (http://127.0.0.1:8765)
-just test             # frontend + rust + python test suites
+just check            # fast invariants — Node only, runs in seconds
+just test             # frontend + rust + python + parity suites (check first)
 ```
 
 Dev loop for the frontend: `just gallery-dev` (Vite on :5173, proxying `/api`
@@ -324,6 +325,12 @@ in-process, plus the terminal and VNC/RDP pages against
 `just widgets-testenv-up`); `just egui-test` runs the suite.
 
 ## Theming
+
+Every token is authored in **`packages/tokens/tokens.source.mjs`** — one value
+per token per scheme, plus the derivation metadata for the translucent tints.
+`packages/tokens/css/tokens.css` is generated from it and committed, so
+installing Forge never runs a generator. Change a token there, then run
+`just generate`; `just check` fails while a generated file is stale.
 
 Everything routes through CSS custom properties (`--bg-0`, `--accent`, …),
 dark by default, light via `prefers-color-scheme` or `data-theme`. Programmatic:
