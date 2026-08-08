@@ -219,13 +219,13 @@ const CUSTOM_BLOCKS = {
       <div style={{ display: 'flex', gap: '8px', 'align-items': 'center' }}>
         <input
           class="fbk-admtitle"
-          style={{ flex: '0 0 140px', border: '1px solid var(--border-default)', 'border-radius': '4px', padding: '4px 8px' }}
+          style={{ flex: '0 0 140px', border: '1px solid var(--border)', 'border-radius': '4px', padding: '4px 8px' }}
           value={props.data?.label ?? ''}
           onInput={(e) => props.onChange({ ...props.data, label: e.currentTarget.value })}
         />
         <input
           class="fbk-admtitle"
-          style={{ flex: '0 0 100px', border: '1px solid var(--border-default)', 'border-radius': '4px', padding: '4px 8px' }}
+          style={{ flex: '0 0 100px', border: '1px solid var(--border)', 'border-radius': '4px', padding: '4px 8px' }}
           value={props.data?.value ?? ''}
           onInput={(e) => props.onChange({ ...props.data, value: e.currentTarget.value })}
         />
@@ -296,7 +296,7 @@ export default function BlocksDemo() {
         <textarea
           class="fbk-ta"
           style={{
-            width: '100%', height: '320px', border: '1px solid var(--border-default)',
+            width: '100%', height: '320px', border: '1px solid var(--border)',
             'border-radius': '6px', padding: '10px', overflow: 'auto', resize: 'vertical',
           }}
           placeholder="Paste markdown…"

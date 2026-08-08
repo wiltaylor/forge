@@ -357,6 +357,13 @@ committed, so installing Forge never runs a generator. Change a token
 there, then run `just generate`; `just check` fails while a generated file is
 stale.
 
+`just check` also scans every stylesheet, and every TypeScript file that builds
+a `var()` expression, against that same declared set. A reference to a name the
+source never declared fails the check, so a border can no longer resolve to
+`currentColor` in silence. Two tables in `scripts/token-scan/scan.mjs` hold the
+exceptions: the per-instance custom properties an app writes from JavaScript,
+and the one file that keeps a hand-picked fallback on purpose.
+
 The block editor's kind list works the same way, from the other direction: the
 registry is authored in Rust (`crates/forge-blocks/src/registry.rs`) and the web
 kit's kind union, starter constructors, slash palette and emoji table are

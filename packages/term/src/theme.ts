@@ -6,7 +6,12 @@
    The tokens ship no ANSI palette, so the 16 ANSI colors are a documented
    approximation: red/green/yellow/blue map to danger/success/warning/accent
    (bright = the matching -fg variants), magenta/cyan are oklch midpoints of
-   danger+accent / info+success, and the gray slots reuse bg/fg shades. */
+   danger+accent / info+success, and the gray slots reuse bg/fg shades.
+
+   Each read below names a fallback for the case where that resolution fails.
+   The accent stand-in is hand-picked and is deliberately not the token value.
+   Do not "fix" it into agreement. The declared-token scan exempts this file
+   for that reason; see FALLBACK_EXEMPT in scripts/token-scan/scan.mjs. */
 import type { ITheme } from '@xterm/xterm';
 
 let probe: HTMLSpanElement | undefined;
@@ -42,6 +47,8 @@ export function readTermTheme(el: Element): ITheme {
   return {
     background: v('--bg-0', '#0B0D10'),
     foreground: v('--fg-0', '#ECEEF2'),
+    /* #5A8FDB is deliberate: a softer stand-in than the token's #2389E2, picked
+       by hand for an unstyled canvas. It is not drift. */
     cursor: v('--accent', '#5A8FDB'),
     cursorAccent: v('--bg-0', '#0B0D10'),
     selectionBackground: v('--accent-bg', 'rgba(90,143,219,0.14)'),
