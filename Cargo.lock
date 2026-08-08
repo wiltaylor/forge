@@ -2705,6 +2705,7 @@ version = "0.1.0"
 dependencies = [
  "forge-block-corpus",
  "forge-blocks",
+ "forge-xterm",
  "insta",
  "portable-pty",
  "pulldown-cmark",
