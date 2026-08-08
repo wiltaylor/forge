@@ -3,9 +3,12 @@ import type { AuthApi, Claims, LoginResult } from '@forge/client';
 import type { Core } from './ipc';
 
 /**
- * AuthApi over IPC. The plugin runs auth-disabled (the caller is the app's
- * own webview): `me()` resolves to the anonymous claims and `login()` always
- * rejects with the contract's 404 "auth is disabled".
+ * AuthApi over IPC — the same contract as over HTTP. `login()` mints a token
+ * the core carries on every later request.
+ *
+ * A plugin built without auth runs auth-disabled: `me()` then resolves to the
+ * anonymous claims and `login()` rejects with the contract's 404 "auth is
+ * disabled", which is what an app whose only caller is its own webview wants.
  */
 export function createAuth(core: Core): AuthApi {
   return {

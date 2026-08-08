@@ -24,6 +24,9 @@ export interface TauriForgeClient extends ForgeClient {
  *
  * Not available over IPC: `ws.connect()` (use `events.on()`) and `wsUrl()`
  * (pass `client.widget(kind)` as the widget transport instead).
+ *
+ * `auth` behaves as it does over HTTP when the plugin was built with auth,
+ * and as auth-disabled mode when it was not.
  */
 export function createClient(): TauriForgeClient {
   const core = createCore();

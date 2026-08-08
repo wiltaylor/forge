@@ -4,20 +4,23 @@
 use serde_json::Value;
 use tauri::{command, Runtime, State};
 
-use crate::bridge::{self, ForgeResponse};
+use crate::bridge::ForgeResponse;
 use crate::state::ForgeState;
 
 #[cfg(not(any(feature = "term", feature = "vnc", feature = "rdp")))]
 const NO_WIDGETS: &str = "widget support is not compiled into this app (forge-tauri features)";
 
+/// One contract request. `token` is the bearer token the caller holds, if
+/// any — IPC has no headers, so it travels as an argument.
 #[command]
 pub(crate) async fn request(
     state: State<'_, ForgeState>,
     method: String,
     path: String,
     body: Option<Value>,
+    token: Option<String>,
 ) -> Result<ForgeResponse, String> {
-    Ok(bridge::handle(&state, &method, &path, body).await)
+    Ok(state.request(&method, &path, body, token.as_deref()).await)
 }
 
 /// Open a widget session: spawns the forge-core engine for `kind`, wired to

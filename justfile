@@ -87,6 +87,7 @@ rust-test:
 corpus-test:
 	cargo test -p forge-contract
 	cargo test -p forge-server --test corpus
+	cargo test --manifest-path crates/forge-tauri/Cargo.toml --test corpus
 	uv run --project python/forge-server --extra dev pytest python/forge-server/tests/test_contract.py python/forge-server/tests/test_corpus.py
 
 # Run the block key corpus (contract/blocks/corpus.json) against every kit
@@ -113,7 +114,8 @@ parity-test base_url='http://127.0.0.1:8765':
 parity-test-local:
 	uv run scripts/parity_test.py
 
-# Run forge-tauri tests (own workspace — heavy tauri tree, so not part of `just test`)
+# Run forge-tauri tests, including the rust-ipc corpus driver (own workspace —
+# heavy tauri tree, so not part of `just test`; `just corpus-test` runs it)
 [group('test')]
 tauri-test:
 	cargo test --manifest-path crates/forge-tauri/Cargo.toml --features widgets

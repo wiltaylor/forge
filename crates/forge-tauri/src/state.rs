@@ -1,11 +1,11 @@
 //! Plugin state managed on the Tauri app: the pieces of a Forge backend that
 //! survive between IPC calls — mirrors forge-server's `StateInner` minus the
-//! HTTP-only concerns (auth validators, frontend, custom routes).
+//! HTTP-only concerns (frontend, custom routes, CORS).
 
 use std::collections::BTreeMap;
 use std::time::Instant;
 
-use forge_core::{BoxedAction, DocStore, EventBus};
+use forge_core::{Auth, BoxedAction, Components, DocStore, EventBus};
 
 #[cfg(any(feature = "vnc", feature = "rdp"))]
 use forge_core::widgets::DesktopConfig;
@@ -26,7 +26,11 @@ pub(crate) type SessionMap =
 pub struct ForgeState {
     pub(crate) app: String,
     pub(crate) start: Instant,
+    /// `None` is auth-disabled mode: every endpoint is open and handlers see
+    /// [`forge_core::Claims::anonymous`].
+    pub(crate) auth: Option<Auth>,
     pub(crate) docstore: Option<DocStore>,
+    pub(crate) components: Option<Components>,
     pub(crate) actions: BTreeMap<String, BoxedAction>,
     pub(crate) events: EventBus,
     #[cfg(feature = "term")]
@@ -44,32 +48,5 @@ pub struct ForgeState {
 impl ForgeState {
     pub(crate) fn action_names(&self) -> Vec<&str> {
         self.actions.keys().map(String::as_str).collect()
-    }
-}
-
-#[cfg(test)]
-impl ForgeState {
-    /// Test constructor that fills the feature-gated fields with defaults.
-    pub(crate) fn for_tests(
-        docstore: Option<DocStore>,
-        actions: BTreeMap<String, BoxedAction>,
-    ) -> Self {
-        Self {
-            app: "forge-tauri-test".into(),
-            start: Instant::now(),
-            docstore,
-            actions,
-            events: EventBus::new(),
-            #[cfg(feature = "term")]
-            term: None,
-            #[cfg(feature = "vnc")]
-            vnc: None,
-            #[cfg(feature = "rdp")]
-            rdp: None,
-            #[cfg(any(feature = "term", feature = "vnc", feature = "rdp"))]
-            sessions: SessionMap::default(),
-            #[cfg(any(feature = "term", feature = "vnc", feature = "rdp"))]
-            next_session: std::sync::atomic::AtomicU32::new(1),
-        }
     }
 }

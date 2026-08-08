@@ -1,15 +1,20 @@
 //! Pure request router: the frozen v1 contract semantics
 //! (docs/api-contract.md) over any carrier. forge-server routes the same
-//! paths with axum; `handle` mirrors it 1:1 so the parity suite's
-//! expectations hold over IPC. Auth-disabled mode only: `me` answers with
-//! anonymous claims and `login` is the contract-specified 404.
+//! paths with axum; this module mirrors it 1:1, so the contract corpus
+//! (`contract/corpus.json`) runs over IPC unchanged.
+//!
+//! Auth works the way it does over HTTP: with an [`Auth`] configured the
+//! protected routes need a valid token, and login mints one. With no `Auth`
+//! at all every route is open and handlers see [`Claims::anonymous`].
+//! The token arrives as an argument rather than a header — that is the only
+//! difference the carrier makes.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use forge_core::{
-    err_value, health_payload, ok_empty_value, ok_value, unknown_action_error, ActionCtx, Claims,
-    ForgeError,
+    err_value, health_payload, ok_empty_value, ok_value, unknown_action_error, ActionCtx, Auth,
+    Claims, Components, DocStore, ForgeError,
 };
 
 use crate::state::ForgeState;
@@ -20,6 +25,45 @@ use crate::state::ForgeState;
 pub struct ForgeResponse {
     pub status: u16,
     pub body: Value,
+}
+
+impl ForgeState {
+    /// Route one contract request and answer it.
+    ///
+    /// `body` is the already-parsed JSON body (IPC carries values, not byte
+    /// streams, so the HTTP layer's "body is not valid JSON" rejections
+    /// cannot arise here). `token` is the bearer token, if the caller has
+    /// one — the IPC equivalent of `Authorization: Bearer`.
+    ///
+    /// Public so a host without a Tauri runtime can drive the same contract;
+    /// the plugin's `request` command is one caller and the contract-corpus
+    /// driver is another.
+    pub async fn request(
+        &self,
+        method: &str,
+        path: &str,
+        body: Option<Value>,
+        token: Option<&str>,
+    ) -> ForgeResponse {
+        let method = method.to_ascii_uppercase();
+        let Some(segments) = split_path(path) else {
+            return not_found(path);
+        };
+        let parts: Vec<&str> = segments.iter().map(String::as_str).collect();
+        let Some(route) = resolve(self, &method, &parts) else {
+            return not_found(path);
+        };
+
+        let claims = if route.is_open() {
+            Claims::anonymous()
+        } else {
+            match authenticate(self.auth.as_ref(), token) {
+                Ok(claims) => claims,
+                Err(e) => return err_forge(e),
+            }
+        };
+        dispatch(self, route, claims, body).await
+    }
 }
 
 fn ok(data: impl Serialize) -> ForgeResponse {
@@ -53,74 +97,147 @@ fn not_found(path: &str) -> ForgeResponse {
     err(404, format!("not found: {path}"))
 }
 
-/// Route one request. `body` is the already-parsed JSON body (IPC carries
-/// values, not byte streams, so the HTTP layer's "body is not valid JSON"
-/// rejections cannot arise here).
-pub async fn handle(
-    state: &ForgeState,
-    method: &str,
-    path: &str,
-    body: Option<Value>,
-) -> ForgeResponse {
-    let method = method.to_ascii_uppercase();
-    let Some(segments) = split_path(path) else {
-        return not_found(path);
-    };
-    let parts: Vec<&str> = segments.iter().map(String::as_str).collect();
+/// One resolved route. Resolving before authenticating is what keeps a miss a
+/// 404 rather than a 401: forge-server's fallback sits outside the auth
+/// middleware, so an unknown path never asks for a token.
+///
+/// A route that needs a configured feature carries it, so a route that
+/// resolved without one cannot be built.
+enum Route<'a> {
+    Health,
+    Login,
+    Me,
+    DataList(&'a DocStore),
+    DataGet(&'a DocStore, &'a str),
+    DataPut(&'a DocStore, &'a str),
+    DataDelete(&'a DocStore, &'a str),
+    Action(&'a str),
+    Components(&'a Components),
+}
 
-    match (method.as_str(), parts.as_slice()) {
-        ("GET", ["api", "health"]) => ok(health_payload(
-            &state.app,
-            state.start.elapsed().as_secs_f64(),
-            env!("CARGO_PKG_VERSION"),
-            false,
-            &state.action_names(),
-        )),
-        ("GET", ["api", "auth", "me"]) => ok(Claims::anonymous()),
-        // Contract: 404 when auth is disabled — and over pure IPC it always is.
-        ("POST", ["api", "auth", "login"]) => err(404, "auth is disabled"),
-        ("GET", ["api", "data"]) => match &state.docstore {
-            Some(store) => match store.list().await {
-                Ok(docs) => ok(docs),
-                Err(e) => err_forge(e),
-            },
-            None => not_found(path),
-        },
-        ("GET", ["api", "data", name]) => match &state.docstore {
-            Some(store) => match store.get(name).await {
-                Ok(doc) => ok(doc),
-                Err(e) => err_forge(e),
-            },
-            None => not_found(path),
-        },
-        ("PUT", ["api", "data", name]) => match &state.docstore {
-            // HTTP parity: an empty body stores JSON null.
-            Some(store) => match store.put(name, &body.unwrap_or(Value::Null)).await {
-                Ok(()) => ok_empty(),
-                Err(e) => err_forge(e),
-            },
-            None => not_found(path),
-        },
-        ("DELETE", ["api", "data", name]) => match &state.docstore {
-            Some(store) => match store.delete(name).await {
-                Ok(()) => ok_empty(),
-                Err(e) => err_forge(e),
-            },
-            None => not_found(path),
-        },
-        ("POST", ["api", "actions", name]) => run_action(state, name, body).await,
-        _ => not_found(path),
+impl Route<'_> {
+    /// Whether the route answers without a token. forge-server mounts these
+    /// two outside the auth middleware; everything else is behind it.
+    fn is_open(&self) -> bool {
+        matches!(self, Route::Health | Route::Login)
     }
 }
 
-async fn run_action(state: &ForgeState, name: &str, body: Option<Value>) -> ForgeResponse {
+/// Match a request onto a route. A route whose feature is not configured does
+/// not exist, mirroring forge-server mounting it only when it is.
+fn resolve<'a>(state: &'a ForgeState, method: &str, parts: &[&'a str]) -> Option<Route<'a>> {
+    let docs = state.docstore.as_ref();
+    Some(match (method, parts) {
+        ("GET", ["api", "health"]) => Route::Health,
+        ("POST", ["api", "auth", "login"]) => Route::Login,
+        ("GET", ["api", "auth", "me"]) => Route::Me,
+        ("GET", ["api", "data"]) => Route::DataList(docs?),
+        ("GET", ["api", "data", name]) => Route::DataGet(docs?, name),
+        ("PUT", ["api", "data", name]) => Route::DataPut(docs?, name),
+        ("DELETE", ["api", "data", name]) => Route::DataDelete(docs?, name),
+        ("POST", ["api", "actions", name]) => Route::Action(name),
+        ("GET", ["api", "components"]) => Route::Components(state.components.as_ref()?),
+        _ => return None,
+    })
+}
+
+/// The identity behind a request. With no [`Auth`] configured every request is
+/// anonymous — auth-disabled mode is first-class in the contract.
+fn authenticate(auth: Option<&Auth>, token: Option<&str>) -> Result<Claims, ForgeError> {
+    let Some(auth) = auth else {
+        return Ok(Claims::anonymous());
+    };
+    let Some(token) = token.filter(|t| !t.is_empty()) else {
+        return Err(ForgeError::Unauthorized(
+            "missing token (pass it as the request command's `token` argument)".into(),
+        ));
+    };
+    auth.validate(token)
+}
+
+async fn dispatch(
+    state: &ForgeState,
+    route: Route<'_>,
+    claims: Claims,
+    body: Option<Value>,
+) -> ForgeResponse {
+    match route {
+        Route::Health => ok(health_payload(
+            &state.app,
+            state.start.elapsed().as_secs_f64(),
+            env!("CARGO_PKG_VERSION"),
+            state.auth.is_some(),
+            &state.action_names(),
+        )),
+        Route::Login => login(state, body),
+        Route::Me => ok(claims),
+        Route::DataList(store) => match store.list().await {
+            Ok(docs) => ok(docs),
+            Err(e) => err_forge(e),
+        },
+        Route::DataGet(store, name) => match store.get(name).await {
+            Ok(doc) => ok(doc),
+            Err(e) => err_forge(e),
+        },
+        // HTTP parity: an empty body stores JSON null.
+        Route::DataPut(store, name) => match store.put(name, &body.unwrap_or(Value::Null)).await {
+            Ok(()) => ok_empty(),
+            Err(e) => err_forge(e),
+        },
+        Route::DataDelete(store, name) => match store.delete(name).await {
+            Ok(()) => ok_empty(),
+            Err(e) => err_forge(e),
+        },
+        Route::Action(name) => run_action(state, name, claims, body).await,
+        Route::Components(components) => match components.manifest(&state.app).await {
+            Ok(manifest) => ok(manifest),
+            Err(e) => err_forge(e),
+        },
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct LoginBody {
+    username: String,
+    password: String,
+}
+
+/// Contract: 404 when auth is disabled, and in external-issuer mode (a
+/// validator without a login config) there is no login endpoint either. Both
+/// are decided before the body is read — with no endpoint here, the body is
+/// nobody's business.
+fn login(state: &ForgeState, body: Option<Value>) -> ForgeResponse {
+    let Some(auth) = state.auth.as_ref().filter(|a| a.can_login()) else {
+        return err(404, forge_core::auth::AUTH_DISABLED);
+    };
+    let body = match serde_json::from_value::<LoginBody>(body.unwrap_or(Value::Null)) {
+        Ok(body) => body,
+        Err(e) => {
+            return err(
+                400,
+                format!("body must be JSON {{username, password}}: {e}"),
+            )
+        }
+    };
+    match auth.login(&body.username, &body.password) {
+        Ok(response) => ok(response),
+        Err(e) => err_forge(e),
+    }
+}
+
+async fn run_action(
+    state: &ForgeState,
+    name: &str,
+    claims: Claims,
+    body: Option<Value>,
+) -> ForgeResponse {
     let Some(action) = state.actions.get(name) else {
         return err_forge(unknown_action_error(name, &state.action_names()));
     };
     // HTTP parity: an empty body dispatches an empty object.
     let payload = body.unwrap_or_else(|| Value::Object(serde_json::Map::new()));
     let ctx = ActionCtx {
-        claims: Claims::anonymous(),
+        claims,
         events: state.events.clone(),
     };
     match action(payload, ctx).await {
@@ -158,214 +275,130 @@ fn percent_decode(segment: &str) -> Option<String> {
     String::from_utf8(out).ok()
 }
 
-// Bridge parity tests: the transport-applicable subset of
-// examples/parity/test_contract.py, plus IPC-specific routing edges.
+/// What the contract corpus cannot state for this transport. Everything the
+/// corpus does cover runs in `tests/corpus.rs` — nothing here restates it.
+///
+/// - Auth-disabled mode. The corpus fixture is auth-enabled, so the mode the
+///   contract calls first-class has no case to run over IPC.
+/// - The routing miss. The corpus case asserts a `content-type` header, which
+///   an IPC response has no room for, so it is declared inapplicable.
 #[cfg(test)]
 mod tests {
-    use std::collections::BTreeMap;
-
-    use forge_core::{box_action, BoxedAction, DocStore, EventBus};
     use serde_json::json;
 
     use super::*;
+    use crate::Builder;
 
-    fn actions() -> BTreeMap<String, BoxedAction> {
-        let mut map = BTreeMap::new();
-        map.insert(
-            "echo".to_string(),
-            box_action(|payload, _ctx| async move { Ok(payload) }),
-        );
-        map.insert(
-            "publish".to_string(),
-            box_action(|payload: Value, ctx: ActionCtx| async move {
-                let topic = payload["topic"].as_str().unwrap_or("events").to_string();
-                ctx.events.publish(&topic, payload["data"].clone());
-                Ok(json!({ "published": true, "topic": topic }))
-            }),
-        );
-        map
-    }
-
-    fn state_with_store(dir: &std::path::Path) -> ForgeState {
-        ForgeState::for_tests(Some(DocStore::new(dir)), actions())
+    fn state() -> ForgeState {
+        Builder::new("forge-tauri-test")
+            .action("echo", |payload, _ctx| async move { Ok(payload) })
+            .try_state()
+            .expect("state")
     }
 
     #[tokio::test]
-    async fn health_reports_capabilities() {
-        let dir = tempfile::tempdir().unwrap();
-        let state = state_with_store(dir.path());
-        let r = handle(&state, "GET", "/api/health", None).await;
+    async fn auth_disabled_mode_is_anonymous_and_open() {
+        let state = state();
+
+        let r = state.request("GET", "/api/health", None, None).await;
         assert_eq!(r.status, 200);
-        assert_eq!(r.body["ok"], true);
-        let data = &r.body["data"];
-        assert_eq!(data["app"], "forge-tauri-test");
-        assert_eq!(data["auth_enabled"], false);
-        assert!(data["uptime_s"].is_number());
-        assert_eq!(data["version"], env!("CARGO_PKG_VERSION"));
-        let actions: Vec<_> = data["actions"].as_array().unwrap().to_vec();
-        assert!(actions.contains(&json!("echo")));
-    }
+        assert_eq!(r.body["data"]["auth_enabled"], false);
 
-    #[tokio::test]
-    async fn me_is_anonymous() {
-        let state = ForgeState::for_tests(None, actions());
-        let r = handle(&state, "GET", "/api/auth/me", None).await;
+        // No token, and every protected route still answers.
+        let r = state.request("GET", "/api/auth/me", None, None).await;
         assert_eq!(r.status, 200);
         assert_eq!(r.body["data"]["sub"], "anonymous");
         assert_eq!(r.body["data"]["roles"], json!([]));
+
+        let r = state
+            .request("POST", "/api/actions/echo", Some(json!({"n": 1})), None)
+            .await;
+        assert_eq!(r.status, 200);
+        assert_eq!(r.body["data"], json!({"n": 1}));
     }
 
+    /// Contract: with no auth configured there is no login endpoint.
     #[tokio::test]
-    async fn login_is_contract_404() {
-        let state = ForgeState::for_tests(None, actions());
-        let r = handle(
-            &state,
-            "POST",
-            "/api/auth/login",
-            Some(json!({"username": "admin", "password": "admin"})),
-        )
-        .await;
+    async fn auth_disabled_login_is_the_contract_404() {
+        let r = state()
+            .request(
+                "POST",
+                "/api/auth/login",
+                Some(json!({"username": "admin", "password": "admin"})),
+                None,
+            )
+            .await;
         assert_eq!(r.status, 404);
         assert_eq!(r.body["ok"], false);
-        assert_eq!(r.body["error"], "auth is disabled");
+        assert_eq!(r.body["error"], forge_core::auth::AUTH_DISABLED);
     }
 
+    /// A miss is a 404 envelope, whether the path is unknown, the method is
+    /// wrong, or the feature behind the path was never configured.
     #[tokio::test]
-    async fn doc_roundtrip_and_idempotent_delete() {
-        let dir = tempfile::tempdir().unwrap();
-        let state = state_with_store(dir.path());
-        let doc = json!({"n": 1, "nested": {"ok": true}, "s": "x"});
-
-        let r = handle(&state, "PUT", "/api/data/paritytest-doc", Some(doc.clone())).await;
-        assert_eq!(r.status, 200);
-        assert_eq!(r.body, json!({"ok": true}));
-
-        let r = handle(&state, "GET", "/api/data/paritytest-doc", None).await;
-        assert_eq!(r.status, 200);
-        assert_eq!(r.body["data"], doc);
-
-        let r = handle(&state, "GET", "/api/data", None).await;
-        let docs = r.body["data"].as_array().unwrap();
-        let meta = docs
-            .iter()
-            .find(|d| d["name"] == "paritytest-doc")
-            .expect("listed");
-        assert!(meta["bytes"].as_u64().unwrap() > 0);
-        assert!(meta["modified"].is_number());
-
-        assert_eq!(
-            handle(&state, "DELETE", "/api/data/paritytest-doc", None)
-                .await
-                .status,
-            200
-        );
-        // Idempotent.
-        assert_eq!(
-            handle(&state, "DELETE", "/api/data/paritytest-doc", None)
-                .await
-                .status,
-            200
-        );
-        let r = handle(&state, "GET", "/api/data/paritytest-doc", None).await;
-        assert_eq!(r.status, 404);
-        assert_eq!(r.body["ok"], false);
-    }
-
-    #[tokio::test]
-    async fn empty_put_body_stores_null() {
-        let dir = tempfile::tempdir().unwrap();
-        let state = state_with_store(dir.path());
-        assert_eq!(
-            handle(&state, "PUT", "/api/data/nul", None).await.status,
-            200
-        );
-        let r = handle(&state, "GET", "/api/data/nul", None).await;
-        assert_eq!(r.body["data"], Value::Null);
-    }
-
-    #[tokio::test]
-    async fn bad_doc_names_reject() {
-        let dir = tempfile::tempdir().unwrap();
-        let state = state_with_store(dir.path());
-        for bad in ["UPPER", "-lead", ".dot", &"a".repeat(70), "a b"] {
-            let r = handle(&state, "PUT", &format!("/api/data/{bad}"), Some(json!({}))).await;
-            assert_eq!(r.status, 400, "{bad:?}");
-            assert_eq!(r.body["ok"], false);
+    async fn a_miss_is_a_json_404() {
+        let state = state();
+        for (method, path) in [
+            ("GET", "/api/definitely-not-a-route"),
+            ("DELETE", "/api/health"),
+            // No doc store and no components dir on this builder.
+            ("GET", "/api/data"),
+            ("GET", "/api/data/x"),
+            ("GET", "/api/components"),
+            // Not a path at all.
+            ("GET", "no-leading-slash"),
+        ] {
+            let r = state.request(method, path, None, None).await;
+            assert_eq!(r.status, 404, "{method} {path}");
+            assert_eq!(r.body["ok"], false, "{method} {path}");
         }
-        // Path separators never reach the name (route shape mismatch), and
-        // percent-encoded traversal decodes into an invalid name.
-        let r = handle(&state, "PUT", "/api/data/sl/ash", Some(json!({}))).await;
-        assert_eq!(r.status, 404);
-        let r = handle(&state, "PUT", "/api/data/%2e%2e", Some(json!({}))).await;
+    }
+
+    /// Percent-decoding happens before the doc-name rule sees the name, the
+    /// way axum decodes a path parameter — otherwise `%2E%2E` would be stored
+    /// verbatim as a name the rule never inspected.
+    #[tokio::test]
+    async fn a_doc_name_is_percent_decoded_before_it_is_validated() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let state = Builder::new("forge-tauri-test")
+            .with_docstore(dir.path())
+            .try_state()
+            .expect("state");
+
+        let r = state
+            .request("PUT", "/api/data/%2E%2E", Some(json!({})), None)
+            .await;
         assert_eq!(r.status, 400);
-    }
-
-    #[tokio::test]
-    async fn docstore_disabled_is_404() {
-        let state = ForgeState::for_tests(None, actions());
-        assert_eq!(handle(&state, "GET", "/api/data", None).await.status, 404);
-        assert_eq!(handle(&state, "GET", "/api/data/x", None).await.status, 404);
-    }
-
-    #[tokio::test]
-    async fn action_echo_roundtrip() {
-        let state = ForgeState::for_tests(None, actions());
-        let payload = json!({"ping": "pong", "n": 3});
-        let r = handle(&state, "POST", "/api/actions/echo", Some(payload.clone())).await;
-        assert_eq!(r.status, 200);
-        assert_eq!(r.body["data"], payload);
-
-        // Empty body dispatches an empty object (HTTP parity).
-        let r = handle(&state, "POST", "/api/actions/echo", None).await;
-        assert_eq!(r.body["data"], json!({}));
-    }
-
-    #[tokio::test]
-    async fn unknown_action_names_the_registry() {
-        let state = ForgeState::for_tests(None, actions());
-        let r = handle(
-            &state,
-            "POST",
-            "/api/actions/definitely-not-registered",
-            Some(json!({})),
-        )
-        .await;
-        assert_eq!(r.status, 404);
         assert_eq!(r.body["ok"], false);
-        let msg = r.body["error"].as_str().unwrap();
-        assert!(msg.contains("echo"), "{msg}");
-        assert!(msg.contains("definitely-not-registered"), "{msg}");
+        assert!(!dir.path().join("%2E%2E.json").exists());
     }
 
+    /// An action sees the identity that made the request, not a hardcoded one.
     #[tokio::test]
-    async fn action_publishes_to_event_bus() {
-        let state = ForgeState::for_tests(None, actions());
-        let mut rx = state.events.subscribe();
-        let r = handle(
-            &state,
-            "POST",
-            "/api/actions/publish",
-            Some(json!({"topic": "paritytest", "data": {"hello": "ipc"}})),
-        )
-        .await;
+    async fn an_action_receives_the_callers_claims() {
+        let state = Builder::new("forge-tauri-test")
+            .auth(forge_core::AuthConfig::new("0123456789abcdef0123456789abcdef").user("ann", "pw"))
+            .action("whoami", |_payload, ctx: ActionCtx| async move {
+                Ok(json!({ "sub": ctx.claims.sub }))
+            })
+            .try_state()
+            .expect("state");
+
+        let login = state
+            .request(
+                "POST",
+                "/api/auth/login",
+                Some(json!({"username": "ann", "password": "pw"})),
+                None,
+            )
+            .await;
+        assert_eq!(login.status, 200);
+        let token = login.body["data"]["token"].as_str().expect("token");
+
+        let r = state
+            .request("POST", "/api/actions/whoami", None, Some(token))
+            .await;
         assert_eq!(r.status, 200);
-        let event = rx.try_recv().expect("event published");
-        assert_eq!(event.topic, "paritytest");
-        assert_eq!(
-            serde_json::from_str::<Value>(&event.json).unwrap(),
-            json!({"hello": "ipc"})
-        );
-    }
-
-    #[tokio::test]
-    async fn api_miss_is_json_404() {
-        let state = ForgeState::for_tests(None, actions());
-        let r = handle(&state, "GET", "/api/definitely-not-a-route", None).await;
-        assert_eq!(r.status, 404);
-        assert_eq!(r.body["ok"], false);
-        assert_eq!(r.body["error"], "not found: /api/definitely-not-a-route");
-        // Wrong method on a real path is a miss too.
-        let r = handle(&state, "DELETE", "/api/health", None).await;
-        assert_eq!(r.status, 404);
+        assert_eq!(r.body["data"]["sub"], "ann");
     }
 }

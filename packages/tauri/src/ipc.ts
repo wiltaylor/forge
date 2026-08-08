@@ -27,8 +27,9 @@ export interface Core {
 }
 
 export function createCore(): Core {
-  // IPC mode is auth-disabled by design; the token store exists only for
-  // AuthApi interface parity and never leaves memory.
+  // The token travels as a command argument rather than a header — IPC has no
+  // headers. An app whose plugin runs auth-disabled never obtains one, and
+  // the bridge ignores it there.
   let token: string | null = null;
   const unauthorizedCbs = new Set<() => void>();
 
@@ -48,6 +49,7 @@ export function createCore(): Core {
       method,
       path,
       body: body ?? null,
+      token,
     });
 
     const json = res.body;
