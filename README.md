@@ -350,9 +350,10 @@ in-process, plus the terminal and VNC/RDP pages against
 
 Every token is authored in **`packages/tokens/tokens.source.mjs`** — one value
 per token per scheme, plus the derivation metadata for the translucent tints.
-The CSS custom properties (`packages/tokens/css/tokens.css`), both Rust kit
-palettes, and forge-egui's geometry, type and motion tokens are generated from
-it and committed, so installing Forge never runs a generator. Change a token
+The CSS custom properties (`packages/tokens/css/tokens.css`), the typed
+TypeScript theme (`packages/tokens/src/theme.gen.ts`), both Rust kit palettes,
+and forge-egui's geometry, type and motion tokens are generated from it and
+committed, so installing Forge never runs a generator. Change a token
 there, then run `just generate`; `just check` fails while a generated file is
 stale.
 
@@ -373,6 +374,11 @@ applyTheme(defineTheme(darkTheme, {             // custom brand
   accent: { base: 'oklch(0.65 0.17 45)', /* … */ },
 }));
 ```
+
+`Theme` covers every declared token, not the colours alone: radii, spacing, the
+type scale, control heights, durations and easings are typed fields too, and
+`applyTheme` writes the whole set. The untyped `vars` record is left for the
+per-instance properties the token source does not declare.
 
 Per-control overrides are CSS vars too: `style={{ '--accent': '…' }}` on any
 component recolors just that control. Because custom properties inherit into
