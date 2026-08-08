@@ -6,11 +6,11 @@
  *   node scripts/generate.mjs           write every artifact  (`just generate`)
  *   node scripts/generate.mjs --check   fail if any differs   (`just check`)
  *
- * The check compares contents rather than asking git, so it fails only for a
- * file that the source no longer produces — an unrelated edit elsewhere in the
- * tree, staged or not, is none of its business.
+ * The check compares file contents. It does not ask git. Thus it fails only for
+ * a file that no longer matches the source. It ignores every other edit in the
+ * tree, staged or not.
  *
- * Adding an output means adding one entry to `ARTIFACTS`.
+ * To add an output, add one entry to `ARTIFACTS`.
  */
 import { readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';

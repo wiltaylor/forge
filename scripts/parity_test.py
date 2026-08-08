@@ -8,11 +8,15 @@
 # ///
 """Run the black-box parity suite against a server this script starts itself.
 
-`just parity-test` runs the suite against a server that is already up — either
-backend, which is what the suite is for. This script is what `just test` uses:
-it starts the Python backend in the demo configuration the suite documents, on
-its own port and in a throwaway directory, runs `examples/parity` against it,
-and stops it again.
+`just parity-test` runs the suite against a server that is already up. That is
+the cross-backend check: point it at either backend. This script is the
+unattended one that `just test` runs. It starts the Python backend on its own
+port, in a throwaway directory, in the demo configuration the suite documents.
+Then it runs `examples/parity` against it and stops it again.
+
+The configuration below mirrors `examples/python-demo/demo.py`. The demo app
+serves the gallery build, which this harness must not need, so the two stay
+separate.
 
 Run via `just parity-test-local`.
 """
@@ -63,7 +67,8 @@ def wait_for_health(server: subprocess.Popen, log: Path) -> None:
             if httpx.get(f"{BASE}/api/health", timeout=1).status_code == 200:
                 return
         except httpx.HTTPError:
-            time.sleep(0.1)
+            pass
+        time.sleep(0.1)
     print(f"the parity server on :{PORT} did not come up; its log:\n{log.read_text()}")
     sys.exit(1)
 

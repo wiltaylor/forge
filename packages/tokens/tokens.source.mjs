@@ -1,11 +1,11 @@
 /**
  * The authored Forge token source — the one place a token value changes.
  *
- * Every palette in the repo is generated from this file and committed to the
- * tree: the CSS custom properties in `css/tokens.css` today, and the typed
- * theme plus the Rust kit palettes as the generators for them land. Run
- * `just generate` after an edit here; `just check` fails when a generated
- * file is stale.
+ * A generator makes each palette from this file, and the tree holds the result.
+ * Today that is the CSS custom properties in `css/tokens.css`. The typed theme
+ * and the Rust kit palettes follow as their generators land. Run
+ * `just generate` after you edit this file. `just check` fails while a
+ * generated file is stale.
  *
  * Shape
  * -----
@@ -26,11 +26,11 @@
  *   { oklch: [L, C, H], alpha, over }      a translucent tint
  *   { raw: '4px' }                         verbatim CSS (sizes, motion, fonts)
  *
- * `alpha` and `over` are the derivation metadata for tints. `alpha` is the
+ * `alpha` and `over` are the derivation metadata for the tints. `alpha` is the
  * opacity the web paints the tint at. `over` names the token whose surface the
- * tint flattens over for targets that have no alpha — the terminal kit
- * pre-composites each tint over the card surface at palette-build time, and
- * that rule lives here rather than in a comment in the kit.
+ * tint flattens over, for a target that has no alpha. The terminal kit
+ * pre-composites each tint over the card surface when it builds its palette.
+ * That rule lives here, not in a comment in the kit.
  */
 
 /** Repo-relative path of this file, for the "do not edit" header of every generated artifact. */

@@ -82,7 +82,7 @@ python-test:
 parity-test base_url='http://127.0.0.1:8765':
 	FORGE_TEST_BASE_URL={{base_url}} uv run --with 'httpx>=0.28' --with 'pytest>=9' --with 'websockets>=16' pytest examples/parity
 
-# Run the parity suite against a Python backend the recipe starts and stops itself
+# Run the parity suite against a Python backend the recipe starts itself (Rust: use parity-test)
 [group('test')]
 parity-test-local:
 	uv run scripts/parity_test.py

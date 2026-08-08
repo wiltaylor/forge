@@ -34,12 +34,14 @@ export function parseBlocks(css) {
         inComment = true;
         break;
       }
-      line = line.slice(0, start) + line.slice(end + 2);
+      // A space, so `1px/* note */solid` cannot become one token.
+      line = `${line.slice(0, start)} ${line.slice(end + 2)}`;
     }
 
     const text = line.trim();
     if (!text) continue;
     if (text === '}') {
+      if (!stack.length) throw new Error(`stray closing brace: ${raw}`);
       stack.pop();
       continue;
     }
@@ -48,8 +50,9 @@ export function parseBlocks(css) {
       blocks[stack.join(' > ')] ??= {};
       continue;
     }
-    const decl = /^([\w-]+)\s*:\s*(.+);$/.exec(text);
+    const decl = /^([\w-]+)\s*:\s*([^;]+);$/.exec(text);
     if (!decl) throw new Error(`unparsed line: ${raw}`);
+    if (!stack.length) throw new Error(`declaration outside a block: ${raw}`);
     blocks[stack.join(' > ')][decl[1]] = decl[2].trim();
   }
 
