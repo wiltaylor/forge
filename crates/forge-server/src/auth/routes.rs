@@ -30,9 +30,10 @@ struct LoginBody {
 
 async fn login(State(state): State<ForgeState>, body: Bytes) -> Response {
     // Contract: 404 when auth is disabled. External-issuer mode (a validator
-    // without a login config) has no login endpoint either — `Auth::login`
-    // answers that one with the same 404.
-    let Some(auth) = state.auth() else {
+    // without a login config) has no login endpoint either. Both are decided
+    // before the body is read: with no endpoint here, the body is nobody's
+    // business.
+    let Some(auth) = state.auth().filter(|a| a.can_login()) else {
         return err(StatusCode::NOT_FOUND, AUTH_DISABLED);
     };
 

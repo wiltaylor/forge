@@ -17,7 +17,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::ForgeError;
 
-pub use jwt::{decode_token, encode_token, unix_now, Claims};
+pub use crate::claims::{unix_now, Claims};
+pub use jwt::{decode_token, encode_token};
 pub use users::{parse_users, AuthUser};
 
 /// Default token lifetime (seconds) — 24 hours.
@@ -209,6 +210,12 @@ impl Auth {
     /// stays available only when a [`AuthConfig`] comes with it.
     pub fn with_validator(validator: Arc<dyn TokenValidator>, config: Option<AuthConfig>) -> Self {
         Self { validator, config }
+    }
+
+    /// Whether this instance can mint tokens. `false` in external-issuer
+    /// mode, where there is no login endpoint to offer.
+    pub fn can_login(&self) -> bool {
+        self.config.is_some()
     }
 
     /// Validate a token and return its claims.

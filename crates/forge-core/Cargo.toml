@@ -1,6 +1,6 @@
 [package]
 name = "forge-core"
-description = "Transport-agnostic core of the Forge backend: doc store, actions, events, claims, envelope shapes."
+description = "Transport-agnostic core of the Forge backend: doc store, actions, events, auth, envelope shapes."
 version.workspace = true
 edition.workspace = true
 license.workspace = true

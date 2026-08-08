@@ -194,6 +194,35 @@ async fn auth_disabled_everything_open_and_anonymous() {
 }
 
 #[tokio::test]
+async fn external_issuer_mode_has_no_login_endpoint() {
+    // A custom validator with no AuthConfig: tokens are validated, nothing is
+    // minted. Login is 404 whatever the body says — the endpoint is absent,
+    // so the body is never read.
+    use forge_server::Hs256Validator;
+    let router = ForgeApp::new("t")
+        .auth_validator(Hs256Validator::new(SECRET))
+        .router();
+    let (status, body) = login(&router, "admin", "hunter2").await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+    assert_eq!(body["ok"], json!(false));
+
+    let req = Request::builder()
+        .method("POST")
+        .uri("/api/auth/login")
+        .header("content-type", "application/json")
+        .body(Body::from("not json"))
+        .unwrap();
+    let (status, _) = send(&router, req).await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+
+    // Validation still works: a token signed with the same secret is accepted.
+    let token = encode_token(&Claims::new("admin", vec![], 3600, None), SECRET).unwrap();
+    let (status, body) = send(&router, get_bearer("/api/auth/me", &token)).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["data"]["sub"], json!("admin"));
+}
+
+#[tokio::test]
 async fn short_secret_is_config_error() {
     let result = ForgeApp::new("t")
         .auth(AuthConfig::new("too-short"))

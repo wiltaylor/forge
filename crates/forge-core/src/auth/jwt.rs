@@ -3,9 +3,8 @@
 
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 
+use crate::claims::Claims;
 use crate::error::ForgeError;
-
-pub use crate::claims::{unix_now, Claims};
 
 /// Encode claims as an HS256 JWT.
 pub fn encode_token(claims: &Claims, secret: &str) -> Result<String, ForgeError> {
@@ -36,6 +35,7 @@ pub fn decode_token(token: &str, secret: &str, iss: Option<&str>) -> Result<Clai
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::claims::unix_now;
 
     const SECRET: &str = "0123456789abcdef0123456789abcdef"; // 32 chars
 
